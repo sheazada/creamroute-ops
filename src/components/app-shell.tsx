@@ -221,6 +221,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const me = useMe();
   const alerts = useAlertsCount();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const role: Role = ((me.data?.roles?.[0] as Role) ?? "salesperson");
+  const mobileTabs = mobileTabsByRole[role] ?? mobileTabsByRole.salesperson;
 
   const signOut = async () => {
     await qc.cancelQueries();
