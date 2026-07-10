@@ -139,7 +139,12 @@ function AuthPage() {
             </TabsContent>
           </Tabs>
 
-          <p className="text-xs text-muted-foreground mt-6 text-center">
+          <div className="mt-5 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">One login for everyone</p>
+            <p>Admin, Manager, Salesperson, Driver and Helper all sign in here. Your role is assigned by your administrator — the app shows only what you need.</p>
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-4 text-center">
             <Link to="/dashboard" className="hover:underline">Back to app</Link>
           </p>
         </Card>
