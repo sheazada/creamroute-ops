@@ -290,7 +290,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0 flex flex-col bg-sidebar">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <SidebarContent path={path} onNavigate={() => setMobileOpen(false)} />
+              <SidebarContent path={path} role={role} onNavigate={() => setMobileOpen(false)} />
               <div className="border-t border-sidebar-border p-3">{userMenu}</div>
             </SheetContent>
           </Sheet>
