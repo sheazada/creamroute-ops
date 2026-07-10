@@ -273,7 +273,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background text-foreground flex">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 bg-sidebar border-r border-sidebar-border z-40 flex-col no-print">
-        <SidebarContent path={path} />
+        <SidebarContent path={path} role={role} />
         <div className="border-t border-sidebar-border p-3">{userMenu}</div>
       </aside>
 
