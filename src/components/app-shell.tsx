@@ -35,49 +35,81 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
-const nav = [
-  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] },
+type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
+const ALL: Role[] = ["admin", "manager", "salesperson", "driver", "helper"];
+const FIN: Role[] = ["admin", "manager"];
+
+const nav: {
+  label: string;
+  items: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[];
+}[] = [
+  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ALL }] },
   {
     label: "Sales",
     items: [
-      { to: "/orders", label: "Orders", icon: ShoppingCart },
-      { to: "/invoices", label: "Invoices", icon: ReceiptText },
-      { to: "/payments", label: "Payments", icon: Wallet },
-      { to: "/deliveries", label: "Deliveries", icon: Truck },
+      { to: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "manager", "salesperson"] },
+      { to: "/invoices", label: "Invoices", icon: ReceiptText, roles: ["admin", "manager", "salesperson"] },
+      { to: "/payments", label: "Payments", icon: Wallet, roles: ["admin", "manager", "salesperson"] },
+      { to: "/deliveries", label: "Deliveries", icon: Truck, roles: ALL },
     ],
   },
   {
     label: "Catalog",
     items: [
-      { to: "/products", label: "Products", icon: Package },
-      { to: "/inventory", label: "Inventory", icon: Boxes },
+      { to: "/products", label: "Products", icon: Package, roles: ["admin", "manager", "salesperson"] },
+      { to: "/inventory", label: "Inventory", icon: Boxes, roles: ["admin", "manager"] },
     ],
   },
   {
     label: "Partners",
     items: [
-      { to: "/customers", label: "Customers", icon: Users },
-      { to: "/suppliers", label: "Suppliers", icon: Building2 },
-      { to: "/purchases", label: "Purchases", icon: ClipboardList },
+      { to: "/customers", label: "Customers", icon: Users, roles: ["admin", "manager", "salesperson"] },
+      { to: "/suppliers", label: "Suppliers", icon: Building2, roles: FIN },
+      { to: "/purchases", label: "Purchases", icon: ClipboardList, roles: FIN },
     ],
   },
   {
     label: "Insights",
     items: [
-      { to: "/daily-demand", label: "Daily Demand", icon: ClipboardList },
-      { to: "/reports", label: "Reports", icon: BarChart3 },
+      { to: "/daily-demand", label: "Daily Demand", icon: ClipboardList, roles: ALL },
+      { to: "/reports", label: "Reports", icon: BarChart3, roles: FIN },
     ],
   },
-  { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings }] },
-] as const;
+  { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings, roles: ["admin"] }] },
+];
 
-// Bottom nav items for mobile (most-used destinations)
-const mobileTabs = [
-  { to: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { to: "/invoices", label: "Invoices", icon: ReceiptText },
-  { to: "/orders", label: "Orders", icon: ShoppingCart },
-  { to: "/customers", label: "Customers", icon: Users },
-] as const;
+const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof LayoutDashboard }[]> = {
+  admin: [
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/customers", label: "Customers", icon: Users },
+  ],
+  manager: [
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/deliveries", label: "Delivery", icon: Truck },
+    { to: "/reports", label: "Reports", icon: BarChart3 },
+  ],
+  salesperson: [
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/customers", label: "Customers", icon: Users },
+  ],
+  driver: [
+    { to: "/deliveries", label: "Deliveries", icon: Truck },
+    { to: "/daily-demand", label: "Demand", icon: ClipboardList },
+    { to: "/customers", label: "Shops", icon: Users },
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+  ],
+  helper: [
+    { to: "/deliveries", label: "Deliveries", icon: Truck },
+    { to: "/daily-demand", label: "Demand", icon: ClipboardList },
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/inventory", label: "Stock", icon: Boxes },
+  ],
+};
 
 function useMe() {
   return useQuery({
