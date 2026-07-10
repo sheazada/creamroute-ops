@@ -147,3 +147,14 @@
   .no-print { display: none !important; }
   body { background: white !important; }
 }
+
+/* Mobile: let wide data tables scroll horizontally instead of overflowing the viewport */
+@media (max-width: 767px) {
+  .overflow-hidden > table,
+  main table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}

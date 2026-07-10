@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -18,6 +18,7 @@ import {
   LogOut,
   Milk,
   ChevronDown,
+  Menu,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 const nav = [
   { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] },
@@ -67,6 +69,14 @@ const nav = [
     ],
   },
   { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings }] },
+] as const;
+
+// Bottom nav items for mobile (most-used destinations)
+const mobileTabs = [
+  { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { to: "/invoices", label: "Invoices", icon: ReceiptText },
+  { to: "/orders", label: "Orders", icon: ShoppingCart },
+  { to: "/customers", label: "Customers", icon: Users },
 ] as const;
 
 function useMe() {
@@ -110,12 +120,69 @@ function useAlertsCount() {
   });
 }
 
+function SidebarContent({
+  path,
+  onNavigate,
+}: {
+  path: string;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <div className="p-5 flex items-center gap-2.5">
+        <div className="size-8 rounded-lg bg-primary grid place-items-center text-primary-foreground shrink-0">
+          <Milk className="size-4" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold tracking-tight leading-none truncate">DairyFlow Pro</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
+            Distribution ERP
+          </div>
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">
+        {nav.map((section) => (
+          <div key={section.label}>
+            <div className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {section.label}
+            </div>
+            <div className="space-y-0.5">
+              {section.items.map((it) => {
+                const active = path === it.to || path.startsWith(it.to + "/");
+                const Icon = it.icon;
+                return (
+                  <Link
+                    key={it.to}
+                    to={it.to}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
+                      active
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium ring-1 ring-primary/10"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span className="truncate">{it.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+    </>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const qc = useQueryClient();
   const me = useMe();
   const alerts = useAlertsCount();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const signOut = async () => {
     await qc.cancelQueries();
@@ -134,108 +201,123 @@ export function AppShell({ children }: { children: ReactNode }) {
     me.data?.user?.email?.[0]?.toUpperCase() ??
     "U";
 
+  const userMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-secondary">
+        <div className="size-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold shrink-0">
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <div className="text-xs font-semibold truncate">
+            {me.data?.profile?.full_name ?? me.data?.user?.email}
+          </div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {me.data?.roles?.[0] ?? "user"}
+          </div>
+        </div>
+        <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="top" className="w-52">
+        <DropdownMenuLabel>Account</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/settings">Settings</Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
+          <LogOut className="size-4" /> Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      <aside className="fixed inset-y-0 left-0 w-60 bg-sidebar border-r border-sidebar-border z-40 flex flex-col no-print">
-        <div className="p-5 flex items-center gap-2.5">
-          <div className="size-8 rounded-lg bg-primary grid place-items-center text-primary-foreground">
-            <Milk className="size-4" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold tracking-tight leading-none">DairyFlow Pro</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
-              Distribution ERP
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">
-          {nav.map((section) => (
-            <div key={section.label}>
-              <div className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {section.label}
-              </div>
-              <div className="space-y-0.5">
-                {section.items.map((it) => {
-                  const active = path === it.to || path.startsWith(it.to + "/");
-                  const Icon = it.icon;
-                  return (
-                    <Link
-                      key={it.to}
-                      to={it.to}
-                      className={cn(
-                        "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium ring-1 ring-primary/10"
-                          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="size-4 shrink-0" />
-                      <span className="truncate">{it.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-sidebar-border p-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-secondary">
-              <div className="size-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold">
-                {initials}
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <div className="text-xs font-semibold truncate">
-                  {me.data?.profile?.full_name ?? me.data?.user?.email}
-                </div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {me.data?.roles?.[0] ?? "user"}
-                </div>
-              </div>
-              <ChevronDown className="size-3.5 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" className="w-52">
-              <DropdownMenuLabel>Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/settings">Settings</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
-                <LogOut className="size-4" /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 bg-sidebar border-r border-sidebar-border z-40 flex-col no-print">
+        <SidebarContent path={path} />
+        <div className="border-t border-sidebar-border p-3">{userMenu}</div>
       </aside>
 
-      <div className="pl-60 flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 h-14 border-b bg-background/70 backdrop-blur px-6 flex items-center justify-between no-print">
-          <div className="relative flex-1 max-w-md">
+      <div className="lg:pl-60 flex-1 flex flex-col min-w-0">
+        <header className="sticky top-0 z-30 h-14 border-b bg-background/80 backdrop-blur px-3 sm:px-6 flex items-center gap-2 sm:gap-3 justify-between no-print">
+          {/* Mobile menu trigger */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="lg:hidden shrink-0" aria-label="Open menu">
+                <Menu className="size-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0 flex flex-col bg-sidebar">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              <SidebarContent path={path} onNavigate={() => setMobileOpen(false)} />
+              <div className="border-t border-sidebar-border p-3">{userMenu}</div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Mobile brand */}
+          <Link to="/dashboard" className="flex lg:hidden items-center gap-2 min-w-0">
+            <div className="size-7 rounded-lg bg-primary grid place-items-center text-primary-foreground shrink-0">
+              <Milk className="size-3.5" />
+            </div>
+            <span className="text-sm font-semibold tracking-tight truncate">DairyFlow</span>
+          </Link>
+
+          {/* Search — desktop only */}
+          <div className="relative flex-1 max-w-md hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search customers, invoices, products…"
               className="pl-9 h-9 bg-muted/60 border-transparent focus-visible:bg-background"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
+          <div className="flex-1 md:hidden" />
+
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <Button variant="ghost" size="icon" className="relative md:hidden" aria-label="Search">
+              <Search className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="relative" aria-label="Alerts">
               <Bell className="size-4" />
               {(alerts.data ?? 0) > 0 && (
                 <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
               )}
             </Button>
-            <Button asChild size="sm" className="gap-1.5">
+            <Button asChild size="sm" className="gap-1.5 hidden sm:inline-flex">
               <Link to="/invoices/new">
                 <ReceiptText className="size-4" /> New Invoice
+              </Link>
+            </Button>
+            <Button asChild size="icon" className="sm:hidden" aria-label="New invoice">
+              <Link to="/invoices/new">
+                <ReceiptText className="size-4" />
               </Link>
             </Button>
           </div>
         </header>
 
-        <main className="flex-1 min-w-0">{children}</main>
+        <main className="flex-1 min-w-0 pb-16 lg:pb-0">{children}</main>
+
+        {/* Mobile bottom tab bar */}
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 h-16 bg-background/95 backdrop-blur border-t no-print grid grid-cols-4">
+          {mobileTabs.map((t) => {
+            const active = path === t.to || path.startsWith(t.to + "/");
+            const Icon = t.icon;
+            return (
+              <Link
+                key={t.to}
+                to={t.to}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="size-5" />
+                <span>{t.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
