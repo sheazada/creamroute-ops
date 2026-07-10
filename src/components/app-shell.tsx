@@ -154,9 +154,11 @@ function useAlertsCount() {
 
 function SidebarContent({
   path,
+  role,
   onNavigate,
 }: {
   path: string;
+  role: Role;
   onNavigate?: () => void;
 }) {
   return (
