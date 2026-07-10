@@ -35,49 +35,81 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
-const nav = [
-  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] },
+type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
+const ALL: Role[] = ["admin", "manager", "salesperson", "driver", "helper"];
+const FIN: Role[] = ["admin", "manager"];
+
+const nav: {
+  label: string;
+  items: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[];
+}[] = [
+  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ALL }] },
   {
     label: "Sales",
     items: [
-      { to: "/orders", label: "Orders", icon: ShoppingCart },
-      { to: "/invoices", label: "Invoices", icon: ReceiptText },
-      { to: "/payments", label: "Payments", icon: Wallet },
-      { to: "/deliveries", label: "Deliveries", icon: Truck },
+      { to: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "manager", "salesperson"] },
+      { to: "/invoices", label: "Invoices", icon: ReceiptText, roles: ["admin", "manager", "salesperson"] },
+      { to: "/payments", label: "Payments", icon: Wallet, roles: ["admin", "manager", "salesperson"] },
+      { to: "/deliveries", label: "Deliveries", icon: Truck, roles: ALL },
     ],
   },
   {
     label: "Catalog",
     items: [
-      { to: "/products", label: "Products", icon: Package },
-      { to: "/inventory", label: "Inventory", icon: Boxes },
+      { to: "/products", label: "Products", icon: Package, roles: ["admin", "manager", "salesperson"] },
+      { to: "/inventory", label: "Inventory", icon: Boxes, roles: ["admin", "manager"] },
     ],
   },
   {
     label: "Partners",
     items: [
-      { to: "/customers", label: "Customers", icon: Users },
-      { to: "/suppliers", label: "Suppliers", icon: Building2 },
-      { to: "/purchases", label: "Purchases", icon: ClipboardList },
+      { to: "/customers", label: "Customers", icon: Users, roles: ["admin", "manager", "salesperson"] },
+      { to: "/suppliers", label: "Suppliers", icon: Building2, roles: FIN },
+      { to: "/purchases", label: "Purchases", icon: ClipboardList, roles: FIN },
     ],
   },
   {
     label: "Insights",
     items: [
-      { to: "/daily-demand", label: "Daily Demand", icon: ClipboardList },
-      { to: "/reports", label: "Reports", icon: BarChart3 },
+      { to: "/daily-demand", label: "Daily Demand", icon: ClipboardList, roles: ALL },
+      { to: "/reports", label: "Reports", icon: BarChart3, roles: FIN },
     ],
   },
-  { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings }] },
-] as const;
+  { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings, roles: ["admin"] }] },
+];
 
-// Bottom nav items for mobile (most-used destinations)
-const mobileTabs = [
-  { to: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { to: "/invoices", label: "Invoices", icon: ReceiptText },
-  { to: "/orders", label: "Orders", icon: ShoppingCart },
-  { to: "/customers", label: "Customers", icon: Users },
-] as const;
+const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof LayoutDashboard }[]> = {
+  admin: [
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/customers", label: "Customers", icon: Users },
+  ],
+  manager: [
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/deliveries", label: "Delivery", icon: Truck },
+    { to: "/reports", label: "Reports", icon: BarChart3 },
+  ],
+  salesperson: [
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/customers", label: "Customers", icon: Users },
+  ],
+  driver: [
+    { to: "/deliveries", label: "Deliveries", icon: Truck },
+    { to: "/daily-demand", label: "Demand", icon: ClipboardList },
+    { to: "/customers", label: "Shops", icon: Users },
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+  ],
+  helper: [
+    { to: "/deliveries", label: "Deliveries", icon: Truck },
+    { to: "/daily-demand", label: "Demand", icon: ClipboardList },
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/inventory", label: "Stock", icon: Boxes },
+  ],
+};
 
 function useMe() {
   return useQuery({
@@ -122,9 +154,11 @@ function useAlertsCount() {
 
 function SidebarContent({
   path,
+  role,
   onNavigate,
 }: {
   path: string;
+  role: Role;
   onNavigate?: () => void;
 }) {
   return (
@@ -142,35 +176,39 @@ function SidebarContent({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">
-        {nav.map((section) => (
-          <div key={section.label}>
-            <div className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {section.label}
+        {nav.map((section) => {
+          const items = section.items.filter((it) => it.roles.includes(role));
+          if (items.length === 0) return null;
+          return (
+            <div key={section.label}>
+              <div className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {section.label}
+              </div>
+              <div className="space-y-0.5">
+                {items.map((it) => {
+                  const active = path === it.to || path.startsWith(it.to + "/");
+                  const Icon = it.icon;
+                  return (
+                    <Link
+                      key={it.to}
+                      to={it.to}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
+                        active
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium ring-1 ring-primary/10"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      <span className="truncate">{it.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <div className="space-y-0.5">
-              {section.items.map((it) => {
-                const active = path === it.to || path.startsWith(it.to + "/");
-                const Icon = it.icon;
-                return (
-                  <Link
-                    key={it.to}
-                    to={it.to}
-                    onClick={onNavigate}
-                    className={cn(
-                      "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
-                      active
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium ring-1 ring-primary/10"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" />
-                    <span className="truncate">{it.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
     </>
   );
@@ -183,6 +221,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const me = useMe();
   const alerts = useAlertsCount();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const role: Role = ((me.data?.roles?.[0] as Role) ?? "salesperson");
+  const mobileTabs = mobileTabsByRole[role] ?? mobileTabsByRole.salesperson;
 
   const signOut = async () => {
     await qc.cancelQueries();
@@ -235,7 +275,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background text-foreground flex">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 bg-sidebar border-r border-sidebar-border z-40 flex-col no-print">
-        <SidebarContent path={path} />
+        <SidebarContent path={path} role={role} />
         <div className="border-t border-sidebar-border p-3">{userMenu}</div>
       </aside>
 
@@ -250,7 +290,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0 flex flex-col bg-sidebar">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <SidebarContent path={path} onNavigate={() => setMobileOpen(false)} />
+              <SidebarContent path={path} role={role} onNavigate={() => setMobileOpen(false)} />
               <div className="border-t border-sidebar-border p-3">{userMenu}</div>
             </SheetContent>
           </Sheet>
