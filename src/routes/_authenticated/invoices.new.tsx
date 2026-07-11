@@ -263,10 +263,10 @@ function NewInvoice() {
                     <span className="font-mono font-medium">{selectedCustomer.gstin}</span>
                   </div>
                 )}
-                {selectedCustomer.phone && (
+                {selectedCustomer.mobile && (
                   <div>
                     <span className="text-muted-foreground">Phone: </span>
-                    <span className="font-medium">{selectedCustomer.phone}</span>
+                    <span className="font-medium">{selectedCustomer.mobile}</span>
                   </div>
                 )}
                 <div className="ml-auto">
