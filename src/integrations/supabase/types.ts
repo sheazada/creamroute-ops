@@ -736,6 +736,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalc_customer_outstanding: {
+        Args: { _customer_id: string }
+        Returns: undefined
+      }
+      recalc_invoice: { Args: { _invoice_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "manager" | "salesperson" | "driver" | "helper"

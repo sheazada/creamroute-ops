@@ -190,13 +190,7 @@ function NewInvoice() {
         }
       }
 
-      if (selectedCustomer) {
-        await supabase
-          .from("customers")
-          .update({ outstanding: Number(selectedCustomer.outstanding) + totals.total })
-          .eq("id", customerId);
-      }
-
+      // Customer outstanding is recalculated by DB trigger on invoice_items insert.
       await supabase.from("deliveries").insert({ invoice_id: inv.id, status: "pending" });
     }
     setSaving(false);
