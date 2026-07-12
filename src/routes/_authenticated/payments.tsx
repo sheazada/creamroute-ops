@@ -94,8 +94,8 @@ function PaymentDialog({ onSaved }: { onSaved: () => void }) {
       customer_id: f.customer_id, invoice_id: f.invoice_id || null,
       amount, mode: f.mode, reference: f.reference || null, notes: f.notes || null,
     });
-    if (!error) {
     // Invoice paid/balance/status and customer outstanding are recalculated by DB triggers.
+
 
     setSaving(false);
     if (error) return toast.error(error.message);
