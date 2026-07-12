@@ -95,22 +95,8 @@ function PaymentDialog({ onSaved }: { onSaved: () => void }) {
       amount, mode: f.mode, reference: f.reference || null, notes: f.notes || null,
     });
     if (!error) {
-      // update invoice if selected
-      if (f.invoice_id) {
-        const inv = (invoices ?? []).find((i) => i.id === f.invoice_id);
-        if (inv) {
-          const newPaid = Number(inv.paid) + amount;
-          const newBal = Number(inv.total) - newPaid;
-          const status = newBal <= 0 ? "paid" : newPaid > 0 ? "partial" : "unpaid";
-          await supabase.from("invoices").update({ paid: newPaid, balance: Math.max(0, newBal), status }).eq("id", f.invoice_id);
-        }
-      }
-      // reduce customer outstanding
-      const cust = (customers ?? []).find((c) => c.id === f.customer_id);
-      if (cust) {
-        await supabase.from("customers").update({ outstanding: Math.max(0, Number(cust.outstanding) - amount) }).eq("id", f.customer_id);
-      }
-    }
+    // Invoice paid/balance/status and customer outstanding are recalculated by DB triggers.
+
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Payment recorded");
