@@ -98,18 +98,15 @@ const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof L
     { to: "/products", label: "Products", icon: Package },
   ],
   driver: [
-    { to: "/deliveries", label: "Deliveries", icon: Truck },
     { to: "/daily-demand", label: "Demand", icon: ClipboardList },
-    { to: "/products", label: "Products", icon: Package },
-    { to: "/inventory", label: "Stock", icon: Boxes },
+    { to: "/deliveries", label: "Deliveries", icon: Truck },
   ],
   helper: [
-    { to: "/deliveries", label: "Deliveries", icon: Truck },
     { to: "/daily-demand", label: "Demand", icon: ClipboardList },
-    { to: "/inventory", label: "Stock", icon: Boxes },
-    { to: "/products", label: "Products", icon: Package },
+    { to: "/deliveries", label: "Deliveries", icon: Truck },
   ],
 };
+
 
 function useMe() {
   return useQuery({
