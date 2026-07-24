@@ -195,6 +195,15 @@ function Settings() {
   return (
     <PageContainer>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
+      {dirty && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
+          <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" className="h-7" onClick={cancelEdit}>Discard</Button>
+            <Button size="sm" className="h-7" onClick={saveBiz}>Save</Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CollapsibleCard
