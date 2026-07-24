@@ -2031,7 +2031,8 @@ function RunEditDialog({
 type TimelineEvent = {
   at: string;
   kind: "run_created" | "pickup" | "run_started" | "run_ended" | "run_edited"
-      | "delivered" | "partial" | "failed" | "en_route" | "stop_edited" | "payment";
+      | "delivered" | "partial" | "failed" | "en_route" | "stop_edited" | "payment"
+      | "gps_ok" | "gps_failed";
   title: string;
   detail?: string | null;
   location?: { lat: number | null; lng: number | null; acc?: number | null } | null;
@@ -2058,6 +2059,8 @@ function eventStyle(kind: TimelineEvent["kind"]) {
     case "run_edited": return { Icon: Pencil, cls: "bg-slate-100 text-slate-700 border-slate-300" };
     case "stop_edited": return { Icon: Pencil, cls: "bg-slate-100 text-slate-700 border-slate-300" };
     case "payment": return { Icon: Wallet, cls: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    case "gps_ok": return { Icon: MapPin, cls: "bg-sky-100 text-sky-700 border-sky-300" };
+    case "gps_failed": return { Icon: XCircle, cls: "bg-amber-100 text-amber-700 border-amber-300" };
     default: return { Icon: Clock, cls: "bg-muted text-foreground border-border" };
   }
 }
