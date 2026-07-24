@@ -53,6 +53,7 @@ const nav: {
       { to: "/payments", label: "Payments", icon: Wallet, roles: ["admin", "manager", "salesperson"] },
       { to: "/reconcile", label: "Reconcile", icon: Wallet, roles: FIN },
       { to: "/deliveries", label: "Deliveries", icon: Truck, roles: ALL },
+      { to: "/delivery-status", label: "Delivery Status", icon: BarChart3, roles: FIN },
       { to: "/routes", label: "Route Planning", icon: MapIcon, roles: FIN },
     ],
   },
