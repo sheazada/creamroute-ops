@@ -307,6 +307,8 @@ function RouteFormDialog({
   const [notes, setNotes] = useState(route?.notes ?? "");
   const [capacity, setCapacity] = useState<string>(route?.capacity_units != null ? String(route.capacity_units) : "");
   const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
+  const [vehicleNumber, setVehicleNumber] = useState(route?.vehicle_number ?? "");
+  const [vehicleType, setVehicleType] = useState(route?.vehicle_type ?? "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -319,6 +321,8 @@ function RouteFormDialog({
       setNotes(route?.notes ?? "");
       setCapacity(route?.capacity_units != null ? String(route.capacity_units) : "");
       setCapacityLabel(route?.capacity_label ?? "L");
+      setVehicleNumber(route?.vehicle_number ?? "");
+      setVehicleType(route?.vehicle_type ?? "");
     }
   }, [open, route]);
 
@@ -330,7 +334,10 @@ function RouteFormDialog({
       active, notes: notes || null,
       capacity_units: capacity ? Number(capacity) : null,
       capacity_label: capacityLabel || null,
+      vehicle_number: vehicleNumber || null,
+      vehicle_type: vehicleType || null,
     };
+
     if (isEdit && route) {
       const { error } = await supabase.from("routes").update(payload).eq("id", route.id);
       setSaving(false);
