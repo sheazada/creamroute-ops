@@ -29,7 +29,26 @@ type RouteRow = {
   notes: string | null;
   capacity_units: number | null;
   capacity_label: string | null;
+  vehicle_number: string | null;
+  vehicle_type: string | null;
 };
+
+type DeliveryRun = {
+  id: string;
+  route_id: string;
+  run_date: string;
+  driver_name: string | null;
+  helper_name: string | null;
+  vehicle_number: string | null;
+  vehicle_type: string | null;
+  odometer_start: number | null;
+  odometer_end: number | null;
+  started_at: string | null;
+  ended_at: string | null;
+  status: string;
+  notes: string | null;
+};
+
 
 type Stop = {
   id: string;
@@ -213,10 +232,12 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
             <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
               <span>Driver: <b className="text-foreground">{route?.driver_name || "—"}</b></span>
               <span>Helper: <b className="text-foreground">{route?.helper_name || "—"}</b></span>
+              <span>Vehicle: <b className="text-foreground">{route?.vehicle_number || "—"}{route?.vehicle_type ? ` · ${route.vehicle_type}` : ""}</b></span>
               <span>Stops: <b className="text-foreground">{total}</b></span>
               <span>Capacity: <b className="text-foreground">{route?.capacity_units ? `${num(route.capacity_units, 0)} ${route.capacity_label || ""}` : "—"}</b></span>
               <span>Outstanding: <b className="text-foreground">{inr(outstanding)}</b></span>
             </div>
+
             {route?.notes && <div className="mt-2 text-xs text-muted-foreground italic">{route.notes}</div>}
           </div>
           <div className="flex gap-2">
@@ -288,6 +309,8 @@ function RouteFormDialog({
   const [notes, setNotes] = useState(route?.notes ?? "");
   const [capacity, setCapacity] = useState<string>(route?.capacity_units != null ? String(route.capacity_units) : "");
   const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
+  const [vehicleNumber, setVehicleNumber] = useState(route?.vehicle_number ?? "");
+  const [vehicleType, setVehicleType] = useState(route?.vehicle_type ?? "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -300,6 +323,8 @@ function RouteFormDialog({
       setNotes(route?.notes ?? "");
       setCapacity(route?.capacity_units != null ? String(route.capacity_units) : "");
       setCapacityLabel(route?.capacity_label ?? "L");
+      setVehicleNumber(route?.vehicle_number ?? "");
+      setVehicleType(route?.vehicle_type ?? "");
     }
   }, [open, route]);
 
@@ -311,7 +336,10 @@ function RouteFormDialog({
       active, notes: notes || null,
       capacity_units: capacity ? Number(capacity) : null,
       capacity_label: capacityLabel || null,
+      vehicle_number: vehicleNumber || null,
+      vehicle_type: vehicleType || null,
     };
+
     if (isEdit && route) {
       const { error } = await supabase.from("routes").update(payload).eq("id", route.id);
       setSaving(false);
@@ -353,7 +381,25 @@ function RouteFormDialog({
             <div className="col-span-2"><Label>Vehicle capacity</Label><Input type="number" inputMode="decimal" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g. 400" /></div>
             <div><Label>Unit</Label><Input value={capacityLabel} onChange={(e) => setCapacityLabel(e.target.value)} placeholder="L / crates / kg" /></div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Vehicle number</Label><Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. BR10AB1234" /></div>
+            <div><Label>Vehicle type</Label>
+              <Select value={vehicleType || "none"} onValueChange={(v) => setVehicleType(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  <SelectItem value="bike">Bike</SelectItem>
+                  <SelectItem value="auto">Auto / Rickshaw</SelectItem>
+                  <SelectItem value="tempo">Tempo</SelectItem>
+                  <SelectItem value="mini_truck">Mini truck</SelectItem>
+                  <SelectItem value="truck">Truck</SelectItem>
+                  <SelectItem value="van">Refrigerated van</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Landmarks, timing…" /></div>
+
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -526,7 +572,7 @@ function SheetTab({ date }: { date: string }) {
       {grouped.unassigned.length > 0 && (
         <RouteSheet
           key="unassigned"
-          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null }}
+          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null, vehicle_number: null, vehicle_type: null }}
           invoices={grouped.unassigned}
           date={date}
         />
@@ -690,7 +736,9 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
             {shortDate(date)} · {invoices.length} stop{invoices.length === 1 ? "" : "s"} · {doneCount} delivered
             {route.driver_name ? ` · Driver: ${route.driver_name}` : ""}
             {route.helper_name ? ` · Helper: ${route.helper_name}` : ""}
+            {route.vehicle_number ? ` · 🚛 ${route.vehicle_number}` : ""}
           </div>
+
         </div>
         <div className="flex items-center gap-3 text-xs">
           <div>Value <span className="font-mono font-semibold">{inr(totalValue)}</span></div>
@@ -703,8 +751,10 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
         </div>
       </div>
 
+      {route.id !== "u" && <RunPanel route={route} date={date} />}
 
       {/* Pickup summary + capacity bar */}
+
       <div className="px-5 py-3 border-b space-y-3">
         {cap > 0 && (
           <div>
@@ -982,4 +1032,208 @@ function DeliverStopDialog({
     </Dialog>
   );
 }
+
+/* ---------------- Delivery run panel ---------------- */
+
+function fmtTime(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function durationMin(a: string | null, b: string | null) {
+  if (!a || !b) return null;
+  return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
+}
+
+function RunPanel({ route, date }: { route: RouteRow; date: string }) {
+  const qc = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const { data: run } = useQuery({
+    queryKey: ["delivery-run", route.id, date],
+    queryFn: async (): Promise<DeliveryRun | null> => {
+      const { data, error } = await supabase
+        .from("delivery_runs")
+        .select("*")
+        .eq("route_id", route.id)
+        .eq("run_date", date)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as DeliveryRun) ?? null;
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["delivery-run", route.id, date] });
+
+  const startRun = async () => {
+    const now = new Date().toISOString();
+    if (run) {
+      const { error } = await supabase.from("delivery_runs").update({
+        started_at: run.started_at ?? now,
+        status: "in_progress",
+      }).eq("id", run.id);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("delivery_runs").insert({
+        route_id: route.id, run_date: date,
+        driver_name: route.driver_name, helper_name: route.helper_name,
+        vehicle_number: route.vehicle_number, vehicle_type: route.vehicle_type,
+        started_at: now, status: "in_progress",
+      });
+      if (error) return toast.error(error.message);
+    }
+    toast.success("Run started");
+    invalidate();
+  };
+
+  const endRun = async () => {
+    if (!run) return;
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("delivery_runs").update({
+      ended_at: now, status: "completed",
+    }).eq("id", run.id);
+    if (error) return toast.error(error.message);
+    toast.success("Run ended");
+    invalidate();
+  };
+
+  const dur = durationMin(run?.started_at ?? null, run?.ended_at ?? null);
+
+  return (
+    <div className="px-5 py-3 border-b bg-primary/5 flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2 text-xs">
+        <Truck className="size-4 text-primary" />
+        <span className="font-semibold uppercase tracking-wider text-muted-foreground">Delivery run</span>
+        <Badge variant={run?.status === "completed" ? "outline" : run?.status === "in_progress" ? "default" : "secondary"} className="capitalize">
+          {run?.status?.replace("_", " ") || "not started"}
+        </Badge>
+      </div>
+      <div className="flex flex-wrap gap-4 text-xs">
+        <span>Start <b className="font-mono text-foreground">{fmtTime(run?.started_at ?? null)}</b></span>
+        <span>End <b className="font-mono text-foreground">{fmtTime(run?.ended_at ?? null)}</b></span>
+        {dur != null && <span>Duration <b className="font-mono text-foreground">{Math.floor(dur / 60)}h {dur % 60}m</b></span>}
+        {run?.odometer_start != null && (
+          <span>Odo <b className="font-mono text-foreground">{num(run.odometer_start, 0)}{run.odometer_end != null ? ` → ${num(run.odometer_end, 0)} (${num(Number(run.odometer_end) - Number(run.odometer_start), 0)} km)` : ""}</b></span>
+        )}
+      </div>
+      <div className="ml-auto flex gap-2 no-print">
+        {!run?.started_at && (
+          <Button size="sm" onClick={startRun} className="gap-1.5">▶ Start run</Button>
+        )}
+        {run?.started_at && !run?.ended_at && (
+          <Button size="sm" variant="destructive" onClick={endRun} className="gap-1.5">■ End run</Button>
+        )}
+        <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>Details</Button>
+      </div>
+      <RunEditDialog open={editOpen} onClose={() => setEditOpen(false)} route={route} date={date} run={run ?? null} onSaved={invalidate} />
+    </div>
+  );
+}
+
+function RunEditDialog({
+  open, onClose, route, date, run, onSaved,
+}: {
+  open: boolean; onClose: () => void; route: RouteRow; date: string; run: DeliveryRun | null; onSaved: () => void;
+}) {
+  const toLocal = (iso: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const off = d.getTimezoneOffset();
+    return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+  };
+  const fromLocal = (v: string) => (v ? new Date(v).toISOString() : null);
+
+  const [driver, setDriver] = useState("");
+  const [helper, setHelper] = useState("");
+  const [vehicle, setVehicle] = useState("");
+  const [vtype, setVtype] = useState("");
+  const [startedAt, setStartedAt] = useState("");
+  const [endedAt, setEndedAt] = useState("");
+  const [odoS, setOdoS] = useState("");
+  const [odoE, setOdoE] = useState("");
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState("scheduled");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setDriver(run?.driver_name ?? route.driver_name ?? "");
+    setHelper(run?.helper_name ?? route.helper_name ?? "");
+    setVehicle(run?.vehicle_number ?? route.vehicle_number ?? "");
+    setVtype(run?.vehicle_type ?? route.vehicle_type ?? "");
+    setStartedAt(toLocal(run?.started_at ?? null));
+    setEndedAt(toLocal(run?.ended_at ?? null));
+    setOdoS(run?.odometer_start != null ? String(run.odometer_start) : "");
+    setOdoE(run?.odometer_end != null ? String(run.odometer_end) : "");
+    setNotes(run?.notes ?? "");
+    setStatus(run?.status ?? "scheduled");
+  }, [open, run, route]);
+
+  const save = async () => {
+    setSaving(true);
+    const payload = {
+      route_id: route.id, run_date: date,
+      driver_name: driver || null, helper_name: helper || null,
+      vehicle_number: vehicle || null, vehicle_type: vtype || null,
+      started_at: fromLocal(startedAt), ended_at: fromLocal(endedAt),
+      odometer_start: odoS ? Number(odoS) : null,
+      odometer_end: odoE ? Number(odoE) : null,
+      notes: notes || null, status,
+    };
+    const q = run
+      ? supabase.from("delivery_runs").update(payload).eq("id", run.id)
+      : supabase.from("delivery_runs").insert(payload);
+    const { error } = await q;
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Run saved");
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Delivery run · {route.name} · {shortDate(date)}</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Driver</Label><Input value={driver} onChange={(e) => setDriver(e.target.value)} /></div>
+            <div><Label>Helper</Label><Input value={helper} onChange={(e) => setHelper(e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Vehicle number</Label><Input value={vehicle} onChange={(e) => setVehicle(e.target.value.toUpperCase())} /></div>
+            <div><Label>Vehicle type</Label><Input value={vtype} onChange={(e) => setVtype(e.target.value)} placeholder="tempo / mini_truck…" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Started at</Label><Input type="datetime-local" value={startedAt} onChange={(e) => setStartedAt(e.target.value)} /></div>
+            <div><Label>Ended at</Label><Input type="datetime-local" value={endedAt} onChange={(e) => setEndedAt(e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Odometer start (km)</Label><Input type="number" inputMode="decimal" value={odoS} onChange={(e) => setOdoS(e.target.value)} /></div>
+            <div><Label>Odometer end (km)</Label><Input type="number" inputMode="decimal" value={odoE} onChange={(e) => setOdoE(e.target.value)} /></div>
+          </div>
+          <div><Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="in_progress">In progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Fuel, incidents, delays…" /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save run"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
