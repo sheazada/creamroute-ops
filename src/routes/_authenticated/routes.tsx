@@ -572,6 +572,7 @@ function RouteFormDialog({
       active, notes: notes || null,
       capacity_units: capacity ? Number(capacity) : null,
       capacity_label: capacityLabel || null,
+      max_stops: maxStops.trim() ? Number(maxStops) : null,
       vehicle_number: vehicleNumber || null,
       vehicle_type: vehicleType || null,
       start_latitude: startLat.trim() ? Number(startLat) : null,
