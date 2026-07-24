@@ -193,8 +193,12 @@ function Settings() {
   };
 
   const [savedFlash, setSavedFlash] = useState<Section | null>(null);
+  const [savingSection, setSavingSection] = useState<Section | null>(null);
 
-  const saveBiz = () => {
+  const saveBiz = async () => {
+    // Guard against double-submit (Enter key, banner + card, rapid clicks).
+    if (savingSection) return;
+    const section = editing;
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
     if (!ok) {
@@ -219,23 +223,33 @@ function Settings() {
       return;
     }
 
-    saveBusiness(biz);
-    const section = editing;
-    setEditing(null);
-    setSnapshot(null);
-    setErrors({});
-    if (section) {
-      setSavedFlash(section);
-      window.setTimeout(() => {
-        setSavedFlash((cur) => (cur === section ? null : cur));
-      }, 4000);
+    if (section) setSavingSection(section);
+    try {
+      // Small awaited tick so the loading state renders even for synchronous
+      // local persistence — and gives room for a real network call later.
+      await new Promise((r) => setTimeout(r, 250));
+      saveBusiness(biz);
+      setEditing(null);
+      setSnapshot(null);
+      setErrors({});
+      if (section) {
+        setSavedFlash(section);
+        window.setTimeout(() => {
+          setSavedFlash((cur) => (cur === section ? null : cur));
+        }, 4000);
+      }
+      toast.success(
+        section === "payment"
+          ? "Payment & bank details saved — new invoices will use them"
+          : "Business identity saved — new invoices will use it",
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSavingSection(null);
     }
-    toast.success(
-      section === "payment"
-        ? "Payment & bank details saved — new invoices will use them"
-        : "Business identity saved — new invoices will use it",
-    );
   };
+
 
 
   // Warn on browser unload while there are unsaved changes.
