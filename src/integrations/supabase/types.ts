@@ -27,6 +27,8 @@ export type Database = {
           mobile: string | null
           name: string
           notes: string | null
+          notify_email: boolean
+          notify_sms: boolean
           outstanding: number
           shop_name: string | null
           status: string
@@ -44,6 +46,8 @@ export type Database = {
           mobile?: string | null
           name: string
           notes?: string | null
+          notify_email?: boolean
+          notify_sms?: boolean
           outstanding?: number
           shop_name?: string | null
           status?: string
@@ -61,6 +65,8 @@ export type Database = {
           mobile?: string | null
           name?: string
           notes?: string | null
+          notify_email?: boolean
+          notify_sms?: boolean
           outstanding?: number
           shop_name?: string | null
           status?: string
