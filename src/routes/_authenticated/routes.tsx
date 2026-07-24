@@ -1275,6 +1275,7 @@ function DeliverStopDialog({
   const [signature, setSignature] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [qtys, setQtys] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open && payload) {
@@ -1284,6 +1285,13 @@ function DeliverStopDialog({
       setReference("");
       setSignature(payload.delivery?.pod_signature ?? "");
       setFile(null);
+      const init: Record<string, string> = {};
+      (payload.inv.items ?? []).forEach((it) => {
+        const ordered = Number(it.ordered_quantity ?? it.quantity ?? 0);
+        const delivered = it.delivered_quantity != null ? Number(it.delivered_quantity) : ordered;
+        init[it.id] = String(delivered);
+      });
+      setQtys(init);
     }
   }, [open, payload]);
 
@@ -1291,11 +1299,41 @@ function DeliverStopDialog({
   const { inv, delivery } = payload;
   const bal = Number(inv.balance);
 
+  const items = inv.items ?? [];
+  const derivedStatus = (() => {
+    if (items.length === 0) return "delivered" as const;
+    let allFull = true, allZero = true;
+    for (const it of items) {
+      const ordered = Number(it.ordered_quantity ?? it.quantity ?? 0);
+      const d = Math.max(0, Math.min(Number(qtys[it.id] || 0), ordered));
+      if (d < ordered) allFull = false;
+      if (d > 0) allZero = false;
+    }
+    if (allZero) return "failed" as const;
+    if (allFull) return "delivered" as const;
+    return "partially_delivered" as const;
+  })();
+
+  const setQty = (id: string, v: string) => setQtys((s) => ({ ...s, [id]: v }));
+
   const save = async () => {
     if (!delivery) return toast.error("No delivery record");
-    if (!receivedBy.trim()) return toast.error("Who received it?");
+    if (!receivedBy.trim() && derivedStatus !== "failed") return toast.error("Who received it?");
     setSaving(true);
     try {
+      // 1. Apply per-item delivered quantities (recomputes invoice via triggers)
+      const payloadItems = items.map((it) => {
+        const ordered = Number(it.ordered_quantity ?? it.quantity ?? 0);
+        return { id: it.id, delivered: Math.max(0, Math.min(Number(qtys[it.id] || 0), ordered)) };
+      });
+      const { data: statusData, error: rpcErr } = await supabase.rpc("apply_delivery_quantities", {
+        _invoice_id: inv.id,
+        _items: payloadItems as any,
+      });
+      if (rpcErr) throw rpcErr;
+      const finalStatus = (statusData as string) || derivedStatus;
+
+      // 2. POD upload
       let podUrl = delivery.pod_photo_url;
       if (file) {
         const ext = file.name.split(".").pop() || "jpg";
@@ -1304,6 +1342,8 @@ function DeliverStopDialog({
         if (up.error) throw up.error;
         podUrl = path;
       }
+
+      // 3. Payment (if any)
       const amt = Number(amount || 0);
       if (amt > 0 && inv.customer) {
         const { error: pErr } = await supabase.from("payments").insert({
@@ -1317,10 +1357,12 @@ function DeliverStopDialog({
         });
         if (pErr) throw pErr;
       }
+
+      // 4. Update delivery row
       const { error: dErr } = await supabase.from("deliveries").update({
-        status: "delivered",
+        status: finalStatus,
         delivered_at: new Date().toISOString(),
-        received_by: receivedBy.trim(),
+        received_by: receivedBy.trim() || null,
         pod_photo_url: podUrl,
         pod_signature: signature || null,
         collected_amount: amt > 0 ? amt : delivery.collected_amount,
@@ -1328,7 +1370,11 @@ function DeliverStopDialog({
         route_id: route.id === "u" ? null : route.id,
       }).eq("id", delivery.id);
       if (dErr) throw dErr;
-      toast.success("Delivery marked with POD");
+      toast.success(
+        finalStatus === "delivered" ? "Delivered" :
+        finalStatus === "partially_delivered" ? "Marked partially delivered" :
+        "Marked as failed"
+      );
       onSaved();
     } catch (e: any) {
       toast.error(e.message || "Failed");
@@ -1337,17 +1383,28 @@ function DeliverStopDialog({
     }
   };
 
+  const setAllFull = () => {
+    const next: Record<string, string> = {};
+    items.forEach((it) => { next[it.id] = String(Number(it.ordered_quantity ?? it.quantity ?? 0)); });
+    setQtys(next);
+  };
+  const setAllZero = () => {
+    const next: Record<string, string> = {};
+    items.forEach((it) => { next[it.id] = "0"; });
+    setQtys(next);
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Delivery · {inv.customer?.shop_name || inv.customer?.name}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="rounded-lg bg-muted/40 p-3 text-sm flex items-center justify-between">
             <div>
               <div className="font-medium">Invoice {inv.invoice_no}</div>
-              <div className="text-xs text-muted-foreground">{inv.items?.length ?? 0} items · {inr(inv.total)}</div>
+              <div className="text-xs text-muted-foreground">{items.length} items · {inr(inv.total)}</div>
             </div>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">Balance</div>
@@ -1355,8 +1412,54 @@ function DeliverStopDialog({
             </div>
           </div>
 
+          {/* Per-item delivered quantities */}
+          <div className="rounded-lg border">
+            <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delivered quantities</div>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={setAllFull}>All full</Button>
+                <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={setAllZero}>All zero</Button>
+              </div>
+            </div>
+            <div className="divide-y">
+              {items.map((it) => {
+                const ordered = Number(it.ordered_quantity ?? it.quantity ?? 0);
+                const d = Math.max(0, Math.min(Number(qtys[it.id] || 0), ordered));
+                const short = ordered - d;
+                return (
+                  <div key={it.id} className="flex items-center gap-3 px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">{it.product_name}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Ordered {ordered} · Rate {inr(it.rate)}
+                        {short > 0 && <span className="text-destructive"> · Short {short}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button type="button" size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setQty(it.id, String(Math.max(0, d - 1)))}>−</Button>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        className="h-8 w-20 text-center"
+                        value={qtys[it.id] ?? ""}
+                        onChange={(e) => setQty(it.id, e.target.value)}
+                      />
+                      <Button type="button" size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setQty(it.id, String(Math.min(ordered, d + 1)))}>+</Button>
+                    </div>
+                    <div className="w-14 text-right text-[11px] text-muted-foreground font-mono">/ {ordered}</div>
+                  </div>
+                );
+              })}
+              {items.length === 0 && <div className="px-3 py-4 text-xs text-muted-foreground">No items on this invoice.</div>}
+            </div>
+            <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/20 text-xs">
+              <span className="text-muted-foreground">Auto-status</span>
+              <StatusBadge status={derivedStatus} />
+            </div>
+          </div>
+
           <div>
-            <Label>Received by *</Label>
+            <Label>Received by {derivedStatus !== "failed" && "*"}</Label>
             <Input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} placeholder="Person accepting the goods" />
           </div>
 
@@ -1399,7 +1502,12 @@ function DeliverStopDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Mark Delivered"}</Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving…" :
+              derivedStatus === "delivered" ? "Mark Delivered" :
+              derivedStatus === "partially_delivered" ? "Save Partial Delivery" :
+              "Mark Failed"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
