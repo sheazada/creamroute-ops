@@ -757,12 +757,14 @@ function CollapsibleCard({
 
 
 function FieldRow({
+  field,
   label,
   error,
   hint,
   colSpan = 1,
   children,
 }: {
+  field?: string;
   label: string;
   error?: string;
   hint?: string;
@@ -770,7 +772,10 @@ function FieldRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`space-y-1.5 ${colSpan === 2 ? "col-span-2" : ""}`}>
+    <div
+      data-field={field}
+      className={`space-y-1.5 scroll-mt-24 ${colSpan === 2 ? "col-span-2" : ""}`}
+    >
       <Label>{label}</Label>
       {children}
       {error ? (
@@ -781,3 +786,4 @@ function FieldRow({
     </div>
   );
 }
+
