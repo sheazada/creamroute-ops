@@ -1137,7 +1137,7 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
         </div>
       </div>
 
-      {route.id !== "u" && <RunPanel route={route} date={date} />}
+      {route.id !== "u" && <RunPanel route={route} date={date} invoiceIds={invoiceIds} />}
 
       {/* Pickup summary + capacity bar */}
 
