@@ -1491,6 +1491,8 @@ function DeliverStopDialog({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [qtys, setQtys] = useState<Record<string, string>>({});
+  const enqueueNotifs = useServerFn(enqueueDeliveryNotifications);
+  const processNotifs = useServerFn(processQueuedNotifications);
 
   useEffect(() => {
     if (open && payload) {
