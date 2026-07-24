@@ -43,7 +43,7 @@ const nav: {
   label: string;
   items: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[];
 }[] = [
-  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ALL }] },
+  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: FIN }] },
   {
     label: "Sales",
     items: [
