@@ -208,6 +208,7 @@ function SortableStopRow({
   onMoveUp,
   onMoveDown,
   onRemove,
+  onSetGps,
 }: {
   stop: Stop;
   index: number;
@@ -215,6 +216,7 @@ function SortableStopRow({
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
+  onSetGps: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id });
   const style = {
@@ -223,6 +225,7 @@ function SortableStopRow({
     opacity: isDragging ? 0.6 : 1,
     zIndex: isDragging ? 10 : "auto" as const,
   };
+  const hasGps = typeof stop.customer?.latitude === "number" && typeof stop.customer?.longitude === "number";
   return (
     <li ref={setNodeRef} style={style} className={`px-5 py-3 flex items-center gap-3 bg-background ${isDragging ? "shadow-lg" : ""}`}>
       <button
@@ -238,7 +241,10 @@ function SortableStopRow({
         {index + 1}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{stop.customer?.shop_name || stop.customer?.name}</div>
+        <div className="text-sm font-medium truncate flex items-center gap-1.5">
+          {stop.customer?.shop_name || stop.customer?.name}
+          {hasGps && <MapPin className="size-3 text-primary" aria-label="GPS captured" />}
+        </div>
         <div className="text-xs text-muted-foreground truncate">
           {stop.customer?.address || "—"}
           {stop.customer?.mobile ? ` · ${stop.customer.mobile}` : ""}
@@ -249,6 +255,16 @@ function SortableStopRow({
         <div className="font-mono font-semibold">{inr(stop.customer?.outstanding ?? 0)}</div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onSetGps}
+          aria-label={hasGps ? "Update GPS" : "Capture GPS at this shop"}
+          title={hasGps ? "Update GPS from current location" : "Capture GPS at this shop"}
+          className={hasGps ? "text-primary" : ""}
+        >
+          <Crosshair className="size-4" />
+        </Button>
         <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={index === 0} aria-label="Move up"><ArrowUp className="size-4" /></Button>
         <Button variant="ghost" size="icon" onClick={onMoveDown} disabled={index === total - 1} aria-label="Move down"><ArrowDown className="size-4" /></Button>
         <Button variant="ghost" size="icon" onClick={onRemove} className="text-destructive" aria-label="Remove"><Trash2 className="size-4" /></Button>
