@@ -109,6 +109,7 @@ function Settings() {
           description="Shown on every invoice header, print copy and PDF."
           summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + biz.gstin : ""}` : "Not set — tap to add"}
           storageKey={me?.userId ? `settings:section:${me.userId}:business` : undefined}
+          readOnly={!isAdmin}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -198,6 +199,7 @@ function Settings() {
               : "Not set — tap to add"
           }
           storageKey={me?.userId ? `settings:section:${me.userId}:payment` : undefined}
+          readOnly={!isAdmin}
         >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5 col-span-2">
