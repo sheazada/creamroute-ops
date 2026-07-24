@@ -481,6 +481,11 @@ function CollapsibleCard({
   defaultOpen = false,
   storageKey,
   readOnly = false,
+  editing = false,
+  dirty = false,
+  onEdit,
+  onCancel,
+  onSave,
   children,
 }: {
   icon: any;
@@ -490,6 +495,11 @@ function CollapsibleCard({
   defaultOpen?: boolean;
   storageKey?: string;
   readOnly?: boolean;
+  editing?: boolean;
+  dirty?: boolean;
+  onEdit?: () => void;
+  onCancel?: () => void;
+  onSave?: () => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -509,47 +519,106 @@ function CollapsibleCard({
       window.localStorage.setItem(storageKey, open ? "1" : "0");
     } catch {}
   }, [open, storageKey, readOnly]);
+  // Auto-open the section while it's being edited so the form is visible.
+  useEffect(() => { if (editing) setOpen(true); }, [editing]);
   const effectiveOpen = readOnly ? false : open;
+
+  const requestToggle = () => {
+    if (readOnly) return;
+    if (open && editing && dirty) {
+      // Route close-with-unsaved-changes through Cancel (which prompts).
+      onCancel?.();
+      return;
+    }
+    if (open && editing) {
+      // Close cleanly and exit edit mode.
+      onCancel?.();
+      setOpen(false);
+      return;
+    }
+    setOpen((v) => !v);
+  };
+
   return (
     <Card className="p-0 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => { if (!readOnly) setOpen((v) => !v); }}
-        disabled={readOnly}
-        className={`w-full flex items-center gap-3 p-4 text-left transition-colors ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
-        aria-expanded={effectiveOpen}
-        title={readOnly ? "Admin-only — view only for your role" : undefined}
-      >
-        <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
-          <Icon className="size-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-sm">{title}</div>
-          {effectiveOpen ? (
-            <div className="text-xs text-muted-foreground truncate">{description}</div>
+      <div className="w-full flex items-center gap-3 p-4">
+        <button
+          type="button"
+          onClick={requestToggle}
+          disabled={readOnly}
+          className={`flex items-center gap-3 flex-1 min-w-0 text-left transition-colors -m-2 p-2 rounded ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
+          aria-expanded={effectiveOpen}
+          title={readOnly ? "Admin-only — view only for your role" : undefined}
+        >
+          <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+            <Icon className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-sm flex items-center gap-2">
+              {title}
+              {editing && (
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20">
+                  {dirty ? "Editing • unsaved" : "Editing"}
+                </span>
+              )}
+            </div>
+            {effectiveOpen ? (
+              <div className="text-xs text-muted-foreground truncate">{description}</div>
+            ) : (
+              <div className="text-xs text-muted-foreground truncate">{summary}</div>
+            )}
+          </div>
+          <ChevronDown
+            className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {readOnly ? (
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hidden sm:inline">
+              Admin only
+            </span>
+          ) : editing ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => onCancel?.()}
+              >
+                <X className="size-3.5 mr-1" /> Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onSave?.()}
+                disabled={!dirty}
+              >
+                <Check className="size-3.5 mr-1" /> Save
+              </Button>
+            </>
           ) : (
-            <div className="text-xs text-muted-foreground truncate">{summary}</div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onEdit?.()}
+            >
+              <Pencil className="size-3.5 mr-1" /> Edit
+            </Button>
           )}
         </div>
-        {readOnly ? (
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hidden sm:inline">
-            Admin only
-          </span>
-        ) : (
-          <>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
-              {open ? "Close" : "Edit"}
-            </span>
-            <ChevronDown
-              className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-            />
-          </>
-        )}
-      </button>
-      {effectiveOpen && <div className="p-6 pt-2 border-t">{children}</div>}
+      </div>
+      {effectiveOpen && (
+        <div className="p-6 pt-2 border-t">
+          <fieldset disabled={!editing} className={editing ? "" : "opacity-90"}>
+            {children}
+          </fieldset>
+        </div>
+      )}
     </Card>
   );
 }
+
 
 
 function FieldRow({
