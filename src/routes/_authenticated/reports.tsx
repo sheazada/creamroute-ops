@@ -534,7 +534,7 @@ ${meta ? `<div class="meta">${esc(meta)}</div>` : ""}
 <table>
   <thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead>
   <tbody>
-    ${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}
+    ${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(cellText(c))}</td>`).join("")}</tr>`).join("")}
     ${totalsRow}
   </tbody>
 </table>
