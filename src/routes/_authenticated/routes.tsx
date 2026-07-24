@@ -1192,6 +1192,15 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
     if (route.id === "u") return;
     const ids = (deliveries ?? []).filter((d) => d.route_id !== route.id).map((d) => d.id);
     if (ids.length === 0) return toast.info("All stops already on this route");
+    const currentOnRoute = (deliveries ?? []).filter((d) => d.route_id === route.id).length;
+    const ms = Number(route.max_stops || 0);
+    if (ms > 0 && currentOnRoute + ids.length > ms) {
+      return toast.error(`Can't assign — ${route.name} allows max ${ms} stops per run (already ${currentOnRoute}). Raise the limit or split across routes.`);
+    }
+    const capUnits = Number(route.capacity_units || 0);
+    if (capUnits > 0 && load > capUnits) {
+      return toast.error(`Can't assign — load ${num(load, 1)} ${route.capacity_label || ""} exceeds capacity ${num(capUnits, 0)}.`);
+    }
     const { error } = await supabase.from("deliveries").update({ route_id: route.id }).in("id", ids);
     if (error) return toast.error(error.message);
     toast.success(`Linked ${ids.length} delivery${ids.length === 1 ? "" : "ies"} to ${route.name}`);
