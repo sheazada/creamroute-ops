@@ -50,6 +50,7 @@ type RouteRow = {
   notes: string | null;
   capacity_units: number | null;
   capacity_label: string | null;
+  max_stops: number | null;
   vehicle_number: string | null;
   vehicle_type: string | null;
   start_latitude: number | null;
@@ -524,6 +525,7 @@ function RouteFormDialog({
   const [notes, setNotes] = useState(route?.notes ?? "");
   const [capacity, setCapacity] = useState<string>(route?.capacity_units != null ? String(route.capacity_units) : "");
   const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
+  const [maxStops, setMaxStops] = useState<string>(route?.max_stops != null ? String(route.max_stops) : "");
   const [vehicleNumber, setVehicleNumber] = useState(route?.vehicle_number ?? "");
   const [vehicleType, setVehicleType] = useState(route?.vehicle_type ?? "");
   const [startLat, setStartLat] = useState<string>(route?.start_latitude != null ? String(route.start_latitude) : "");
@@ -540,6 +542,7 @@ function RouteFormDialog({
       setNotes(route?.notes ?? "");
       setCapacity(route?.capacity_units != null ? String(route.capacity_units) : "");
       setCapacityLabel(route?.capacity_label ?? "L");
+      setMaxStops(route?.max_stops != null ? String(route.max_stops) : "");
       setVehicleNumber(route?.vehicle_number ?? "");
       setVehicleType(route?.vehicle_type ?? "");
       setStartLat(route?.start_latitude != null ? String(route.start_latitude) : "");
@@ -569,6 +572,7 @@ function RouteFormDialog({
       active, notes: notes || null,
       capacity_units: capacity ? Number(capacity) : null,
       capacity_label: capacityLabel || null,
+      max_stops: maxStops.trim() ? Number(maxStops) : null,
       vehicle_number: vehicleNumber || null,
       vehicle_type: vehicleType || null,
       start_latitude: startLat.trim() ? Number(startLat) : null,
@@ -616,6 +620,7 @@ function RouteFormDialog({
             <div className="col-span-2"><Label>Vehicle capacity</Label><Input type="number" inputMode="decimal" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g. 400" /></div>
             <div><Label>Unit</Label><Input value={capacityLabel} onChange={(e) => setCapacityLabel(e.target.value)} placeholder="L / crates / kg" /></div>
           </div>
+          <div><Label>Max stops per run</Label><Input type="number" inputMode="numeric" value={maxStops} onChange={(e) => setMaxStops(e.target.value)} placeholder="e.g. 25 (leave blank for no limit)" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Vehicle number</Label><Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. BR10AB1234" /></div>
             <div><Label>Vehicle type</Label>
@@ -888,6 +893,13 @@ function SheetTab({ date }: { date: string }) {
       return min;
     };
 
+    const routeLimit = (r: RouteRow) => {
+      const cap = Number(r.capacity_units || 0);
+      const ms = Number(r.max_stops || 0);
+      const limits = [cap, ms].filter((n) => n > 0);
+      return limits.length ? Math.min(...limits) : Infinity;
+    };
+
     const pickRoute = (cust: { address?: string | null; latitude?: number | null; longitude?: number | null } | null | undefined) => {
       const address = cust?.address ?? null;
       const cLat = cust?.latitude != null ? Number(cust.latitude) : null;
@@ -895,6 +907,11 @@ function SheetTab({ date }: { date: string }) {
       const custTokens = tokens(address);
       let best: { rid: string; score: number } | null = null;
       for (const r of active) {
+        // Hard capacity guard — never assign to a route already at its per-run limit.
+        const load = routeLoad.get(r.id) ?? 0;
+        const limit = routeLimit(r);
+        if (load >= limit) continue;
+
         const vocab = routeVocab.get(r.id)!;
         let overlap = 0;
         custTokens.forEach((t) => { if (vocab.has(t)) overlap += 1; });
@@ -902,10 +919,8 @@ function SheetTab({ date }: { date: string }) {
         const areaLc = (r.area ?? "").toLowerCase().trim();
         const addrLc = (address ?? "").toLowerCase();
         const areaBonus = areaLc && addrLc.includes(areaLc) ? 5 : 0;
-        // load penalty
-        const load = routeLoad.get(r.id) ?? 0;
-        const cap = Number(r.capacity_units || 0);
-        const overCap = cap > 0 && load >= cap ? -3 : 0;
+        // soft near-capacity penalty (kicks in in the last 20% of slots)
+        const nearCap = Number.isFinite(limit) && load >= Math.max(1, Math.floor(limit * 0.8)) ? -3 : 0;
 
         // distance score — dominant signal when both sides have coordinates
         let distScore = 0;
@@ -922,7 +937,7 @@ function SheetTab({ date }: { date: string }) {
           }
         }
 
-        const score = distScore + overlap * 2 + areaBonus - load * 0.05 + overCap;
+        const score = distScore + overlap * 2 + areaBonus - load * 0.05 + nearCap;
         if (!best || score > best.score) best = { rid: r.id, score };
       }
       return best?.rid ?? null;
@@ -944,10 +959,11 @@ function SheetTab({ date }: { date: string }) {
       const deliveryUpdates = new Map<string, string[]>(); // route_id -> delivery ids
       const perRouteCount = new Map<string, number>();
       const seen = new Set<string>(); // route+customer dedupe
+      let skipped = 0;
 
       for (const inv of unassigned) {
         const rid = pickRoute(inv.customer);
-        if (!rid) continue;
+        if (!rid) { skipped += 1; continue; }
         const key = `${rid}::${inv.customer_id}`;
         if (!seen.has(key)) {
           seen.add(key);
@@ -961,6 +977,8 @@ function SheetTab({ date }: { date: string }) {
           arr.push(delId);
           deliveryUpdates.set(rid, arr);
         }
+        // Reserve a slot on the chosen route so subsequent picks respect capacity.
+        routeLoad.set(rid, (routeLoad.get(rid) ?? 0) + 1);
         perRouteCount.set(rid, (perRouteCount.get(rid) ?? 0) + 1);
       }
 
@@ -1004,6 +1022,9 @@ function SheetTab({ date }: { date: string }) {
       const total = Array.from(perRouteCount.values()).reduce((a, b) => a + b, 0);
       setLastAssign({ date, createdStops, deliveryPrev, total });
       toast.success(`Auto-assigned ${total} shop${total === 1 ? "" : "s"} across ${routesTouched} route${routesTouched === 1 ? "" : "s"}.`);
+      if (skipped > 0) {
+        toast.warning(`${skipped} shop${skipped === 1 ? "" : "s"} skipped — all eligible routes are at capacity or max stops. Raise the limits or add a route.`);
+      }
       qc.invalidateQueries({ queryKey: ["all-route-stops-with-addr"] });
       qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date] });
       qc.invalidateQueries({ queryKey: ["deliveries"] });
@@ -1091,7 +1112,7 @@ function SheetTab({ date }: { date: string }) {
       {grouped.unassigned.length > 0 && (
         <RouteSheet
           key="unassigned"
-          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null, vehicle_number: null, vehicle_type: null, start_latitude: null, start_longitude: null }}
+          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null, max_stops: null, vehicle_number: null, vehicle_type: null, start_latitude: null, start_longitude: null }}
           invoices={grouped.unassigned}
           date={date}
         />
@@ -1171,6 +1192,15 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
     if (route.id === "u") return;
     const ids = (deliveries ?? []).filter((d) => d.route_id !== route.id).map((d) => d.id);
     if (ids.length === 0) return toast.info("All stops already on this route");
+    const currentOnRoute = (deliveries ?? []).filter((d) => d.route_id === route.id).length;
+    const ms = Number(route.max_stops || 0);
+    if (ms > 0 && currentOnRoute + ids.length > ms) {
+      return toast.error(`Can't assign — ${route.name} allows max ${ms} stops per run (already ${currentOnRoute}). Raise the limit or split across routes.`);
+    }
+    const capUnits = Number(route.capacity_units || 0);
+    if (capUnits > 0 && load > capUnits) {
+      return toast.error(`Can't assign — load ${num(load, 1)} ${route.capacity_label || ""} exceeds capacity ${num(capUnits, 0)}.`);
+    }
     const { error } = await supabase.from("deliveries").update({ route_id: route.id }).in("id", ids);
     if (error) return toast.error(error.message);
     toast.success(`Linked ${ids.length} delivery${ids.length === 1 ? "" : "ies"} to ${route.name}`);
@@ -1279,6 +1309,20 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
       {/* Pickup summary + capacity bar */}
 
       <div className="px-5 py-3 border-b space-y-3">
+        {route.max_stops != null && route.max_stops > 0 && (
+          <div>
+            <div className="flex items-center justify-between text-[11px] mb-1">
+              <span className="font-semibold uppercase tracking-wider text-muted-foreground">Stops used</span>
+              <span className={`font-mono ${invoices.length > route.max_stops ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                {invoices.length} / {route.max_stops}
+                {invoices.length > route.max_stops && ` · OVER by ${invoices.length - route.max_stops}`}
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div className={`h-full ${invoices.length > route.max_stops ? "bg-destructive" : "bg-primary"}`} style={{ width: `${Math.min(100, (invoices.length / route.max_stops) * 100)}%` }} />
+            </div>
+          </div>
+        )}
         {cap > 0 && (
           <div>
             <div className="flex items-center justify-between text-[11px] mb-1">

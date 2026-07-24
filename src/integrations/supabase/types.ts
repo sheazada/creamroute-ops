@@ -863,6 +863,7 @@ export type Database = {
           driver_name: string | null
           helper_name: string | null
           id: string
+          max_stops: number | null
           name: string
           notes: string | null
           start_latitude: number | null
@@ -880,6 +881,7 @@ export type Database = {
           driver_name?: string | null
           helper_name?: string | null
           id?: string
+          max_stops?: number | null
           name: string
           notes?: string | null
           start_latitude?: number | null
@@ -897,6 +899,7 @@ export type Database = {
           driver_name?: string | null
           helper_name?: string | null
           id?: string
+          max_stops?: number | null
           name?: string
           notes?: string | null
           start_latitude?: number | null
