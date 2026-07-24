@@ -1014,8 +1014,18 @@ function SheetTab({ date }: { date: string }) {
           <div className="text-sm flex-1 min-w-0">
             <b>{grouped.unassigned.length}</b> shop{grouped.unassigned.length === 1 ? "" : "s"} not on any route yet. Auto-match by area and existing route mix.
           </div>
-          <Button size="sm" onClick={autoAssign} disabled={assigning} className="gap-1.5">
+          <Button size="sm" onClick={autoAssign} disabled={assigning || undoing} className="gap-1.5">
             <Sparkles className="size-4" /> {assigning ? "Assigning…" : "Auto-assign"}
+          </Button>
+        </Card>
+      )}
+      {lastAssign && lastAssign.date === date && (lastAssign.createdStops.length > 0 || lastAssign.deliveryPrev.length > 0) && (
+        <Card className="p-3 flex flex-wrap items-center gap-3 bg-amber-50 border-amber-200">
+          <div className="text-sm flex-1 min-w-0">
+            Last auto-assign added <b>{lastAssign.total}</b> shop{lastAssign.total === 1 ? "" : "s"} for {shortDate(date)}.
+          </div>
+          <Button size="sm" variant="outline" onClick={undoAutoAssign} disabled={undoing || assigning} className="gap-1.5">
+            {undoing ? "Undoing…" : "Undo auto-assign"}
           </Button>
         </Card>
       )}
