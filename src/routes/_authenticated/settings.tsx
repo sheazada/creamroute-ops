@@ -470,6 +470,7 @@ function Settings() {
           onEdit={() => startEdit("payment")}
           onCancel={cancelEdit}
           onSave={saveBiz}
+          saving={savingSection === "payment"}
         >
           {renderSectionBanner("payment")}
           <div className="grid grid-cols-2 gap-3">
