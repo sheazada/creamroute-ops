@@ -1879,8 +1879,8 @@ function eventStyle(kind: TimelineEvent["kind"]) {
 }
 
 function RunTimelineDialog({
-  open, onClose, route, date,
-}: { open: boolean; onClose: () => void; route: RouteRow; date: string }) {
+  open, onClose, route, date, invoiceIds,
+}: { open: boolean; onClose: () => void; route: RouteRow; date: string; invoiceIds: string[] }) {
   const { data, isLoading } = useQuery({
     enabled: open,
     queryKey: ["run-timeline", route.id, date],
