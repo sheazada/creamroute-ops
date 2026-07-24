@@ -170,7 +170,7 @@ function SidebarContent({
         <div className="min-w-0">
           <div className="text-sm font-semibold tracking-tight leading-none truncate">DairyFlow Pro</div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
-            Distribution ERP
+            Distribution ERP 🧪 Arena Connected
           </div>
         </div>
       </div>
