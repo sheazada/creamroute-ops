@@ -1367,6 +1367,15 @@ function DeliverStopDialog({
         if (pErr) throw pErr;
       }
 
+      // 3b. Capture POD GPS (non-blocking on failure)
+      let podLat: number | null = null, podLng: number | null = null, podAcc: number | null = null, podAt: string | null = null;
+      try {
+        const fix = await getCurrentPosition();
+        podLat = fix.latitude; podLng = fix.longitude; podAcc = fix.accuracy; podAt = fix.capturedAt;
+      } catch (geoErr: any) {
+        toast.warning(`Saved without GPS: ${geoErr.message}`);
+      }
+
       // 4. Update delivery row
       const { error: dErr } = await supabase.from("deliveries").update({
         status: finalStatus,
@@ -1377,6 +1386,10 @@ function DeliverStopDialog({
         collected_amount: amt > 0 ? amt : delivery.collected_amount,
         collected_mode: amt > 0 ? mode : delivery.collected_mode,
         route_id: route.id === "u" ? null : route.id,
+        pod_latitude: podLat ?? (delivery as any).pod_latitude ?? null,
+        pod_longitude: podLng ?? (delivery as any).pod_longitude ?? null,
+        pod_accuracy_m: podAcc ?? (delivery as any).pod_accuracy_m ?? null,
+        pod_captured_at: podAt ?? (delivery as any).pod_captured_at ?? null,
       }).eq("id", delivery.id);
       if (dErr) throw dErr;
       toast.success(
