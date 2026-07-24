@@ -1755,6 +1755,7 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   const { data: run } = useQuery({
     queryKey: ["delivery-run", route.id, date],
