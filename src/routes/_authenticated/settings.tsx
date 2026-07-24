@@ -47,6 +47,39 @@ export const Route = createFileRoute("/_authenticated/settings")({
 
 type Section = "business" | "payment";
 
+// Friendly labels used in the error summary banner.
+const FIELD_LABELS: Partial<Record<keyof BusinessProfile, string>> = {
+  name: "Trade name",
+  legal_name: "Legal name",
+  gstin: "GSTIN",
+  fssai: "FSSAI",
+  pan: "PAN",
+  state: "State (GST)",
+  state_code: "State code",
+  invoice_prefix: "Invoice prefix",
+  mobile: "Mobile",
+  email: "Email",
+  address: "Address",
+  upi_vpa: "UPI VPA",
+  bank_name: "Bank name",
+  bank_holder: "Account holder",
+  bank_account: "Account number",
+  bank_ifsc: "IFSC",
+  bank_branch: "Branch",
+  terms: "Invoice terms",
+};
+
+const SECTION_FIELDS: Record<Section, (keyof BusinessProfile)[]> = {
+  business: [
+    "name", "legal_name", "gstin", "fssai", "pan", "state", "state_code",
+    "invoice_prefix", "mobile", "email", "address",
+  ],
+  payment: [
+    "upi_vpa", "bank_name", "bank_holder", "bank_account", "bank_ifsc",
+    "bank_branch", "terms",
+  ],
+};
+
 type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
 const ROLES: { value: Role; label: string; hint: string }[] = [
   { value: "admin", label: "Admin", hint: "Full access, manages team & finances" },
