@@ -2168,16 +2168,44 @@ function RunTimelineDialog({
             : null,
           location: rr.end_latitude != null ? { lat: rr.end_latitude, lng: rr.end_longitude, acc: rr.end_accuracy_m } : null,
         });
-        // Detect edits: updated_at significantly after the last known milestone
-        const milestones = [rr.created_at, rr.pickup_confirmed_at, rr.started_at, rr.ended_at]
-          .filter(Boolean).map((x: string) => new Date(x).getTime());
-        const lastMs = milestones.length ? Math.max(...milestones) : 0;
-        if (rr.updated_at && new Date(rr.updated_at).getTime() - lastMs > 1500) {
+      }
+
+      // Deliveries: milestone + payment events (edits are covered by audit-log below)
+      for (const d of dels ?? []) {
+        const dd = d as any;
+        const inv = dd.invoice as { invoice_no?: string | null; customer?: { name?: string | null; shop_name?: string | null } | null } | null;
+        const shop = inv?.customer?.shop_name || inv?.customer?.name || "Shop";
+        const invNo = inv?.invoice_no ? ` · ${inv.invoice_no}` : "";
+        if (dd.created_at) ev.push({
+          at: dd.created_at, kind: "en_route",
+          title: `Assigned to route: ${shop}`,
+          detail: invNo || null,
+        });
+        if (dd.delivered_at) {
+          const kind: TimelineEvent["kind"] =
+            dd.status === "delivered" ? "delivered" :
+            dd.status === "partially_delivered" ? "partial" :
+            dd.status === "failed" ? "failed" : "en_route";
+          const label =
+            dd.status === "delivered" ? "Delivered" :
+            dd.status === "partially_delivered" ? "Partially delivered" :
+            dd.status === "failed" ? "Failed delivery" : "Status updated";
+          const bits: string[] = [];
+          if (dd.received_by) bits.push(`Received by ${dd.received_by}`);
+          if (dd.collected_amount) bits.push(`${inr(dd.collected_amount)} ${dd.collected_mode || ""}`.trim());
           ev.push({
-            at: rr.updated_at, kind: "run_edited",
-            title: "Run details edited",
-            detail: rr.notes ? `Notes: ${rr.notes}` : null,
+            at: dd.delivered_at, kind,
+            title: `${label}: ${shop}${invNo}`,
+            detail: bits.join(" · ") || null,
+            location: dd.pod_latitude != null ? { lat: dd.pod_latitude, lng: dd.pod_longitude, acc: dd.pod_accuracy_m } : null,
           });
+          if (dd.collected_amount && Number(dd.collected_amount) > 0) {
+            ev.push({
+              at: dd.delivered_at, kind: "payment",
+              title: `Payment collected: ${shop}`,
+              detail: `${inr(dd.collected_amount)} via ${dd.collected_mode || "cash"}`,
+            });
+          }
         }
       }
 
@@ -2221,39 +2249,6 @@ function RunTimelineDialog({
       }
       for (const grp of groups.values()) {
         ev.push({ at: grp.at, kind: grp.kind, title: grp.title, changes: grp.changes });
-      }
-        if (dd.delivered_at) {
-          const kind: TimelineEvent["kind"] =
-            dd.status === "delivered" ? "delivered" :
-            dd.status === "partially_delivered" ? "partial" :
-            dd.status === "failed" ? "failed" : "en_route";
-          const label =
-            dd.status === "delivered" ? "Delivered" :
-            dd.status === "partially_delivered" ? "Partially delivered" :
-            dd.status === "failed" ? "Failed delivery" : "Status updated";
-          const bits: string[] = [];
-          if (dd.received_by) bits.push(`Received by ${dd.received_by}`);
-          if (dd.collected_amount) bits.push(`${inr(dd.collected_amount)} ${dd.collected_mode || ""}`.trim());
-          ev.push({
-            at: dd.delivered_at, kind,
-            title: `${label}: ${shop}${invNo}`,
-            detail: bits.join(" · ") || null,
-            location: dd.pod_latitude != null ? { lat: dd.pod_latitude, lng: dd.pod_longitude, acc: dd.pod_accuracy_m } : null,
-          });
-          if (dd.collected_amount && Number(dd.collected_amount) > 0) {
-            ev.push({
-              at: dd.delivered_at, kind: "payment",
-              title: `Payment collected: ${shop}`,
-              detail: `${inr(dd.collected_amount)} via ${dd.collected_mode || "cash"}`,
-            });
-          }
-        } else if (dd.updated_at && dd.status && dd.status !== "planned") {
-          ev.push({
-            at: dd.updated_at, kind: "stop_edited",
-            title: `Stop updated: ${shop}${invNo}`,
-            detail: `Status: ${String(dd.status).replace("_", " ")}`,
-          });
-        }
       }
 
       // GPS audit events (attempts + failures)
