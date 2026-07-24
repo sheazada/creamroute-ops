@@ -9,6 +9,7 @@ import {
   ReceiptText,
   Wallet,
   Truck,
+  Map as MapIcon,
   Building2,
   ClipboardList,
   BarChart3,
