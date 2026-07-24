@@ -1575,6 +1575,7 @@ function durationMin(a: string | null, b: string | null) {
 function RunPanel({ route, date }: { route: RouteRow; date: string }) {
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
 
   const { data: run } = useQuery({
     queryKey: ["delivery-run", route.id, date],
