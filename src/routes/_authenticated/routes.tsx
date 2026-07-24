@@ -782,12 +782,13 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
                   <td className="px-4 py-3 align-top text-right font-mono">{inr(inv.total)}</td>
                   <td className="px-4 py-3 align-top text-right font-mono font-semibold text-destructive">{inr(inv.balance)}</td>
                   <td className="px-4 py-3 align-top text-center no-print">
-                    <Select value={d?.status ?? "pending"} onValueChange={(v) => setStatus(d?.id, inv.id, v)}>
+                    <Select value={d?.status ?? "planned"} onValueChange={(v) => setStatus(d?.id, inv.id, v)}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="out_for_delivery">Out for delivery</SelectItem>
+                        <SelectItem value="planned">Planned</SelectItem>
+                        <SelectItem value="en_route">En Route</SelectItem>
                         <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="partially_delivered">Partially Delivered</SelectItem>
                         <SelectItem value="failed">Failed</SelectItem>
                       </SelectContent>
                     </Select>

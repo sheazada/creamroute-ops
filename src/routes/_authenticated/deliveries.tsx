@@ -82,9 +82,10 @@ function Deliveries() {
               <Select value={d.status} onValueChange={(v) => update(d.id, { status: v, delivered_at: v === "delivered" ? new Date().toISOString() : null })}>
                 <SelectTrigger className="h-8 flex-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                  <SelectItem value="planned">Planned</SelectItem>
+                  <SelectItem value="en_route">En Route</SelectItem>
                   <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="partially_delivered">Partially Delivered</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
