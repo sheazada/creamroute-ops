@@ -180,6 +180,10 @@ function Reports() {
         <TabsContent value="top">
           <TopReport items={data?.items ?? []} invoices={data?.invoices ?? []} />
         </TabsContent>
+
+        <TabsContent value="shifts">
+          <DriverShifts from={from} to={to} />
+        </TabsContent>
       </Tabs>
     </PageContainer>
   );
