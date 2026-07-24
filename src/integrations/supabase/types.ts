@@ -22,6 +22,8 @@ export type Database = {
           email: string | null
           gstin: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           mobile: string | null
           name: string
           notes: string | null
@@ -37,6 +39,8 @@ export type Database = {
           email?: string | null
           gstin?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           mobile?: string | null
           name: string
           notes?: string | null
@@ -52,6 +56,8 @@ export type Database = {
           email?: string | null
           gstin?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           mobile?: string | null
           name?: string
           notes?: string | null
@@ -817,6 +823,8 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          start_latitude: number | null
+          start_longitude: number | null
           updated_at: string
           vehicle_number: string | null
           vehicle_type: string | null
@@ -832,6 +840,8 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          start_latitude?: number | null
+          start_longitude?: number | null
           updated_at?: string
           vehicle_number?: string | null
           vehicle_type?: string | null
@@ -847,6 +857,8 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          start_latitude?: number | null
+          start_longitude?: number | null
           updated_at?: string
           vehicle_number?: string | null
           vehicle_type?: string | null

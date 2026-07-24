@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
-import { ArrowDown, ArrowUp, Camera, CheckCircle2, Download, GripVertical, MapPin, Plus, Printer, Route as RouteIcon, Sparkles, Trash2, Truck, UserPlus, Wallet } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, CheckCircle2, Crosshair, Download, GripVertical, LocateFixed, MapPin, Plus, Printer, Route as RouteIcon, Sparkles, Trash2, Truck, UserPlus, Wallet, Wand2 } from "lucide-react";
+import { optimizeStops } from "@/lib/route-optimize";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -49,6 +50,8 @@ type RouteRow = {
   capacity_label: string | null;
   vehicle_number: string | null;
   vehicle_type: string | null;
+  start_latitude: number | null;
+  start_longitude: number | null;
 };
 
 type DeliveryRun = {
@@ -80,6 +83,8 @@ type Stop = {
     address: string | null;
     mobile: string | null;
     outstanding: number;
+    latitude: number | null;
+    longitude: number | null;
   } | null;
 };
 
@@ -203,6 +208,7 @@ function SortableStopRow({
   onMoveUp,
   onMoveDown,
   onRemove,
+  onSetGps,
 }: {
   stop: Stop;
   index: number;
@@ -210,6 +216,7 @@ function SortableStopRow({
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
+  onSetGps: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id });
   const style = {
@@ -218,6 +225,7 @@ function SortableStopRow({
     opacity: isDragging ? 0.6 : 1,
     zIndex: isDragging ? 10 : "auto" as const,
   };
+  const hasGps = typeof stop.customer?.latitude === "number" && typeof stop.customer?.longitude === "number";
   return (
     <li ref={setNodeRef} style={style} className={`px-5 py-3 flex items-center gap-3 bg-background ${isDragging ? "shadow-lg" : ""}`}>
       <button
@@ -233,7 +241,10 @@ function SortableStopRow({
         {index + 1}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{stop.customer?.shop_name || stop.customer?.name}</div>
+        <div className="text-sm font-medium truncate flex items-center gap-1.5">
+          {stop.customer?.shop_name || stop.customer?.name}
+          {hasGps && <MapPin className="size-3 text-primary" aria-label="GPS captured" />}
+        </div>
         <div className="text-xs text-muted-foreground truncate">
           {stop.customer?.address || "—"}
           {stop.customer?.mobile ? ` · ${stop.customer.mobile}` : ""}
@@ -244,6 +255,16 @@ function SortableStopRow({
         <div className="font-mono font-semibold">{inr(stop.customer?.outstanding ?? 0)}</div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onSetGps}
+          aria-label={hasGps ? "Update GPS" : "Capture GPS at this shop"}
+          title={hasGps ? "Update GPS from current location" : "Capture GPS at this shop"}
+          className={hasGps ? "text-primary" : ""}
+        >
+          <Crosshair className="size-4" />
+        </Button>
         <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={index === 0} aria-label="Move up"><ArrowUp className="size-4" /></Button>
         <Button variant="ghost" size="icon" onClick={onMoveDown} disabled={index === total - 1} aria-label="Move down"><ArrowDown className="size-4" /></Button>
         <Button variant="ghost" size="icon" onClick={onRemove} className="text-destructive" aria-label="Remove"><Trash2 className="size-4" /></Button>
@@ -263,7 +284,7 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
     queryFn: async (): Promise<Stop[]> => {
       const { data, error } = await supabase
         .from("route_stops")
-        .select("id, route_id, customer_id, sequence, customer:customers(id, name, shop_name, address, mobile, outstanding)")
+        .select("id, route_id, customer_id, sequence, customer:customers(id, name, shop_name, address, mobile, outstanding, latitude, longitude)")
         .eq("route_id", routeId)
         .order("sequence");
       if (error) throw error;
@@ -335,6 +356,64 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
     toast.success("Stop removed");
   };
 
+  const [optimizing, setOptimizing] = useState(false);
+  const optimize = async () => {
+    const list = stops ?? [];
+    if (list.length < 2) return toast.info("Need at least 2 stops to optimize");
+    const withGeo = list.filter(
+      (s) => typeof s.customer?.latitude === "number" && typeof s.customer?.longitude === "number",
+    ).length;
+    if (withGeo < 2) {
+      return toast.error(
+        "Add GPS to at least 2 shops first — tap the crosshair on each stop while standing there.",
+      );
+    }
+    setOptimizing(true);
+    const res = optimizeStops(
+      list.map((s) => ({
+        id: s.id,
+        lat: s.customer?.latitude ?? null,
+        lng: s.customer?.longitude ?? null,
+        _raw: s,
+      })),
+      route?.start_latitude != null && route?.start_longitude != null
+        ? { lat: route.start_latitude, lng: route.start_longitude }
+        : null,
+    );
+    const orderedStops = res.ordered.map((o: any) => o._raw as Stop);
+    qc.setQueryData(
+      ["route-stops", routeId],
+      orderedStops.map((s, i) => ({ ...s, sequence: i + 1 })),
+    );
+    await persistOrder(orderedStops);
+    setOptimizing(false);
+    const saved = Math.max(0, res.beforeKm - res.afterKm);
+    toast.success(
+      `Optimized ${res.optimizedCount} stops · ${res.afterKm.toFixed(1)} km` +
+        (saved > 0.05 ? ` (saved ${saved.toFixed(1)} km)` : "") +
+        (res.skippedCount ? ` · ${res.skippedCount} without GPS kept at end` : ""),
+    );
+  };
+
+  const setStopGps = async (customerId: string) => {
+    if (!("geolocation" in navigator)) return toast.error("GPS not available on this device");
+    toast.info("Getting current location…");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const { error } = await supabase
+          .from("customers")
+          .update({ latitude, longitude })
+          .eq("id", customerId);
+        if (error) return toast.error(error.message);
+        toast.success(`Saved GPS · ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        invalidate();
+      },
+      (err) => toast.error(err.message || "Could not get location"),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   const total = stops?.length ?? 0;
   const outstanding = (stops ?? []).reduce((s, x) => s + Number(x.customer?.outstanding ?? 0), 0);
 
@@ -367,9 +446,22 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="px-5 py-3 border-b flex items-center justify-between">
-          <div className="text-sm font-semibold">Stops in delivery order</div>
-          <div className="text-xs text-muted-foreground">Drag <GripVertical className="inline size-3 -mt-0.5" /> to reorder, or use arrows</div>
+        <div className="px-5 py-3 border-b flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-sm font-semibold">Stops in delivery order</div>
+            <div className="text-xs text-muted-foreground">Drag <GripVertical className="inline size-3 -mt-0.5" /> to reorder, use arrows, or auto-optimize by GPS.</div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={optimize}
+            disabled={optimizing || (stops ?? []).length < 2}
+            className="gap-1.5"
+            title="Reorder stops using shortest-drive heuristic (nearest-neighbor + 2-opt) based on GPS"
+          >
+            <Wand2 className="size-4" />
+            {optimizing ? "Optimizing…" : "Optimize sequence"}
+          </Button>
         </div>
         {(stops ?? []).length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">No stops yet. Click "Add stops" to assign shops.</div>
@@ -386,6 +478,7 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
                     onMoveUp={() => move(s.id, -1)}
                     onMoveDown={() => move(s.id, 1)}
                     onRemove={() => remove(s.id)}
+                    onSetGps={() => setStopGps(s.customer_id)}
                   />
                 ))}
               </ol>
@@ -423,6 +516,8 @@ function RouteFormDialog({
   const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
   const [vehicleNumber, setVehicleNumber] = useState(route?.vehicle_number ?? "");
   const [vehicleType, setVehicleType] = useState(route?.vehicle_type ?? "");
+  const [startLat, setStartLat] = useState<string>(route?.start_latitude != null ? String(route.start_latitude) : "");
+  const [startLng, setStartLng] = useState<string>(route?.start_longitude != null ? String(route.start_longitude) : "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -437,8 +532,24 @@ function RouteFormDialog({
       setCapacityLabel(route?.capacity_label ?? "L");
       setVehicleNumber(route?.vehicle_number ?? "");
       setVehicleType(route?.vehicle_type ?? "");
+      setStartLat(route?.start_latitude != null ? String(route.start_latitude) : "");
+      setStartLng(route?.start_longitude != null ? String(route.start_longitude) : "");
     }
   }, [open, route]);
+
+  const captureStartHere = () => {
+    if (!("geolocation" in navigator)) return toast.error("GPS not available");
+    toast.info("Getting current location…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setStartLat(pos.coords.latitude.toFixed(6));
+        setStartLng(pos.coords.longitude.toFixed(6));
+        toast.success("Start point set to current location");
+      },
+      (err) => toast.error(err.message || "Could not get location"),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   const save = async () => {
     if (!name.trim()) return toast.error("Name required");
@@ -450,6 +561,8 @@ function RouteFormDialog({
       capacity_label: capacityLabel || null,
       vehicle_number: vehicleNumber || null,
       vehicle_type: vehicleType || null,
+      start_latitude: startLat.trim() ? Number(startLat) : null,
+      start_longitude: startLng.trim() ? Number(startLng) : null,
     };
 
     if (isEdit && route) {
@@ -509,6 +622,19 @@ function RouteFormDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="rounded-md border p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Start point (depot / pickup)</Label>
+              <Button type="button" variant="outline" size="sm" onClick={captureStartHere} className="gap-1.5 h-8">
+                <LocateFixed className="size-3.5" /> Use my location
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Latitude</Label><Input value={startLat} onChange={(e) => setStartLat(e.target.value)} placeholder="e.g. 25.2425" inputMode="decimal" /></div>
+              <div><Label className="text-xs">Longitude</Label><Input value={startLng} onChange={(e) => setStartLng(e.target.value)} placeholder="e.g. 86.9842" inputMode="decimal" /></div>
+            </div>
+            <p className="text-xs text-muted-foreground">Used by the sequence optimizer as the driver's starting point.</p>
           </div>
           <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Landmarks, timing…" /></div>
 
@@ -819,7 +945,7 @@ function SheetTab({ date }: { date: string }) {
       {grouped.unassigned.length > 0 && (
         <RouteSheet
           key="unassigned"
-          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null, vehicle_number: null, vehicle_type: null }}
+          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null, vehicle_number: null, vehicle_type: null, start_latitude: null, start_longitude: null }}
           invoices={grouped.unassigned}
           date={date}
         />
