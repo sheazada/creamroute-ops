@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -14,9 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
-import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check } from "lucide-react";
 import {
   getBusiness,
   saveBusiness,
@@ -32,6 +43,8 @@ import { MaskedInput } from "@/components/masked-input";
 export const Route = createFileRoute("/_authenticated/settings")({
   component: Settings,
 });
+
+type Section = "business" | "payment";
 
 type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
 const ROLES: { value: Role; label: string; hint: string }[] = [
@@ -106,6 +119,45 @@ function Settings() {
   const [errors, setErrors] = useState<BusinessValidationErrors>({});
   const err = (k: keyof BusinessProfile) => errors[k];
 
+  // Edit / Save / Cancel state per section (only one section editable at a time)
+  const [editing, setEditing] = useState<Section | null>(null);
+  const [snapshot, setSnapshot] = useState<BusinessProfile | null>(null);
+  const dirty = useMemo(
+    () => editing !== null && snapshot !== null && JSON.stringify(snapshot) !== JSON.stringify(biz),
+    [editing, snapshot, biz],
+  );
+
+  // Confirm dialog for discarding unsaved changes (close section / cancel / navigate)
+  const [confirm, setConfirm] = useState<null | { onConfirm: () => void; message?: string }>(null);
+  const askDiscard = (onConfirm: () => void, message?: string) => {
+    if (!dirty) { onConfirm(); return; }
+    setConfirm({ onConfirm, message });
+  };
+
+  const startEdit = (section: Section) => {
+    if (editing && editing !== section && dirty) {
+      askDiscard(() => {
+        if (snapshot) setBiz(snapshot);
+        setErrors({});
+        setSnapshot(biz);
+        setEditing(section);
+      });
+      return;
+    }
+    setSnapshot(biz);
+    setErrors({});
+    setEditing(section);
+  };
+
+  const cancelEdit = () => {
+    askDiscard(() => {
+      if (snapshot) setBiz(snapshot);
+      setEditing(null);
+      setSnapshot(null);
+      setErrors({});
+    });
+  };
+
   const saveBiz = () => {
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
@@ -114,12 +166,44 @@ function Settings() {
       return;
     }
     saveBusiness(biz);
+    setEditing(null);
+    setSnapshot(null);
     toast.success("Business profile saved — reflects on all new invoices");
   };
+
+  // Warn on browser unload while there are unsaved changes.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  // Block in-app navigation while dirty.
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!dirty) return false;
+      return !window.confirm("You have unsaved changes. Leave without saving?");
+    },
+    enableBeforeUnload: false,
+  });
+
 
   return (
     <PageContainer>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
+      {dirty && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
+          <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" className="h-7" onClick={cancelEdit}>Discard</Button>
+            <Button size="sm" className="h-7" onClick={saveBiz}>Save</Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CollapsibleCard
@@ -129,10 +213,16 @@ function Settings() {
           summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + maskMiddle(biz.gstin, 2, 4) : ""}` : "Not set — tap to add"}
           storageKey={me?.userId ? `settings:section:${me.userId}:business` : undefined}
           readOnly={!isAdmin}
+          editing={editing === "business"}
+          dirty={editing === "business" && dirty}
+          onEdit={() => startEdit("business")}
+          onCancel={cancelEdit}
+          onSave={saveBiz}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <FieldRow label="Trade name" error={err("name")} colSpan={2}>
+
                 <Input
                   value={biz.name}
                   onChange={(e) => setField("name", e.target.value)}
@@ -227,9 +317,6 @@ function Settings() {
                 />
               </FieldRow>
             </div>
-            <div className="pt-2">
-              <Button onClick={saveBiz} size="sm">Save business profile</Button>
-            </div>
           </div>
         </CollapsibleCard>
 
@@ -250,7 +337,13 @@ function Settings() {
           }
           storageKey={me?.userId ? `settings:section:${me.userId}:payment` : undefined}
           readOnly={!isAdmin}
+          editing={editing === "payment"}
+          dirty={editing === "payment" && dirty}
+          onEdit={() => startEdit("payment")}
+          onCancel={cancelEdit}
+          onSave={saveBiz}
         >
+
           <div className="grid grid-cols-2 gap-3">
             <FieldRow label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
               <MaskedInput
@@ -308,10 +401,8 @@ function Settings() {
               />
             </FieldRow>
           </div>
-          <div className="pt-4">
-            <Button onClick={saveBiz} size="sm">Save business profile</Button>
-          </div>
         </CollapsibleCard>
+
 
         <Card className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
@@ -394,9 +485,35 @@ function Settings() {
           </div>
         </Card>
       </div>
+
+      <AlertDialog open={!!confirm} onOpenChange={(o) => { if (!o) setConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.message ??
+                "You have edits that haven't been saved yet. Discarding will revert them to the last saved values."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                const fn = confirm?.onConfirm;
+                setConfirm(null);
+                fn?.();
+              }}
+            >
+              Discard changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 }
+
 
 function CollapsibleCard({
   icon: Icon,
@@ -406,6 +523,11 @@ function CollapsibleCard({
   defaultOpen = false,
   storageKey,
   readOnly = false,
+  editing = false,
+  dirty = false,
+  onEdit,
+  onCancel,
+  onSave,
   children,
 }: {
   icon: any;
@@ -415,6 +537,11 @@ function CollapsibleCard({
   defaultOpen?: boolean;
   storageKey?: string;
   readOnly?: boolean;
+  editing?: boolean;
+  dirty?: boolean;
+  onEdit?: () => void;
+  onCancel?: () => void;
+  onSave?: () => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -434,47 +561,106 @@ function CollapsibleCard({
       window.localStorage.setItem(storageKey, open ? "1" : "0");
     } catch {}
   }, [open, storageKey, readOnly]);
+  // Auto-open the section while it's being edited so the form is visible.
+  useEffect(() => { if (editing) setOpen(true); }, [editing]);
   const effectiveOpen = readOnly ? false : open;
+
+  const requestToggle = () => {
+    if (readOnly) return;
+    if (open && editing && dirty) {
+      // Route close-with-unsaved-changes through Cancel (which prompts).
+      onCancel?.();
+      return;
+    }
+    if (open && editing) {
+      // Close cleanly and exit edit mode.
+      onCancel?.();
+      setOpen(false);
+      return;
+    }
+    setOpen((v) => !v);
+  };
+
   return (
     <Card className="p-0 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => { if (!readOnly) setOpen((v) => !v); }}
-        disabled={readOnly}
-        className={`w-full flex items-center gap-3 p-4 text-left transition-colors ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
-        aria-expanded={effectiveOpen}
-        title={readOnly ? "Admin-only — view only for your role" : undefined}
-      >
-        <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
-          <Icon className="size-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-sm">{title}</div>
-          {effectiveOpen ? (
-            <div className="text-xs text-muted-foreground truncate">{description}</div>
+      <div className="w-full flex items-center gap-3 p-4">
+        <button
+          type="button"
+          onClick={requestToggle}
+          disabled={readOnly}
+          className={`flex items-center gap-3 flex-1 min-w-0 text-left transition-colors -m-2 p-2 rounded ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
+          aria-expanded={effectiveOpen}
+          title={readOnly ? "Admin-only — view only for your role" : undefined}
+        >
+          <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+            <Icon className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-sm flex items-center gap-2">
+              {title}
+              {editing && (
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20">
+                  {dirty ? "Editing • unsaved" : "Editing"}
+                </span>
+              )}
+            </div>
+            {effectiveOpen ? (
+              <div className="text-xs text-muted-foreground truncate">{description}</div>
+            ) : (
+              <div className="text-xs text-muted-foreground truncate">{summary}</div>
+            )}
+          </div>
+          <ChevronDown
+            className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {readOnly ? (
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hidden sm:inline">
+              Admin only
+            </span>
+          ) : editing ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => onCancel?.()}
+              >
+                <X className="size-3.5 mr-1" /> Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onSave?.()}
+                disabled={!dirty}
+              >
+                <Check className="size-3.5 mr-1" /> Save
+              </Button>
+            </>
           ) : (
-            <div className="text-xs text-muted-foreground truncate">{summary}</div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onEdit?.()}
+            >
+              <Pencil className="size-3.5 mr-1" /> Edit
+            </Button>
           )}
         </div>
-        {readOnly ? (
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hidden sm:inline">
-            Admin only
-          </span>
-        ) : (
-          <>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
-              {open ? "Close" : "Edit"}
-            </span>
-            <ChevronDown
-              className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-            />
-          </>
-        )}
-      </button>
-      {effectiveOpen && <div className="p-6 pt-2 border-t">{children}</div>}
+      </div>
+      {effectiveOpen && (
+        <div className="p-6 pt-2 border-t">
+          <fieldset disabled={!editing} className={editing ? "" : "opacity-90"}>
+            {children}
+          </fieldset>
+        </div>
+      )}
     </Card>
   );
 }
+
 
 
 function FieldRow({
