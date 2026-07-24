@@ -412,6 +412,10 @@ function Settings() {
   return (
 
     <PageContainer>
+      {/* Polite SR-only live region: announces save start and completion. */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {saveStatus}
+      </div>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
       {showErrorSummary && Object.keys(errors).length > 0 && (() => {
         const items = [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment]
