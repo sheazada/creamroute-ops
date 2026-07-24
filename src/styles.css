@@ -146,7 +146,11 @@
 @media print {
   .no-print { display: none !important; }
   body { background: white !important; }
+  body.print-single .route-sheet:not(.print-target) { display: none !important; }
+  body.print-single .no-print-when-single { display: none !important; }
+  .route-sheet { break-inside: avoid; page-break-inside: avoid; }
 }
+
 
 /* Mobile: let wide data tables scroll horizontally instead of overflowing the viewport */
 @media (max-width: 767px) {

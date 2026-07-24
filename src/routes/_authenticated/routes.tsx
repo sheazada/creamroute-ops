@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
-import { ArrowDown, ArrowUp, Camera, CheckCircle2, MapPin, Plus, Printer, Route as RouteIcon, Trash2, Truck, UserPlus, Wallet } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, CheckCircle2, Download, MapPin, Plus, Printer, Route as RouteIcon, Trash2, Truck, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/routes")({
@@ -609,8 +609,77 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
     qc.invalidateQueries({ queryKey: ["deliveries"] });
   };
 
+  const sheetDomId = `route-sheet-${route.id}`;
+  const printThis = () => {
+    document.body.classList.add("print-single");
+    const el = document.getElementById(sheetDomId);
+    el?.classList.add("print-target");
+    const cleanup = () => {
+      document.body.classList.remove("print-single");
+      el?.classList.remove("print-target");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    setTimeout(() => window.print(), 50);
+  };
+  const exportCsv = () => {
+    const rows: string[][] = [];
+    rows.push([`Delivery Sheet - ${route.name}`]);
+    rows.push([`Date`, shortDate(date)]);
+    if (route.area) rows.push([`Area`, route.area]);
+    if (route.driver_name) rows.push([`Driver`, route.driver_name]);
+    if (route.helper_name) rows.push([`Helper`, route.helper_name]);
+    if (route.capacity_units) rows.push([`Capacity`, `${route.capacity_units} ${route.capacity_label || ""}`]);
+    rows.push([]);
+    rows.push(["Pickup summary"]);
+    rows.push(["Product", "Quantity"]);
+    pickup.forEach((p) => rows.push([p.product, String(p.qty)]));
+    rows.push([]);
+    rows.push(["Stops"]);
+    rows.push(["#", "Shop", "Address", "Mobile", "Invoice", "Item", "Qty", "Rate", "Amount", "Invoice Total", "Collect"]);
+    invoices.forEach((inv, i) => {
+      const shop = inv.customer?.shop_name || inv.customer?.name || "";
+      const addr = inv.customer?.address || "";
+      const mob = inv.customer?.mobile || "";
+      const items = inv.items ?? [];
+      if (items.length === 0) {
+        rows.push([String(i + 1), shop, addr, mob, inv.invoice_no, "", "", "", "", String(inv.total), String(inv.balance)]);
+      } else {
+        items.forEach((it, k) => rows.push([
+          k === 0 ? String(i + 1) : "",
+          k === 0 ? shop : "",
+          k === 0 ? addr : "",
+          k === 0 ? mob : "",
+          k === 0 ? inv.invoice_no : "",
+          it.product_name,
+          String(it.quantity),
+          String(it.rate),
+          String(it.amount),
+          k === 0 ? String(inv.total) : "",
+          k === 0 ? String(inv.balance) : "",
+        ]));
+      }
+    });
+    rows.push([]);
+    rows.push(["", "", "", "", "", "", "", "", "TOTAL", String(totalValue), String(totalDue)]);
+    const csv = rows.map((r) => r.map((c) => {
+      const s = String(c ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `delivery-${route.name.replace(/\s+/g, "-").toLowerCase()}-${date}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported");
+  };
+
   return (
-    <Card className="overflow-hidden print:break-inside-avoid print:mb-6">
+    <Card id={sheetDomId} className="route-sheet overflow-hidden print:break-inside-avoid print:mb-6">
       <div className="px-5 py-3 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-sm font-semibold flex items-center gap-2">
@@ -626,11 +695,14 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
         <div className="flex items-center gap-3 text-xs">
           <div>Value <span className="font-mono font-semibold">{inr(totalValue)}</span></div>
           <div>Collect <span className="font-mono font-semibold text-destructive">{inr(totalDue)}</span></div>
+          <Button size="sm" variant="outline" onClick={printThis} className="no-print gap-1.5"><Printer className="size-3.5" /> Print</Button>
+          <Button size="sm" variant="outline" onClick={exportCsv} className="no-print gap-1.5"><Download className="size-3.5" /> CSV</Button>
           {route.id !== "u" && (
             <Button size="sm" variant="outline" onClick={assignAll} className="no-print">Assign to route</Button>
           )}
         </div>
       </div>
+
 
       {/* Pickup summary + capacity bar */}
       <div className="px-5 py-3 border-b space-y-3">
