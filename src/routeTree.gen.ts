@@ -16,6 +16,7 @@ import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authentica
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedRoutesRouteImport } from './routes/_authenticated/routes'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticated/payments'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
@@ -65,6 +66,11 @@ const AuthenticatedRoutesRoute = AuthenticatedRoutesRouteImport.update({
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
+  id: '/reconcile',
+  path: '/reconcile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AuthenticatedInventoryRoute
   '/payments': typeof AuthenticatedPaymentsRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof AuthenticatedInventoryRoute
   '/payments': typeof AuthenticatedPaymentsRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/payments': typeof AuthenticatedPaymentsRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
+  '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/routes': typeof AuthenticatedRoutesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/payments'
     | '/products'
+    | '/reconcile'
     | '/reports'
     | '/routes'
     | '/settings'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/payments'
     | '/products'
+    | '/reconcile'
     | '/reports'
     | '/routes'
     | '/settings'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inventory'
     | '/_authenticated/payments'
     | '/_authenticated/products'
+    | '/_authenticated/reconcile'
     | '/_authenticated/reports'
     | '/_authenticated/routes'
     | '/_authenticated/settings'
@@ -361,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reconcile': {
+      id: '/_authenticated/reconcile'
+      path: '/reconcile'
+      fullPath: '/reconcile'
+      preLoaderRoute: typeof AuthenticatedReconcileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/products': {
@@ -500,6 +519,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedPaymentsRoute: typeof AuthenticatedPaymentsRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
+  AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRoutesRoute: typeof AuthenticatedRoutesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -522,6 +542,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedPaymentsRoute: AuthenticatedPaymentsRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
+  AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRoutesRoute: AuthenticatedRoutesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
