@@ -1729,9 +1729,11 @@ function RunPanel({ route, date }: { route: RouteRow; date: string }) {
             <LocateFixed className="size-4" /> {busy === "end" ? "Getting GPS…" : "End run (capture GPS)"}
           </Button>
         )}
+        <Button size="sm" variant="outline" onClick={() => setTimelineOpen(true)} className="gap-1.5"><History className="size-4" /> Timeline</Button>
         <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>Details</Button>
       </div>
       <RunEditDialog open={editOpen} onClose={() => setEditOpen(false)} route={route} date={date} run={run ?? null} onSaved={invalidate} />
+      <RunTimelineDialog open={timelineOpen} onClose={() => setTimelineOpen(false)} route={route} date={date} />
     </div>
   );
 }
