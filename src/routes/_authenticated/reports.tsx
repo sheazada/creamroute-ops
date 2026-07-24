@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -10,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { inr, num, isoDate, shortDate } from "@/lib/format";
-import { Download, FileText, Printer } from "lucide-react";
+import { Download, ExternalLink, FileText, Printer } from "lucide-react";
+
+type Cell = string | number | { text: string; to?: string; params?: Record<string, string> };
 
 export const Route = createFileRoute("/_authenticated/reports")({
   component: Reports,
