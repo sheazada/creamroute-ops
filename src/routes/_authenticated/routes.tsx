@@ -232,10 +232,12 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
             <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
               <span>Driver: <b className="text-foreground">{route?.driver_name || "—"}</b></span>
               <span>Helper: <b className="text-foreground">{route?.helper_name || "—"}</b></span>
+              <span>Vehicle: <b className="text-foreground">{route?.vehicle_number || "—"}{route?.vehicle_type ? ` · ${route.vehicle_type}` : ""}</b></span>
               <span>Stops: <b className="text-foreground">{total}</b></span>
               <span>Capacity: <b className="text-foreground">{route?.capacity_units ? `${num(route.capacity_units, 0)} ${route.capacity_label || ""}` : "—"}</b></span>
               <span>Outstanding: <b className="text-foreground">{inr(outstanding)}</b></span>
             </div>
+
             {route?.notes && <div className="mt-2 text-xs text-muted-foreground italic">{route.notes}</div>}
           </div>
           <div className="flex gap-2">
