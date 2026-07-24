@@ -622,9 +622,12 @@ function SheetTab({ date }: { date: string }) {
   });
 
   const { data: stops } = useQuery({
-    queryKey: ["all-route-stops"],
+    queryKey: ["all-route-stops-with-addr"],
     queryFn: async () => {
-      const { data } = await supabase.from("route_stops").select("route_id, customer_id, sequence").order("sequence");
+      const { data } = await supabase
+        .from("route_stops")
+        .select("route_id, customer_id, sequence, customer:customers(id, address)")
+        .order("sequence");
       return data ?? [];
     },
   });
