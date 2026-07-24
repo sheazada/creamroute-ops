@@ -525,6 +525,7 @@ function RouteFormDialog({
   const [notes, setNotes] = useState(route?.notes ?? "");
   const [capacity, setCapacity] = useState<string>(route?.capacity_units != null ? String(route.capacity_units) : "");
   const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
+  const [maxStops, setMaxStops] = useState<string>(route?.max_stops != null ? String(route.max_stops) : "");
   const [vehicleNumber, setVehicleNumber] = useState(route?.vehicle_number ?? "");
   const [vehicleType, setVehicleType] = useState(route?.vehicle_type ?? "");
   const [startLat, setStartLat] = useState<string>(route?.start_latitude != null ? String(route.start_latitude) : "");
