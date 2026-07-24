@@ -21,11 +21,22 @@ const ROLE_ICONS: Record<string, any> = {
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: AuthPage,
 });
 
+function safeNext(next: string | undefined): string | null {
+  if (!next) return null;
+  // Only allow same-origin relative paths.
+  if (!next.startsWith("/") || next.startsWith("//")) return null;
+  return next;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,17 +44,27 @@ function AuthPage() {
   const [seeding, setSeeding] = useState(false);
   const seed = useServerFn(seedDemoUsers);
 
+  const goPostAuth = () => {
+    const dest = safeNext(next);
+    if (dest) {
+      window.location.href = dest;
+    } else {
+      navigate({ to: "/", replace: true });
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/", replace: true });
+      if (data.session) goPostAuth();
     });
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const doSignIn = async (emailArg: string, passwordArg: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email: emailArg, password: passwordArg });
     if (error) throw error;
     toast.success("Welcome back");
-    navigate({ to: "/", replace: true });
+    goPostAuth();
   };
 
   const signIn = async (e: React.FormEvent) => {
