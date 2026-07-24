@@ -204,10 +204,16 @@ function Settings() {
           summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + maskMiddle(biz.gstin, 2, 4) : ""}` : "Not set — tap to add"}
           storageKey={me?.userId ? `settings:section:${me.userId}:business` : undefined}
           readOnly={!isAdmin}
+          editing={editing === "business"}
+          dirty={editing === "business" && dirty}
+          onEdit={() => startEdit("business")}
+          onCancel={cancelEdit}
+          onSave={saveBiz}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <FieldRow label="Trade name" error={err("name")} colSpan={2}>
+
                 <Input
                   value={biz.name}
                   onChange={(e) => setField("name", e.target.value)}
