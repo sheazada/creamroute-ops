@@ -1842,4 +1842,207 @@ function RunEditDialog({
   );
 }
 
+/* ---------------- Run timeline ---------------- */
+
+type TimelineEvent = {
+  at: string;
+  kind: "run_created" | "pickup" | "run_started" | "run_ended" | "run_edited"
+      | "delivered" | "partial" | "failed" | "en_route" | "stop_edited" | "payment";
+  title: string;
+  detail?: string | null;
+  location?: { lat: number | null; lng: number | null; acc?: number | null } | null;
+  by?: string | null;
+};
+
+function fmtDateTime(iso: string) {
+  return new Date(iso).toLocaleString([], {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    day: "2-digit", month: "short",
+  });
+}
+
+function eventStyle(kind: TimelineEvent["kind"]) {
+  switch (kind) {
+    case "pickup": return { Icon: CheckCircle2, cls: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    case "run_started": return { Icon: Play, cls: "bg-primary/10 text-primary border-primary/30" };
+    case "run_ended": return { Icon: Square, cls: "bg-slate-200 text-slate-700 border-slate-300" };
+    case "delivered": return { Icon: CheckCircle2, cls: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    case "partial": return { Icon: Truck, cls: "bg-amber-100 text-amber-700 border-amber-300" };
+    case "failed": return { Icon: XCircle, cls: "bg-destructive/10 text-destructive border-destructive/30" };
+    case "en_route": return { Icon: Truck, cls: "bg-blue-100 text-blue-700 border-blue-300" };
+    case "run_created": return { Icon: Sparkles, cls: "bg-violet-100 text-violet-700 border-violet-300" };
+    case "run_edited": return { Icon: Pencil, cls: "bg-slate-100 text-slate-700 border-slate-300" };
+    case "stop_edited": return { Icon: Pencil, cls: "bg-slate-100 text-slate-700 border-slate-300" };
+    case "payment": return { Icon: Wallet, cls: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    default: return { Icon: Clock, cls: "bg-muted text-foreground border-border" };
+  }
+}
+
+function RunTimelineDialog({
+  open, onClose, route, date,
+}: { open: boolean; onClose: () => void; route: RouteRow; date: string }) {
+  const { data, isLoading } = useQuery({
+    enabled: open,
+    queryKey: ["run-timeline", route.id, date],
+    queryFn: async (): Promise<TimelineEvent[]> => {
+      // Fetch all runs for this route+date (there may be multiple sessions)
+      const { data: runs, error: rErr } = await supabase
+        .from("delivery_runs")
+        .select("*")
+        .eq("route_id", route.id)
+        .eq("run_date", date)
+        .order("created_at", { ascending: true });
+      if (rErr) throw rErr;
+
+      // Fetch deliveries assigned to this route for this date
+      const { data: dels, error: dErr } = await supabase
+        .from("deliveries")
+        .select("id, invoice_id, status, delivered_at, created_at, updated_at, received_by, collected_amount, collected_mode, pod_latitude, pod_longitude, pod_accuracy_m, pod_captured_at, invoice:invoices(invoice_no, customer:customers(name, shop_name))")
+        .eq("route_id", route.id)
+        .eq("delivery_date", date);
+      if (dErr) throw dErr;
+
+      const ev: TimelineEvent[] = [];
+
+      for (const r of runs ?? []) {
+        const rr = r as any;
+        const who = [rr.driver_name, rr.helper_name].filter(Boolean).join(" & ");
+        if (rr.created_at) ev.push({
+          at: rr.created_at, kind: "run_created",
+          title: "Run created",
+          detail: [who && `Team: ${who}`, rr.vehicle_number && `🚛 ${rr.vehicle_number}`].filter(Boolean).join(" · "),
+        });
+        if (rr.pickup_confirmed_at) ev.push({
+          at: rr.pickup_confirmed_at, kind: "pickup",
+          title: "Pickup confirmed from Sudha",
+        });
+        if (rr.started_at) ev.push({
+          at: rr.started_at, kind: "run_started",
+          title: "Run started",
+          detail: rr.odometer_start != null ? `Odo ${num(rr.odometer_start, 0)} km` : null,
+          location: rr.start_latitude != null ? { lat: rr.start_latitude, lng: rr.start_longitude, acc: rr.start_accuracy_m } : null,
+        });
+        if (rr.ended_at) ev.push({
+          at: rr.ended_at, kind: "run_ended",
+          title: "Run ended",
+          detail: rr.odometer_end != null
+            ? `Odo ${num(rr.odometer_end, 0)} km${rr.odometer_start != null ? ` · ${num(Number(rr.odometer_end) - Number(rr.odometer_start), 0)} km driven` : ""}`
+            : null,
+          location: rr.end_latitude != null ? { lat: rr.end_latitude, lng: rr.end_longitude, acc: rr.end_accuracy_m } : null,
+        });
+        // Detect edits: updated_at significantly after the last known milestone
+        const milestones = [rr.created_at, rr.pickup_confirmed_at, rr.started_at, rr.ended_at]
+          .filter(Boolean).map((x: string) => new Date(x).getTime());
+        const lastMs = milestones.length ? Math.max(...milestones) : 0;
+        if (rr.updated_at && new Date(rr.updated_at).getTime() - lastMs > 1500) {
+          ev.push({
+            at: rr.updated_at, kind: "run_edited",
+            title: "Run details edited",
+            detail: rr.notes ? `Notes: ${rr.notes}` : null,
+          });
+        }
+      }
+
+      for (const d of dels ?? []) {
+        const dd = d as any;
+        const inv = dd.invoice as { invoice_no?: string | null; customer?: { name?: string | null; shop_name?: string | null } | null } | null;
+        const shop = inv?.customer?.shop_name || inv?.customer?.name || "Shop";
+        const invNo = inv?.invoice_no ? ` · ${inv.invoice_no}` : "";
+        if (dd.created_at) ev.push({
+          at: dd.created_at, kind: "en_route",
+          title: `Assigned to route: ${shop}`,
+          detail: invNo || null,
+        });
+        if (dd.delivered_at) {
+          const kind: TimelineEvent["kind"] =
+            dd.status === "delivered" ? "delivered" :
+            dd.status === "partially_delivered" ? "partial" :
+            dd.status === "failed" ? "failed" : "en_route";
+          const label =
+            dd.status === "delivered" ? "Delivered" :
+            dd.status === "partially_delivered" ? "Partially delivered" :
+            dd.status === "failed" ? "Failed delivery" : "Status updated";
+          const bits: string[] = [];
+          if (dd.received_by) bits.push(`Received by ${dd.received_by}`);
+          if (dd.collected_amount) bits.push(`${inr(dd.collected_amount)} ${dd.collected_mode || ""}`.trim());
+          ev.push({
+            at: dd.delivered_at, kind,
+            title: `${label}: ${shop}${invNo}`,
+            detail: bits.join(" · ") || null,
+            location: dd.pod_latitude != null ? { lat: dd.pod_latitude, lng: dd.pod_longitude, acc: dd.pod_accuracy_m } : null,
+          });
+          if (dd.collected_amount && Number(dd.collected_amount) > 0) {
+            ev.push({
+              at: dd.delivered_at, kind: "payment",
+              title: `Payment collected: ${shop}`,
+              detail: `${inr(dd.collected_amount)} via ${dd.collected_mode || "cash"}`,
+            });
+          }
+        } else if (dd.updated_at && dd.status && dd.status !== "planned") {
+          ev.push({
+            at: dd.updated_at, kind: "stop_edited",
+            title: `Stop updated: ${shop}${invNo}`,
+            detail: `Status: ${String(dd.status).replace("_", " ")}`,
+          });
+        }
+      }
+
+      return ev.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="size-5 text-primary" />
+            Timeline · {route.name}
+          </DialogTitle>
+          <div className="text-xs text-muted-foreground">
+            {shortDate(date)} · all run, edit, and delivery events
+          </div>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">Loading timeline…</div>
+        ) : !data || data.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            No events yet for this route on {shortDate(date)}.
+          </div>
+        ) : (
+          <ol className="relative border-l-2 border-border ml-3 space-y-4 pl-6 py-2">
+            {data.map((e, i) => {
+              const { Icon, cls } = eventStyle(e.kind);
+              const map = e.location ? gmapsUrl(e.location.lat, e.location.lng) : null;
+              const loc = e.location ? fmtLatLng(e.location.lat, e.location.lng) : null;
+              return (
+                <li key={i} className="relative">
+                  <span className={`absolute -left-[34px] top-0 flex size-6 items-center justify-center rounded-full border ${cls}`}>
+                    <Icon className="size-3.5" />
+                  </span>
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="text-sm font-medium">{e.title}</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">{fmtDateTime(e.at)}</span>
+                  </div>
+                  {e.detail && <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>}
+                  {loc && map && (
+                    <a href={map} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
+                      <MapPin className="size-3" /> {loc}
+                      {e.location?.acc != null && <span className="text-muted-foreground">±{Math.round(e.location.acc)}m</span>}
+                    </a>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
