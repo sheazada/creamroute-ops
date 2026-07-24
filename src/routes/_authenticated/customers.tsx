@@ -22,6 +22,7 @@ import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, A
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getBusiness } from "@/lib/business";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/customers")({
   component: Customers,
