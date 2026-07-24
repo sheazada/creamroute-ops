@@ -673,12 +673,144 @@ function SheetTab({ date }: { date: string }) {
     return { byRoute, unassigned };
   }, [invoices, custToRoute]);
 
+  const qc = useQueryClient();
+  const [assigning, setAssigning] = useState(false);
+
+  const tokens = (s?: string | null) =>
+    (s ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 3);
+
+  const autoAssign = async () => {
+    const unassigned = grouped.unassigned;
+    const active = (routes ?? []).filter((r) => r.active);
+    if (unassigned.length === 0) return toast.info("Nothing to assign — every shop already has a route.");
+    if (active.length === 0) return toast.error("No active routes to assign to.");
+
+    // Build per-route address vocabulary from existing stops + area
+    const routeVocab = new Map<string, Set<string>>();
+    const routeLoad = new Map<string, number>();
+    const routeNextSeq = new Map<string, number>();
+    active.forEach((r) => {
+      const set = new Set<string>(tokens(r.area));
+      routeVocab.set(r.id, set);
+      routeLoad.set(r.id, 0);
+      routeNextSeq.set(r.id, 0);
+    });
+    (stops ?? []).forEach((s: any) => {
+      const set = routeVocab.get(s.route_id);
+      if (set) tokens(s.customer?.address).forEach((t) => set.add(t));
+      routeLoad.set(s.route_id, (routeLoad.get(s.route_id) ?? 0) + 1);
+      routeNextSeq.set(s.route_id, Math.max(routeNextSeq.get(s.route_id) ?? 0, s.sequence ?? 0));
+    });
+    // Include today's already-planned load
+    (invoices ?? []).forEach((inv) => {
+      const link = custToRoute.get(inv.customer_id);
+      if (link) routeLoad.set(link.route_id, (routeLoad.get(link.route_id) ?? 0) + 1);
+    });
+
+    const pickRoute = (address: string | null | undefined) => {
+      const custTokens = tokens(address);
+      let best: { rid: string; score: number } | null = null;
+      for (const r of active) {
+        const vocab = routeVocab.get(r.id)!;
+        let overlap = 0;
+        custTokens.forEach((t) => { if (vocab.has(t)) overlap += 1; });
+        // area substring bonus
+        const areaLc = (r.area ?? "").toLowerCase().trim();
+        const addrLc = (address ?? "").toLowerCase();
+        const areaBonus = areaLc && addrLc.includes(areaLc) ? 5 : 0;
+        // load penalty (lighter routes preferred as tiebreaker)
+        const load = routeLoad.get(r.id) ?? 0;
+        const cap = Number(r.capacity_units || 0);
+        const overCap = cap > 0 && load >= cap ? -3 : 0;
+        const score = overlap * 2 + areaBonus - load * 0.05 + overCap;
+        if (!best || score > best.score) best = { rid: r.id, score };
+      }
+      return best?.rid ?? null;
+    };
+
+    setAssigning(true);
+    try {
+      // Fetch delivery rows for unassigned invoices to update route_id
+      const invIds = unassigned.map((i) => i.id);
+      const { data: delRows } = await supabase
+        .from("deliveries")
+        .select("id, invoice_id")
+        .in("invoice_id", invIds);
+      const delByInv = new Map<string, string>();
+      (delRows ?? []).forEach((d: any) => delByInv.set(d.invoice_id, d.id));
+
+      const stopInserts: { route_id: string; customer_id: string; sequence: number }[] = [];
+      const deliveryUpdates = new Map<string, string[]>(); // route_id -> delivery ids
+      const perRouteCount = new Map<string, number>();
+      const seen = new Set<string>(); // route+customer dedupe
+
+      for (const inv of unassigned) {
+        const rid = pickRoute(inv.customer?.address);
+        if (!rid) continue;
+        const key = `${rid}::${inv.customer_id}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          const next = (routeNextSeq.get(rid) ?? 0) + 1;
+          routeNextSeq.set(rid, next);
+          stopInserts.push({ route_id: rid, customer_id: inv.customer_id, sequence: next });
+        }
+        const delId = delByInv.get(inv.id);
+        if (delId) {
+          const arr = deliveryUpdates.get(rid) ?? [];
+          arr.push(delId);
+          deliveryUpdates.set(rid, arr);
+        }
+        perRouteCount.set(rid, (perRouteCount.get(rid) ?? 0) + 1);
+      }
+
+      if (stopInserts.length > 0) {
+        // upsert to respect unique(route_id, customer_id)
+        const { error } = await supabase
+          .from("route_stops")
+          .upsert(stopInserts, { onConflict: "route_id,customer_id", ignoreDuplicates: true });
+        if (error) throw error;
+      }
+      for (const [rid, ids] of deliveryUpdates) {
+        if (ids.length === 0) continue;
+        const { error } = await supabase.from("deliveries").update({ route_id: rid }).in("id", ids);
+        if (error) throw error;
+      }
+
+      const routesTouched = perRouteCount.size;
+      const total = Array.from(perRouteCount.values()).reduce((a, b) => a + b, 0);
+      toast.success(`Auto-assigned ${total} shop${total === 1 ? "" : "s"} across ${routesTouched} route${routesTouched === 1 ? "" : "s"}.`);
+      qc.invalidateQueries({ queryKey: ["all-route-stops-with-addr"] });
+      qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date] });
+      qc.invalidateQueries({ queryKey: ["deliveries"] });
+      qc.invalidateQueries({ queryKey: ["route-stops"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Auto-assign failed");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   if (!invoices) return <Card className="p-10 text-center text-sm text-muted-foreground">Loading…</Card>;
   if (invoices.length === 0)
     return <Card className="p-10 text-center text-sm text-muted-foreground">No invoices for {shortDate(date)}.</Card>;
 
   return (
     <div className="space-y-4">
+      {grouped.unassigned.length > 0 && (
+        <Card className="p-3 flex flex-wrap items-center gap-3 bg-primary/5 border-primary/20">
+          <Sparkles className="size-4 text-primary shrink-0" />
+          <div className="text-sm flex-1 min-w-0">
+            <b>{grouped.unassigned.length}</b> shop{grouped.unassigned.length === 1 ? "" : "s"} not on any route yet. Auto-match by area and existing route mix.
+          </div>
+          <Button size="sm" onClick={autoAssign} disabled={assigning} className="gap-1.5">
+            <Sparkles className="size-4" /> {assigning ? "Assigning…" : "Auto-assign"}
+          </Button>
+        </Card>
+      )}
       {(routes ?? []).map((r) => {
         const list = grouped.byRoute.get(r.id) ?? [];
         if (list.length === 0) return null;
