@@ -92,8 +92,8 @@ const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof L
     { to: "/reports", label: "Reports", icon: BarChart3 },
   ],
   salesperson: [
-    { to: "/orders", label: "Orders", icon: ShoppingCart },
     { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/orders/new", label: "Add Sale", icon: ShoppingCart },
     { to: "/customers", label: "Customers", icon: Users },
     { to: "/products", label: "Products", icon: Package },
   ],
