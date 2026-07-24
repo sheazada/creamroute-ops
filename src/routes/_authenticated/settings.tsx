@@ -344,6 +344,7 @@ function Settings() {
           onEdit={() => startEdit("business")}
           onCancel={cancelEdit}
           onSave={saveBiz}
+          saving={savingSection === "business"}
         >
           <div className="space-y-3">
             {renderSectionBanner("business")}
