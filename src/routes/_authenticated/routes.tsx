@@ -27,6 +27,8 @@ type RouteRow = {
   helper_name: string | null;
   active: boolean;
   notes: string | null;
+  capacity_units: number | null;
+  capacity_label: string | null;
 };
 
 type Stop = {
