@@ -35,7 +35,7 @@ function pinIcon(color: string, label = "") {
 }
 
 function FitBounds({ points }: { points: MapPoint[] }) {
-  const map = useMapSafe();
+  const map = useMap();
   useEffect(() => {
     if (!map || points.length === 0) return;
     if (points.length === 1) {
@@ -48,11 +48,6 @@ function FitBounds({ points }: { points: MapPoint[] }) {
   return null;
 }
 
-function useMapSafe() {
-  // useMap from react-leaflet requires being inside MapContainer; we import lazily via require to avoid SSR issues
-  const { useMap } = require("react-leaflet") as typeof import("react-leaflet");
-  return useMap();
-}
 
 export default function RunMap({ points, height = 480 }: { points: MapPoint[]; height?: number }) {
   const center = useMemo<[number, number]>(() => {
