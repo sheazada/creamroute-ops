@@ -25,6 +25,7 @@ import { Route as AuthenticatedCustomersRouteImport } from './routes/_authentica
 import { Route as AuthenticatedPurchasesIndexRouteImport } from './routes/_authenticated/purchases.index'
 import { Route as AuthenticatedOrdersIndexRouteImport } from './routes/_authenticated/orders.index'
 import { Route as AuthenticatedInvoicesIndexRouteImport } from './routes/_authenticated/invoices.index'
+import { Route as AuthenticatedSuppliersIdRouteImport } from './routes/_authenticated/suppliers.$id'
 import { Route as AuthenticatedPurchasesNewRouteImport } from './routes/_authenticated/purchases.new'
 import { Route as AuthenticatedPurchasesChallanRouteImport } from './routes/_authenticated/purchases.challan'
 import { Route as AuthenticatedOrdersNewRouteImport } from './routes/_authenticated/orders.new'
@@ -114,6 +115,12 @@ const AuthenticatedInvoicesIndexRoute =
     path: '/invoices/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSuppliersIdRoute =
+  AuthenticatedSuppliersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedSuppliersRoute,
+  } as any)
 const AuthenticatedPurchasesNewRoute =
   AuthenticatedPurchasesNewRouteImport.update({
     id: '/purchases/new',
@@ -155,12 +162,13 @@ export interface FileRoutesByFullPath {
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/invoices/new': typeof AuthenticatedInvoicesNewRoute
   '/orders/new': typeof AuthenticatedOrdersNewRoute
   '/purchases/challan': typeof AuthenticatedPurchasesChallanRoute
   '/purchases/new': typeof AuthenticatedPurchasesNewRoute
+  '/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/orders/': typeof AuthenticatedOrdersIndexRoute
   '/purchases/': typeof AuthenticatedPurchasesIndexRoute
@@ -177,12 +185,13 @@ export interface FileRoutesByTo {
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/invoices/new': typeof AuthenticatedInvoicesNewRoute
   '/orders/new': typeof AuthenticatedOrdersNewRoute
   '/purchases/challan': typeof AuthenticatedPurchasesChallanRoute
   '/purchases/new': typeof AuthenticatedPurchasesNewRoute
+  '/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/invoices': typeof AuthenticatedInvoicesIndexRoute
   '/orders': typeof AuthenticatedOrdersIndexRoute
   '/purchases': typeof AuthenticatedPurchasesIndexRoute
@@ -201,12 +210,13 @@ export interface FileRoutesById {
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
+  '/_authenticated/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/_authenticated/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/_authenticated/invoices/new': typeof AuthenticatedInvoicesNewRoute
   '/_authenticated/orders/new': typeof AuthenticatedOrdersNewRoute
   '/_authenticated/purchases/challan': typeof AuthenticatedPurchasesChallanRoute
   '/_authenticated/purchases/new': typeof AuthenticatedPurchasesNewRoute
+  '/_authenticated/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/_authenticated/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/_authenticated/orders/': typeof AuthenticatedOrdersIndexRoute
   '/_authenticated/purchases/': typeof AuthenticatedPurchasesIndexRoute
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/orders/new'
     | '/purchases/challan'
     | '/purchases/new'
+    | '/suppliers/$id'
     | '/invoices/'
     | '/orders/'
     | '/purchases/'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/orders/new'
     | '/purchases/challan'
     | '/purchases/new'
+    | '/suppliers/$id'
     | '/invoices'
     | '/orders'
     | '/purchases'
@@ -276,6 +288,7 @@ export interface FileRouteTypes {
     | '/_authenticated/orders/new'
     | '/_authenticated/purchases/challan'
     | '/_authenticated/purchases/new'
+    | '/_authenticated/suppliers/$id'
     | '/_authenticated/invoices/'
     | '/_authenticated/orders/'
     | '/_authenticated/purchases/'
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInvoicesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/suppliers/$id': {
+      id: '/_authenticated/suppliers/$id'
+      path: '/$id'
+      fullPath: '/suppliers/$id'
+      preLoaderRoute: typeof AuthenticatedSuppliersIdRouteImport
+      parentRoute: typeof AuthenticatedSuppliersRoute
+    }
     '/_authenticated/purchases/new': {
       id: '/_authenticated/purchases/new'
       path: '/purchases/new'
@@ -439,6 +459,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedSuppliersRouteChildren {
+  AuthenticatedSuppliersIdRoute: typeof AuthenticatedSuppliersIdRoute
+}
+
+const AuthenticatedSuppliersRouteChildren: AuthenticatedSuppliersRouteChildren =
+  {
+    AuthenticatedSuppliersIdRoute: AuthenticatedSuppliersIdRoute,
+  }
+
+const AuthenticatedSuppliersRouteWithChildren =
+  AuthenticatedSuppliersRoute._addFileChildren(
+    AuthenticatedSuppliersRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
   AuthenticatedDailyDemandRoute: typeof AuthenticatedDailyDemandRoute
@@ -449,7 +483,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
+  AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRouteWithChildren
   AuthenticatedInvoicesIdRoute: typeof AuthenticatedInvoicesIdRoute
   AuthenticatedInvoicesNewRoute: typeof AuthenticatedInvoicesNewRoute
   AuthenticatedOrdersNewRoute: typeof AuthenticatedOrdersNewRoute
@@ -470,7 +504,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
+  AuthenticatedSuppliersRoute: AuthenticatedSuppliersRouteWithChildren,
   AuthenticatedInvoicesIdRoute: AuthenticatedInvoicesIdRoute,
   AuthenticatedInvoicesNewRoute: AuthenticatedInvoicesNewRoute,
   AuthenticatedOrdersNewRoute: AuthenticatedOrdersNewRoute,
