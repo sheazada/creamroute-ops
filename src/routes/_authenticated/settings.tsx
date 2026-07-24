@@ -17,7 +17,17 @@ import {
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark } from "lucide-react";
-import { getBusiness, saveBusiness, type BusinessProfile } from "@/lib/business";
+import {
+  getBusiness,
+  saveBusiness,
+  validateBusiness,
+  maskMiddle,
+  maskTail,
+  maskVpa,
+  type BusinessProfile,
+  type BusinessValidationErrors,
+} from "@/lib/business";
+import { MaskedInput } from "@/components/masked-input";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: Settings,
@@ -93,7 +103,16 @@ function Settings() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [errors, setErrors] = useState<BusinessValidationErrors>({});
+  const err = (k: keyof BusinessProfile) => errors[k];
+
   const saveBiz = () => {
+    const { ok, errors: e } = validateBusiness(biz);
+    setErrors(e);
+    if (!ok) {
+      toast.error("Please fix the highlighted fields before saving");
+      return;
+    }
     saveBusiness(biz);
     toast.success("Business profile saved — reflects on all new invoices");
   };
