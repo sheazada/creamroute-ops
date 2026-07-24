@@ -126,79 +126,106 @@ function Settings() {
           icon={Building2}
           title="Business identity"
           description="Shown on every invoice header, print copy and PDF."
-          summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + biz.gstin : ""}` : "Not set — tap to add"}
+          summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + maskMiddle(biz.gstin, 2, 4) : ""}` : "Not set — tap to add"}
           storageKey={me?.userId ? `settings:section:${me.userId}:business` : undefined}
           readOnly={!isAdmin}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5 col-span-2">
-                <Label>Trade name</Label>
-                <Input value={biz.name} onChange={(e) => setField("name", e.target.value)} />
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Legal name (optional)</Label>
+              <FieldRow label="Trade name" error={err("name")} colSpan={2}>
+                <Input
+                  value={biz.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  aria-invalid={!!err("name")}
+                />
+              </FieldRow>
+              <FieldRow label="Legal name (optional)" error={err("legal_name")} colSpan={2}>
                 <Input
                   value={biz.legal_name ?? ""}
                   onChange={(e) => setField("legal_name", e.target.value)}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>GSTIN</Label>
-                <Input value={biz.gstin} onChange={(e) => setField("gstin", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>FSSAI</Label>
-                <Input
+              </FieldRow>
+              <FieldRow label="GSTIN" error={err("gstin")} hint="15 chars • state+PAN+entity+Z+checksum">
+                <MaskedInput
+                  value={biz.gstin}
+                  onChange={(e) => setField("gstin", e.target.value)}
+                  mask={(v) => maskMiddle(v, 2, 4)}
+                  uppercase
+                  maxLength={15}
+                  invalid={!!err("gstin")}
+                  placeholder="07AAAAA0000A1Z5"
+                />
+              </FieldRow>
+              <FieldRow label="FSSAI" error={err("fssai")}>
+                <MaskedInput
                   value={biz.fssai ?? ""}
                   onChange={(e) => setField("fssai", e.target.value)}
+                  mask={(v) => maskTail(v, 4)}
+                  maxLength={14}
+                  inputMode="numeric"
+                  invalid={!!err("fssai")}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>PAN</Label>
-                <Input value={biz.pan ?? ""} onChange={(e) => setField("pan", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>State (GST)</Label>
+              </FieldRow>
+              <FieldRow label="PAN" error={err("pan")}>
+                <MaskedInput
+                  value={biz.pan ?? ""}
+                  onChange={(e) => setField("pan", e.target.value)}
+                  mask={(v) => maskMiddle(v, 2, 3)}
+                  uppercase
+                  maxLength={10}
+                  invalid={!!err("pan")}
+                  placeholder="AAAAA1234A"
+                />
+              </FieldRow>
+              <FieldRow label="State (GST)" error={err("state")}>
                 <Input
                   value={biz.state ?? ""}
                   onChange={(e) => setField("state", e.target.value)}
                   placeholder="Delhi"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>State code</Label>
+              </FieldRow>
+              <FieldRow label="State code" error={err("state_code")}>
                 <Input
                   value={biz.state_code ?? ""}
-                  onChange={(e) => setField("state_code", e.target.value)}
+                  onChange={(e) => setField("state_code", e.target.value.replace(/\D/g, ""))}
                   placeholder="07"
                   maxLength={2}
+                  inputMode="numeric"
+                  aria-invalid={!!err("state_code")}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Invoice prefix</Label>
+              </FieldRow>
+              <FieldRow label="Invoice prefix" error={err("invoice_prefix")}>
                 <Input
                   value={biz.invoice_prefix ?? ""}
                   onChange={(e) => setField("invoice_prefix", e.target.value)}
                   placeholder="INV"
+                  maxLength={8}
+                  aria-invalid={!!err("invoice_prefix")}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Mobile</Label>
-                <Input value={biz.mobile} onChange={(e) => setField("mobile", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Email</Label>
-                <Input value={biz.email} onChange={(e) => setField("email", e.target.value)} />
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Address</Label>
+              </FieldRow>
+              <FieldRow label="Mobile" error={err("mobile")}>
+                <Input
+                  value={biz.mobile}
+                  onChange={(e) => setField("mobile", e.target.value)}
+                  aria-invalid={!!err("mobile")}
+                  inputMode="tel"
+                />
+              </FieldRow>
+              <FieldRow label="Email" error={err("email")}>
+                <Input
+                  value={biz.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  aria-invalid={!!err("email")}
+                  inputMode="email"
+                />
+              </FieldRow>
+              <FieldRow label="Address" error={err("address")} colSpan={2}>
                 <Textarea
                   rows={2}
                   value={biz.address}
                   onChange={(e) => setField("address", e.target.value)}
                 />
-              </div>
+              </FieldRow>
             </div>
             <div className="pt-2">
               <Button onClick={saveBiz} size="sm">Save business profile</Button>
