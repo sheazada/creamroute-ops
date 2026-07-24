@@ -2313,6 +2313,19 @@ function RunTimelineDialog({
                     <span className="text-[11px] font-mono text-muted-foreground">{fmtDateTime(e.at)}</span>
                   </div>
                   {e.detail && <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>}
+                  {e.changes && e.changes.length > 0 && (
+                    <ul className="mt-1.5 space-y-1 rounded-md border border-border/70 bg-muted/40 p-2">
+                      {e.changes.map((c, ci) => (
+                        <li key={ci} className="text-[11px] leading-snug">
+                          <span className="font-medium text-foreground">{FIELD_LABELS[c.field] || c.field}</span>
+                          <span className="mx-1.5 text-muted-foreground">·</span>
+                          <span className="line-through text-muted-foreground break-all">{prettyFieldValue(c.field, c.from)}</span>
+                          <span className="mx-1.5 text-muted-foreground">→</span>
+                          <span className="font-medium text-emerald-700 break-all">{prettyFieldValue(c.field, c.to)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {loc && map && (
                     <a href={map} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
                       <MapPin className="size-3" /> {loc}
