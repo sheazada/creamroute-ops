@@ -19,6 +19,7 @@ export type Database = {
           address: string | null
           created_at: string
           credit_limit: number
+          email: string | null
           gstin: string | null
           id: string
           mobile: string | null
@@ -33,6 +34,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           credit_limit?: number
+          email?: string | null
           gstin?: string | null
           id?: string
           mobile?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           credit_limit?: number
+          email?: string | null
           gstin?: string | null
           id?: string
           mobile?: string | null
