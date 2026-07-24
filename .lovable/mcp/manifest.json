@@ -160,6 +160,111 @@
           }
         },
         "outputSchema": null
+      },
+      {
+        "name": "mark_delivery_collected",
+        "title": "Mark delivery collected / delivered",
+        "description": "Update a delivery stop with collection details. Sets status (default 'delivered'), delivered_at (now for delivered/partially_delivered), receiver name, and optionally records a payment collected on delivery. Use list_pending_deliveries first to get the delivery id.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "delivery_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Delivery id from list_pending_deliveries."
+            },
+            "status": {
+              "description": "Defaults to 'delivered'.",
+              "type": "string",
+              "enum": [
+                "delivered",
+                "partially_delivered",
+                "failed",
+                "en_route"
+              ]
+            },
+            "received_by": {
+              "description": "Name of person who received the goods.",
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "collected_amount": {
+              "description": "Amount collected from the shop.",
+              "type": "number",
+              "minimum": 0
+            },
+            "collected_mode": {
+              "description": "Payment mode when collected_amount > 0.",
+              "type": "string",
+              "enum": [
+                "cash",
+                "upi",
+                "bank",
+                "cheque",
+                "credit"
+              ]
+            },
+            "reference": {
+              "description": "UPI/txn/cheque reference when applicable.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "delivery_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upload_pod_proof",
+        "title": "Upload proof of delivery (POD)",
+        "description": "Upload a POD photo/PDF for a delivery stop into the private 'pod' bucket and save its path on the delivery. Accepts a base64-encoded file up to 8 MB. Use list_pending_deliveries to find the delivery id.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "delivery_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Delivery id from list_pending_deliveries."
+            },
+            "content_base64": {
+              "type": "string",
+              "description": "File bytes, base64-encoded (no data: prefix)."
+            },
+            "content_type": {
+              "type": "string",
+              "description": "MIME type: image/jpeg, image/png, image/webp, image/heic, or application/pdf."
+            },
+            "signature_note": {
+              "description": "Optional signature name/note to store alongside the POD.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "delivery_id",
+            "content_base64",
+            "content_type"
+          ]
+        },
+        "outputSchema": null
       }
     ]
   }
