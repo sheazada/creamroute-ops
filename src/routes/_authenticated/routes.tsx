@@ -268,7 +268,7 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
     queryFn: async (): Promise<Stop[]> => {
       const { data, error } = await supabase
         .from("route_stops")
-        .select("id, route_id, customer_id, sequence, customer:customers(id, name, shop_name, address, mobile, outstanding)")
+        .select("id, route_id, customer_id, sequence, customer:customers(id, name, shop_name, address, mobile, outstanding, latitude, longitude)")
         .eq("route_id", routeId)
         .order("sequence");
       if (error) throw error;
