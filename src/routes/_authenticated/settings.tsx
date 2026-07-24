@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { useState } from "react";
 import { ShieldCheck, User as UserIcon } from "lucide-react";
+import { getBusiness, saveBusiness, type BusinessProfile } from "@/lib/business";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: Settings,
@@ -41,13 +42,9 @@ const roleStyles: Record<Role, string> = {
 
 function Settings() {
   const qc = useQueryClient();
-  const [biz, setBiz] = useState({
-    name: "DairyFlow Distributors",
-    gstin: "07AAAAA0000A1Z5",
-    address: "Wholesale Dairy Market, New Delhi 110001",
-    mobile: "+91 98100 00000",
-    email: "hello@dairyflow.example",
-  });
+  const [biz, setBiz] = useState<BusinessProfile>(() => getBusiness());
+  const setField = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) =>
+    setBiz((b) => ({ ...b, [k]: v }));
 
   const { data: me } = useQuery({
     queryKey: ["me-settings"],
@@ -81,7 +78,6 @@ function Settings() {
 
   const changeRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: Role }) => {
-      // Replace all roles with the single selected role
       const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
       if (delErr) throw delErr;
       const { error: insErr } = await supabase
@@ -97,26 +93,158 @@ function Settings() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const saveBiz = () => {
+    saveBusiness(biz);
+    toast.success("Business profile saved — reflects on all new invoices");
+  };
+
   return (
     <PageContainer>
-      <PageHeader title="Settings" description="Business details, team roles and preferences." />
+      <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
-          <h3 className="font-semibold mb-4">Business details</h3>
+          <h3 className="font-semibold mb-1">Business identity</h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Shown on every invoice header, print copy and PDF.
+          </p>
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Business name</Label><Input value={biz.name} onChange={(e) => setBiz({ ...biz, name: e.target.value })} /></div>
-            <div className="space-y-1.5"><Label>GSTIN</Label><Input value={biz.gstin} onChange={(e) => setBiz({ ...biz, gstin: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Mobile</Label><Input value={biz.mobile} onChange={(e) => setBiz({ ...biz, mobile: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label>Email</Label><Input value={biz.email} onChange={(e) => setBiz({ ...biz, email: e.target.value })} /></div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Trade name</Label>
+                <Input value={biz.name} onChange={(e) => setField("name", e.target.value)} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Legal name (optional)</Label>
+                <Input
+                  value={biz.legal_name ?? ""}
+                  onChange={(e) => setField("legal_name", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>GSTIN</Label>
+                <Input value={biz.gstin} onChange={(e) => setField("gstin", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>FSSAI</Label>
+                <Input
+                  value={biz.fssai ?? ""}
+                  onChange={(e) => setField("fssai", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>PAN</Label>
+                <Input value={biz.pan ?? ""} onChange={(e) => setField("pan", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>State (GST)</Label>
+                <Input
+                  value={biz.state ?? ""}
+                  onChange={(e) => setField("state", e.target.value)}
+                  placeholder="Delhi"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>State code</Label>
+                <Input
+                  value={biz.state_code ?? ""}
+                  onChange={(e) => setField("state_code", e.target.value)}
+                  placeholder="07"
+                  maxLength={2}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Invoice prefix</Label>
+                <Input
+                  value={biz.invoice_prefix ?? ""}
+                  onChange={(e) => setField("invoice_prefix", e.target.value)}
+                  placeholder="INV"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Mobile</Label>
+                <Input value={biz.mobile} onChange={(e) => setField("mobile", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input value={biz.email} onChange={(e) => setField("email", e.target.value)} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Address</Label>
+                <Textarea
+                  rows={2}
+                  value={biz.address}
+                  onChange={(e) => setField("address", e.target.value)}
+                />
+              </div>
             </div>
-            <div className="space-y-1.5"><Label>Address</Label><Textarea rows={2} value={biz.address} onChange={(e) => setBiz({ ...biz, address: e.target.value })} /></div>
-            <Button onClick={() => toast.success("Saved locally. Persist to DB coming next.")}>Save changes</Button>
           </div>
         </Card>
 
         <Card className="p-6">
+          <h3 className="font-semibold mb-1">Payment & bank</h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Printed on invoices. UPI VPA also powers the QR code retailers can scan to pay.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5 col-span-2">
+              <Label>UPI VPA</Label>
+              <Input
+                value={biz.upi_vpa ?? ""}
+                onChange={(e) => setField("upi_vpa", e.target.value)}
+                placeholder="dairyflow@okhdfcbank"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Bank name</Label>
+              <Input
+                value={biz.bank_name ?? ""}
+                onChange={(e) => setField("bank_name", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account holder</Label>
+              <Input
+                value={biz.bank_holder ?? ""}
+                onChange={(e) => setField("bank_holder", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account no.</Label>
+              <Input
+                value={biz.bank_account ?? ""}
+                onChange={(e) => setField("bank_account", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>IFSC</Label>
+              <Input
+                value={biz.bank_ifsc ?? ""}
+                onChange={(e) => setField("bank_ifsc", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label>Branch</Label>
+              <Input
+                value={biz.bank_branch ?? ""}
+                onChange={(e) => setField("bank_branch", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label>Invoice terms & conditions</Label>
+              <Textarea
+                rows={3}
+                value={biz.terms ?? ""}
+                onChange={(e) => setField("terms", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="pt-4">
+            <Button onClick={saveBiz}>Save business profile</Button>
+          </div>
+        </Card>
+
+        <Card className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Team members</h3>
             {isAdmin ? (
@@ -129,12 +257,17 @@ function Settings() {
           </div>
 
           <div className="divide-y">
-            {isLoading && <div className="text-sm text-muted-foreground py-6 text-center">Loading team…</div>}
+            {isLoading && (
+              <div className="text-sm text-muted-foreground py-6 text-center">Loading team…</div>
+            )}
             {(users ?? []).map((u) => {
               const currentRole = (u.roles[0] ?? "salesperson") as Role;
               const isSelf = u.id === me?.userId;
               return (
-                <div key={u.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div
+                  key={u.id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="size-9 rounded-full bg-muted grid place-items-center shrink-0">
                       <UserIcon className="size-4 text-muted-foreground" />
@@ -142,7 +275,11 @@ function Settings() {
                     <div className="min-w-0">
                       <div className="font-medium text-sm truncate">
                         {u.full_name ?? u.email}
-                        {isSelf && <span className="ml-2 text-[10px] uppercase text-muted-foreground">(you)</span>}
+                        {isSelf && (
+                          <span className="ml-2 text-[10px] uppercase text-muted-foreground">
+                            (you)
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                     </div>
@@ -170,7 +307,9 @@ function Settings() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded ring-1 ${roleStyles[currentRole]}`}>
+                      <span
+                        className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded ring-1 ${roleStyles[currentRole]}`}
+                      >
                         {currentRole}
                       </span>
                     )}
@@ -179,25 +318,11 @@ function Settings() {
               );
             })}
             {!isLoading && (users ?? []).length === 0 && (
-              <div className="text-sm text-muted-foreground py-6 text-center">No team members yet.</div>
+              <div className="text-sm text-muted-foreground py-6 text-center">
+                No team members yet.
+              </div>
             )}
           </div>
-
-          <div className="mt-4 rounded-lg bg-muted/40 border p-3 text-xs text-muted-foreground space-y-1">
-            <p><b className="text-foreground">How it works:</b> everyone signs in on the same login page. The very first account becomes <b>Admin</b>. New sign-ups default to <b>Salesperson</b>; only Admin can change roles.</p>
-            <p className="pt-1"><b className="text-foreground">Roles:</b> Admin (all access) · Manager (ops + finance) · Salesperson (orders/invoices) · Driver (deliveries) · Helper (delivery support).</p>
-          </div>
-        </Card>
-
-        <Card className="p-6 lg:col-span-2">
-          <h3 className="font-semibold mb-2">Coming soon</h3>
-          <ul className="text-sm text-muted-foreground space-y-2 list-disc pl-5">
-            <li>Custom logo & invoice templates</li>
-            <li>Automated WhatsApp / SMS reminders</li>
-            <li>Barcode / QR scanner integration</li>
-            <li>Multi-warehouse & GPS delivery tracking</li>
-            <li>AI-powered demand forecasting</li>
-          </ul>
         </Card>
       </div>
     </PageContainer>

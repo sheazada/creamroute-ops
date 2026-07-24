@@ -1,14 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer } from "@/components/page-header";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, shortDate } from "@/lib/format";
-import { ArrowLeft, Printer, Milk, Pencil, Ban, Save, X, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Printer,
+  Milk,
+  Pencil,
+  Ban,
+  Save,
+  X,
+  Trash2,
+  Share2,
+  Receipt,
+  Download,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -21,6 +32,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { amountInWords } from "@/lib/amount-in-words";
+import { getBusiness, qrImage, upiIntent } from "@/lib/business";
 
 export const Route = createFileRoute("/_authenticated/invoices/$id")({
   component: InvoiceView,
@@ -44,6 +57,7 @@ function InvoiceView() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<EditableItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const biz = useMemo(() => getBusiness(), []);
 
   const { data } = useQuery({
     queryKey: ["invoice", id],
@@ -107,7 +121,6 @@ function InvoiceView() {
           })
           .eq("id", row.id);
 
-        // Adjust stock delta if quantity changed
         const original = (data.items ?? []).find((it: any) => it.id === row.id);
         if (original && row.product_id) {
           const delta = row.quantity - Number(original.quantity);
@@ -148,7 +161,6 @@ function InvoiceView() {
 
   const voidInvoice = async () => {
     try {
-      // Restock every line item
       for (const it of data.items) {
         if (!it.product_id) continue;
         const { data: p } = await supabase
@@ -185,7 +197,6 @@ function InvoiceView() {
     }
   };
 
-  // Live totals during edit
   const liveTotals = (() => {
     let subtotal = 0,
       tax = 0;
@@ -198,9 +209,58 @@ function InvoiceView() {
     return { subtotal, tax, total: subtotal + tax };
   })();
 
+  const printA4 = () => {
+    document.body.classList.add("print-a4");
+    document.body.classList.remove("print-thermal");
+    window.print();
+    setTimeout(() => document.body.classList.remove("print-a4"), 500);
+  };
+  const printThermal = () => {
+    document.body.classList.add("print-thermal");
+    document.body.classList.remove("print-a4");
+    window.print();
+    setTimeout(() => document.body.classList.remove("print-thermal"), 500);
+  };
+
+  const whatsappShare = () => {
+    const phone = (c?.mobile ?? "").replace(/[^\d]/g, "");
+    const lines = [
+      `*${biz.name}* — Tax Invoice`,
+      `Invoice #: ${inv.invoice_no}`,
+      `Date: ${shortDate(inv.invoice_date)}`,
+      `Bill to: ${c?.name ?? ""}${c?.shop_name ? " · " + c.shop_name : ""}`,
+      `Amount: ${inr(inv.total)}`,
+      Number(inv.balance) > 0 ? `Balance due: ${inr(inv.balance)}` : `Paid in full ✓`,
+      biz.upi_vpa ? `\nPay via UPI: ${biz.upi_vpa}` : "",
+      `\nView / download: ${typeof window !== "undefined" ? window.location.href : ""}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const url = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(lines)}`
+      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  // QR: UPI intent if VPA configured, else invoice URL
+  const qrPayload = biz.upi_vpa
+    ? upiIntent({
+        payee: biz.name,
+        vpa: biz.upi_vpa,
+        amount: Number(inv.balance) > 0 ? Number(inv.balance) : Number(inv.total),
+        note: `Inv ${inv.invoice_no}`,
+      })
+    : typeof window !== "undefined"
+      ? window.location.href
+      : inv.invoice_no;
+
+  const items = editing ? draft.filter((d) => !d._deleted) : data.items;
+  const totalQty = items.reduce((s: number, it: any) => s + Number(it.quantity), 0);
+
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-6 no-print">
+      {/* Action bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 no-print">
         <Button asChild variant="ghost" size="sm" className="gap-1.5">
           <Link to="/invoices">
             <ArrowLeft className="size-4" /> Back
@@ -246,16 +306,27 @@ function InvoiceView() {
             </>
           )}
           {!editing && (
-            <Button size="sm" variant="outline" onClick={() => window.print()} className="gap-1.5">
-              <Printer className="size-4" /> Print / PDF
-            </Button>
+            <>
+              <Button size="sm" variant="outline" onClick={whatsappShare} className="gap-1.5">
+                <Share2 className="size-4" /> WhatsApp
+              </Button>
+              <Button size="sm" variant="outline" onClick={printThermal} className="gap-1.5">
+                <Receipt className="size-4" /> Thermal
+              </Button>
+              <Button size="sm" variant="outline" onClick={printA4} className="gap-1.5">
+                <Printer className="size-4" /> Print
+              </Button>
+              <Button size="sm" onClick={printA4} className="gap-1.5">
+                <Download className="size-4" /> Save PDF
+              </Button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Live customer balance banner */}
+      {/* Customer balance banner */}
       {c && (
-        <div className="max-w-4xl mx-auto mb-4 no-print flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3 text-sm">
+        <div className="max-w-[210mm] mx-auto mb-4 no-print flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3 text-sm">
           <div>
             <span className="text-muted-foreground">Customer: </span>
             <span className="font-semibold">{c.name}</span>
@@ -282,71 +353,131 @@ function InvoiceView() {
         </div>
       )}
 
-      <Card className="p-6 sm:p-10 max-w-4xl mx-auto shadow-md print:shadow-none print:border-0">
-        <div className="flex justify-between items-start pb-6 border-b gap-4">
-          <div className="flex items-center gap-3">
-            <div className="size-12 rounded-xl bg-primary grid place-items-center text-primary-foreground">
-              <Milk className="size-6" />
-            </div>
-            <div>
-              <div className="text-xl font-semibold tracking-tight">DairyFlow Distributors</div>
-              <div className="text-xs text-muted-foreground">
-                Wholesale Dairy Distribution · GSTIN: 07AAAAA0000A1Z5
+      {/* =========== A4 INVOICE =========== */}
+      <div className="invoice-a4 mx-auto bg-white text-slate-900 shadow-sm border rounded-md print:rounded-none print:shadow-none print:border-0">
+        {/* Header band */}
+        <div className="relative">
+          <div className="absolute inset-x-0 top-0 h-1 bg-primary print:bg-black" />
+          <div className="p-6 sm:p-8 flex justify-between items-start gap-4 border-b">
+            <div className="flex items-start gap-3">
+              <div className="size-12 rounded-lg bg-primary print:bg-black grid place-items-center text-white shrink-0">
+                <Milk className="size-6" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-xl font-bold tracking-tight leading-tight">
+                  {biz.name}
+                </div>
+                {biz.legal_name && biz.legal_name !== biz.name && (
+                  <div className="text-[11px] text-slate-500">{biz.legal_name}</div>
+                )}
+                <div className="text-[11px] text-slate-600 mt-1 whitespace-pre-line max-w-xs">
+                  {biz.address}
+                </div>
+                <div className="text-[11px] text-slate-600 mt-1 space-x-2">
+                  <span>📞 {biz.mobile}</span>
+                  {biz.email && <span>· ✉ {biz.email}</span>}
+                </div>
+                <div className="text-[11px] mt-1 space-x-3">
+                  <span>
+                    <b>GSTIN:</b> <span className="font-mono">{biz.gstin}</span>
+                  </span>
+                  {biz.fssai && (
+                    <span>
+                      <b>FSSAI:</b> <span className="font-mono">{biz.fssai}</span>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xl sm:text-2xl font-semibold tracking-tight">TAX INVOICE</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {isVoid ? "VOIDED" : "Original for recipient"}
+            <div className="text-right shrink-0">
+              <div className="inline-block px-3 py-1 rounded bg-primary/10 text-primary print:bg-slate-100 print:text-black text-[10px] font-bold uppercase tracking-widest">
+                Tax Invoice
+              </div>
+              <div className="text-lg font-bold font-mono mt-2">{inv.invoice_no}</div>
+              <div className="text-[11px] text-slate-500">
+                {shortDate(inv.invoice_date)}
+                {inv.due_date && <> · Due {shortDate(inv.due_date)}</>}
+              </div>
+              {isVoid && (
+                <div className="mt-2 inline-block text-[10px] px-2 py-0.5 rounded bg-destructive/10 text-destructive font-bold uppercase">
+                  Voided
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 py-6 border-b">
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+        {/* Bill to / Ship to / Meta */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 border-b divide-y sm:divide-y-0 sm:divide-x text-[12px]">
+          <div className="p-4">
+            <div className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">
               Billed to
             </div>
             <div className="font-semibold">{c?.name}</div>
-            {c?.shop_name && <div className="text-sm text-muted-foreground">{c.shop_name}</div>}
+            {c?.shop_name && <div className="text-slate-600">{c.shop_name}</div>}
             {c?.address && (
-              <div className="text-sm text-muted-foreground whitespace-pre-line">{c.address}</div>
+              <div className="text-slate-600 whitespace-pre-line leading-snug">{c.address}</div>
             )}
             {c?.mobile && (
-              <div className="text-sm mt-1">
-                Mobile: <span className="font-mono">{c.mobile}</span>
+              <div className="text-slate-600">
+                📞 <span className="font-mono">{c.mobile}</span>
               </div>
             )}
             {c?.gstin && (
-              <div className="text-sm">
-                GSTIN: <span className="font-mono">{c.gstin}</span>
+              <div>
+                <b>GSTIN:</b> <span className="font-mono">{c.gstin}</span>
               </div>
             )}
           </div>
-          <div className="sm:text-right space-y-1">
-            <Field label="Invoice #" value={inv.invoice_no} mono />
-            <Field label="Date" value={shortDate(inv.invoice_date)} />
-            {inv.due_date && <Field label="Due" value={shortDate(inv.due_date)} />}
+          <div className="p-4">
+            <div className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">
+              Shipped to
+            </div>
+            <div className="font-semibold">{c?.name}</div>
+            {c?.shop_name && <div className="text-slate-600">{c.shop_name}</div>}
+            {c?.address && (
+              <div className="text-slate-600 whitespace-pre-line leading-snug">{c.address}</div>
+            )}
+          </div>
+          <div className="p-4 space-y-1">
+            <MetaRow label="Invoice #" value={inv.invoice_no} mono />
+            <MetaRow label="Invoice date" value={shortDate(inv.invoice_date)} />
+            {inv.due_date && <MetaRow label="Due date" value={shortDate(inv.due_date)} />}
+            <MetaRow
+              label="Place of supply"
+              value={`${biz.state ?? "-"}${biz.state_code ? ` (${biz.state_code})` : ""}`}
+            />
+            <MetaRow label="Supply type" value={isInter ? "Inter-state" : "Intra-state"} />
+            <MetaRow label="Reverse charge" value="No" />
           </div>
         </div>
 
+        {/* Items table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm my-6 min-w-[640px]">
+          <table className="w-full text-[12px] border-collapse min-w-[720px]">
             <thead>
-              <tr className="border-b text-[10px] uppercase tracking-wider text-muted-foreground">
-                <th className="text-left py-2 font-semibold">#</th>
-                <th className="text-left py-2 font-semibold">Item</th>
-                <th className="text-left py-2 font-semibold">HSN</th>
-                <th className="text-right py-2 font-semibold">Qty</th>
-                <th className="text-right py-2 font-semibold">Rate</th>
-                <th className="text-right py-2 font-semibold">Disc</th>
-                <th className="text-right py-2 font-semibold">GST</th>
-                <th className="text-right py-2 font-semibold">Amount</th>
-                {editing && <th className="w-8 no-print" />}
+              <tr className="bg-slate-50 print:bg-slate-100 text-slate-700 border-b">
+                <th className="text-left py-2 px-2 font-semibold w-8">#</th>
+                <th className="text-left py-2 px-2 font-semibold">Item / Description</th>
+                <th className="text-left py-2 px-2 font-semibold w-16">HSN</th>
+                <th className="text-right py-2 px-2 font-semibold w-16">Qty</th>
+                <th className="text-right py-2 px-2 font-semibold w-20">Rate</th>
+                <th className="text-right py-2 px-2 font-semibold w-20">Taxable</th>
+                {isInter ? (
+                  <th className="text-right py-2 px-2 font-semibold w-24" colSpan={1}>
+                    IGST
+                  </th>
+                ) : (
+                  <>
+                    <th className="text-right py-2 px-2 font-semibold w-24">CGST</th>
+                    <th className="text-right py-2 px-2 font-semibold w-24">SGST</th>
+                  </>
+                )}
+                <th className="text-right py-2 px-2 font-semibold w-24">Amount</th>
+                {editing && <th className="w-6 no-print" />}
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody>
               {(editing ? draft : data.items).map((it: any, i: number) => {
                 if (editing && it._deleted) return null;
                 const q = editing ? it.quantity : Number(it.quantity);
@@ -355,15 +486,21 @@ function InvoiceView() {
                 const gstRate = editing ? it.gst_rate : Number(it.gst_rate);
                 const taxable = q * rate - disc;
                 const taxAmt = (taxable * gstRate) / 100;
+                const half = taxAmt / 2;
                 const amount = taxable + taxAmt;
                 return (
-                  <tr key={editing ? it.id : it.id}>
-                    <td className="py-2 text-muted-foreground">{i + 1}</td>
-                    <td className="py-2 font-medium">{it.product_name}</td>
-                    <td className="py-2 font-mono text-xs text-muted-foreground">
-                      {it.hsn ?? "—"}
+                  <tr key={it.id} className="border-b align-top">
+                    <td className="py-2 px-2 text-slate-500">{i + 1}</td>
+                    <td className="py-2 px-2">
+                      <div className="font-medium text-slate-900">{it.product_name}</div>
+                      {disc > 0 && !editing && (
+                        <div className="text-[10px] text-slate-500">Discount {inr(disc)}</div>
+                      )}
                     </td>
-                    <td className="py-2 text-right font-mono">
+                    <td className="py-2 px-2 font-mono text-[11px] text-slate-500">
+                      {it.hsn ?? "0401"}
+                    </td>
+                    <td className="py-2 px-2 text-right font-mono">
                       {editing ? (
                         <Input
                           type="number"
@@ -371,17 +508,19 @@ function InvoiceView() {
                           onChange={(e) =>
                             setDraft(
                               draft.map((r) =>
-                                r.id === it.id ? { ...r, quantity: Number(e.target.value) } : r,
+                                r.id === it.id
+                                  ? { ...r, quantity: Number(e.target.value) }
+                                  : r,
                               ),
                             )
                           }
-                          className="h-8 w-20 text-right ml-auto"
+                          className="h-8 w-16 text-right ml-auto"
                         />
                       ) : (
                         q
                       )}
                     </td>
-                    <td className="py-2 text-right font-mono">
+                    <td className="py-2 px-2 text-right font-mono">
                       {editing ? (
                         <Input
                           type="number"
@@ -393,36 +532,35 @@ function InvoiceView() {
                               ),
                             )
                           }
-                          className="h-8 w-24 text-right ml-auto"
+                          className="h-8 w-20 text-right ml-auto"
                         />
                       ) : (
                         inr(rate)
                       )}
                     </td>
-                    <td className="py-2 text-right font-mono text-muted-foreground">
-                      {editing ? (
-                        <Input
-                          type="number"
-                          value={disc}
-                          onChange={(e) =>
-                            setDraft(
-                              draft.map((r) =>
-                                r.id === it.id ? { ...r, discount: Number(e.target.value) } : r,
-                              ),
-                            )
-                          }
-                          className="h-8 w-20 text-right ml-auto"
-                        />
-                      ) : (
-                        inr(disc)
-                      )}
+                    <td className="py-2 px-2 text-right font-mono">{inr(taxable)}</td>
+                    {isInter ? (
+                      <td className="py-2 px-2 text-right font-mono">
+                        <div>{inr(taxAmt)}</div>
+                        <div className="text-[10px] text-slate-500">@{gstRate}%</div>
+                      </td>
+                    ) : (
+                      <>
+                        <td className="py-2 px-2 text-right font-mono">
+                          <div>{inr(half)}</div>
+                          <div className="text-[10px] text-slate-500">@{gstRate / 2}%</div>
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono">
+                          <div>{inr(half)}</div>
+                          <div className="text-[10px] text-slate-500">@{gstRate / 2}%</div>
+                        </td>
+                      </>
+                    )}
+                    <td className="py-2 px-2 text-right font-mono font-semibold">
+                      {inr(amount)}
                     </td>
-                    <td className="py-2 text-right font-mono text-muted-foreground">
-                      {gstRate}% ({inr(taxAmt)})
-                    </td>
-                    <td className="py-2 text-right font-mono font-semibold">{inr(amount)}</td>
                     {editing && (
-                      <td className="py-2 text-right no-print">
+                      <td className="py-2 px-1 text-right no-print">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -440,64 +578,121 @@ function InvoiceView() {
                   </tr>
                 );
               })}
+              <tr className="bg-slate-50 print:bg-slate-100 font-semibold">
+                <td colSpan={3} className="py-2 px-2 text-right">
+                  Totals
+                </td>
+                <td className="py-2 px-2 text-right font-mono">{totalQty}</td>
+                <td />
+                <td className="py-2 px-2 text-right font-mono">
+                  {inr(editing ? liveTotals.subtotal : inv.subtotal)}
+                </td>
+                {isInter ? (
+                  <td className="py-2 px-2 text-right font-mono">{inr(inv.igst)}</td>
+                ) : (
+                  <>
+                    <td className="py-2 px-2 text-right font-mono">{inr(inv.cgst)}</td>
+                    <td className="py-2 px-2 text-right font-mono">{inr(inv.sgst)}</td>
+                  </>
+                )}
+                <td className="py-2 px-2 text-right font-mono">
+                  {inr(editing ? liveTotals.total : inv.total)}
+                </td>
+                {editing && <td className="no-print" />}
+              </tr>
             </tbody>
           </table>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 pt-6 border-t">
-          <div>
-            {inv.notes && (
-              <>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                  Notes
+        {/* Bottom: bank + qr + totals */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 border-t">
+          {/* Bank & payment */}
+          <div className="p-4 border-b sm:border-b-0 sm:border-r text-[11px] space-y-2">
+            <div>
+              <div className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">
+                Payment details
+              </div>
+              {biz.bank_name && (
+                <div>
+                  <b>Bank:</b> {biz.bank_name}
                 </div>
-                <div className="text-sm text-muted-foreground whitespace-pre-line">{inv.notes}</div>
-              </>
-            )}
-            <div className="mt-6 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-              Terms
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Payment due on delivery. Interest @ 18% p.a. on overdue amounts. Goods once sold will
-              not be taken back.
+              )}
+              {biz.bank_holder && (
+                <div>
+                  <b>A/c holder:</b> {biz.bank_holder}
+                </div>
+              )}
+              {biz.bank_account && (
+                <div>
+                  <b>A/c no:</b> <span className="font-mono">{biz.bank_account}</span>
+                </div>
+              )}
+              {biz.bank_ifsc && (
+                <div>
+                  <b>IFSC:</b> <span className="font-mono">{biz.bank_ifsc}</span>
+                </div>
+              )}
+              {biz.bank_branch && (
+                <div>
+                  <b>Branch:</b> {biz.bank_branch}
+                </div>
+              )}
+              {biz.upi_vpa && (
+                <div>
+                  <b>UPI:</b> <span className="font-mono">{biz.upi_vpa}</span>
+                </div>
+              )}
             </div>
           </div>
-          <div className="space-y-1.5 text-sm">
+
+          {/* QR */}
+          <div className="p-4 border-b sm:border-b-0 sm:border-r text-center">
+            <img
+              src={qrImage(qrPayload, 140)}
+              alt="QR"
+              className="mx-auto"
+              width={140}
+              height={140}
+            />
+            <div className="text-[10px] text-slate-500 mt-2">
+              {biz.upi_vpa ? "Scan to pay via UPI" : "Scan to view invoice"}
+            </div>
+          </div>
+
+          {/* Totals */}
+          <div className="p-4 text-[12px]">
             {editing ? (
               <>
-                <Row label="Subtotal (live)" value={inr(liveTotals.subtotal)} />
-                <Row label="Tax (live)" value={inr(liveTotals.tax)} muted />
-                <div className="border-t pt-2 mt-2 flex justify-between items-center">
+                <SummaryRow label="Subtotal (live)" value={inr(liveTotals.subtotal)} />
+                <SummaryRow label="Tax (live)" value={inr(liveTotals.tax)} muted />
+                <div className="border-t mt-2 pt-2 flex justify-between items-center bg-slate-50 -mx-4 px-4 py-2">
                   <span className="font-semibold">New total (on save)</span>
-                  <span className="text-xl font-semibold font-mono">{inr(liveTotals.total)}</span>
+                  <span className="text-lg font-bold font-mono">{inr(liveTotals.total)}</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground pt-1">
+                <div className="text-[10px] text-slate-500 pt-1">
                   Customer outstanding recalculates automatically when you save.
                 </div>
               </>
             ) : (
               <>
-                <Row label="Subtotal" value={inr(inv.subtotal)} />
+                <SummaryRow label="Subtotal" value={inr(inv.subtotal)} />
                 {Number(inv.discount) > 0 && (
-                  <Row label="Discount" value={`− ${inr(inv.discount)}`} />
+                  <SummaryRow label="Discount" value={`− ${inr(inv.discount)}`} />
                 )}
-                {!isInter ? (
-                  <>
-                    <Row label="CGST" value={inr(inv.cgst)} muted />
-                    <Row label="SGST" value={inr(inv.sgst)} muted />
-                  </>
+                {isInter ? (
+                  <SummaryRow label="IGST" value={inr(inv.igst)} muted />
                 ) : (
-                  <Row label="IGST" value={inr(inv.igst)} muted />
+                  <>
+                    <SummaryRow label="CGST" value={inr(inv.cgst)} muted />
+                    <SummaryRow label="SGST" value={inr(inv.sgst)} muted />
+                  </>
                 )}
-                <div className="border-t pt-2 mt-2 flex justify-between items-center">
+                <div className="border-t mt-2 pt-2 flex justify-between items-center bg-primary/5 print:bg-slate-100 -mx-4 px-4 py-2 rounded">
                   <span className="font-semibold">Grand Total</span>
-                  <span className="text-xl font-semibold font-mono">{inr(inv.total)}</span>
+                  <span className="text-lg font-bold font-mono">{inr(inv.total)}</span>
                 </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Paid</span>
-                  <span className="font-mono">{inr(inv.paid)}</span>
-                </div>
-                <div className="flex justify-between font-semibold">
+                <SummaryRow label="Paid" value={inr(inv.paid)} muted />
+                <div className="flex justify-between font-semibold pt-1">
                   <span>Balance due</span>
                   <span
                     className={`font-mono ${Number(inv.balance) > 0 ? "text-destructive" : "text-success"}`}
@@ -510,30 +705,179 @@ function InvoiceView() {
           </div>
         </div>
 
-        <div className="mt-12 flex justify-between items-end text-xs text-muted-foreground">
-          <div>Thank you for your business.</div>
-          <div className="text-right">
-            <div className="h-10" />
-            <div className="border-t pt-1">Authorized signatory</div>
+        {/* Amount in words */}
+        <div className="border-t p-4 text-[12px] bg-slate-50 print:bg-slate-100">
+          <span className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mr-2">
+            Amount in words:
+          </span>
+          <span className="font-semibold">
+            {amountInWords(editing ? liveTotals.total : inv.total)}
+          </span>
+        </div>
+
+        {/* Terms + signature */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 border-t">
+          <div className="p-4 border-b sm:border-b-0 sm:border-r text-[11px]">
+            <div className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">
+              Terms & conditions
+            </div>
+            <div className="text-slate-600 whitespace-pre-line leading-snug">
+              {biz.terms ??
+                "Payment due on delivery. Interest @18% p.a. on overdue amounts. Goods once sold will not be taken back."}
+            </div>
+            {inv.notes && (
+              <div className="mt-3">
+                <div className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">
+                  Notes
+                </div>
+                <div className="text-slate-600 whitespace-pre-line leading-snug">{inv.notes}</div>
+              </div>
+            )}
+          </div>
+          <div className="p-4 text-right text-[11px] flex flex-col justify-between">
+            <div className="text-slate-500">Thank you for your business.</div>
+            <div className="mt-10">
+              <div className="border-t inline-block pt-1 px-8 text-slate-600">
+                Authorised signatory
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">for {biz.name}</div>
+            </div>
           </div>
         </div>
-      </Card>
+      </div>
+
+      {/* =========== THERMAL 80mm RECEIPT (print-only) =========== */}
+      <div className="invoice-thermal">
+        <div className="t-center">
+          <div className="t-title">{biz.name}</div>
+          <div className="t-sm">{biz.address}</div>
+          <div className="t-sm">GSTIN: {biz.gstin}</div>
+          {biz.fssai && <div className="t-sm">FSSAI: {biz.fssai}</div>}
+          <div className="t-sm">Ph: {biz.mobile}</div>
+        </div>
+        <div className="t-hr" />
+        <div className="t-center t-bold">TAX INVOICE</div>
+        <div className="t-hr" />
+        <div className="t-row">
+          <span>Inv #</span>
+          <span>{inv.invoice_no}</span>
+        </div>
+        <div className="t-row">
+          <span>Date</span>
+          <span>{shortDate(inv.invoice_date)}</span>
+        </div>
+        <div className="t-row">
+          <span>Bill to</span>
+          <span>{c?.name}</span>
+        </div>
+        {c?.shop_name && (
+          <div className="t-row">
+            <span></span>
+            <span>{c.shop_name}</span>
+          </div>
+        )}
+        {c?.mobile && (
+          <div className="t-row">
+            <span>Ph</span>
+            <span>{c.mobile}</span>
+          </div>
+        )}
+        {c?.gstin && (
+          <div className="t-row">
+            <span>GSTIN</span>
+            <span>{c.gstin}</span>
+          </div>
+        )}
+        <div className="t-hr" />
+        <div className="t-row t-bold">
+          <span>Item</span>
+          <span>Qty x Rate</span>
+          <span>Amt</span>
+        </div>
+        <div className="t-hr" />
+        {data.items.map((it: any) => {
+          const taxable = Number(it.quantity) * Number(it.rate) - Number(it.discount);
+          const amt = taxable + (taxable * Number(it.gst_rate)) / 100;
+          return (
+            <div key={it.id} className="t-item">
+              <div className="t-item-name">{it.product_name}</div>
+              <div className="t-row">
+                <span>
+                  GST {Number(it.gst_rate)}%
+                </span>
+                <span>
+                  {Number(it.quantity)} x {inr(Number(it.rate))}
+                </span>
+                <span>{inr(amt)}</span>
+              </div>
+            </div>
+          );
+        })}
+        <div className="t-hr" />
+        <div className="t-row">
+          <span>Subtotal</span>
+          <span>{inr(inv.subtotal)}</span>
+        </div>
+        {!isInter ? (
+          <>
+            <div className="t-row">
+              <span>CGST</span>
+              <span>{inr(inv.cgst)}</span>
+            </div>
+            <div className="t-row">
+              <span>SGST</span>
+              <span>{inr(inv.sgst)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="t-row">
+            <span>IGST</span>
+            <span>{inr(inv.igst)}</span>
+          </div>
+        )}
+        <div className="t-hr" />
+        <div className="t-row t-bold t-lg">
+          <span>TOTAL</span>
+          <span>{inr(inv.total)}</span>
+        </div>
+        <div className="t-row">
+          <span>Paid</span>
+          <span>{inr(inv.paid)}</span>
+        </div>
+        <div className="t-row t-bold">
+          <span>Balance</span>
+          <span>{inr(inv.balance)}</span>
+        </div>
+        <div className="t-hr" />
+        <div className="t-sm">{amountInWords(inv.total)}</div>
+        {biz.upi_vpa && (
+          <>
+            <div className="t-hr" />
+            <div className="t-center">
+              <img src={qrImage(qrPayload, 140)} alt="UPI QR" width={140} height={140} />
+              <div className="t-sm">Pay UPI: {biz.upi_vpa}</div>
+            </div>
+          </>
+        )}
+        <div className="t-hr" />
+        <div className="t-center t-sm">Thank you! Visit again.</div>
+      </div>
     </PageContainer>
   );
 }
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function MetaRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="text-sm">
-      <span className="text-muted-foreground">{label}: </span>
-      <span className={mono ? "font-mono" : ""}>{value}</span>
+    <div className="flex justify-between gap-2">
+      <span className="text-slate-500">{label}</span>
+      <span className={mono ? "font-mono font-semibold" : "font-semibold"}>{value}</span>
     </div>
   );
 }
-function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+function SummaryRow({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="flex justify-between">
-      <span className={muted ? "text-muted-foreground" : ""}>{label}</span>
+    <div className="flex justify-between py-0.5">
+      <span className={muted ? "text-slate-500" : ""}>{label}</span>
       <span className="font-mono">{value}</span>
     </div>
   );
