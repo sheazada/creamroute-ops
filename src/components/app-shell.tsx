@@ -77,10 +77,12 @@ const nav: {
     items: [
       { to: "/daily-demand", label: "Daily Demand", icon: ClipboardList, roles: ALL },
       { to: "/reports", label: "Reports", icon: BarChart3, roles: FIN },
+      { to: "/notifications", label: "Notifications", icon: Bell, roles: FIN },
     ],
   },
   { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings, roles: ["admin"] }] },
 ];
+
 
 const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof LayoutDashboard }[]> = {
   admin: [
