@@ -376,7 +376,9 @@ function Settings() {
 
       )}
 
+      <BlurValidateContext.Provider value={editing ? validateFieldOnBlur : null}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         <CollapsibleCard
           icon={Building2}
           title="Business identity"
