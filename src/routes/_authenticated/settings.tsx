@@ -339,3 +339,50 @@ function Settings() {
     </PageContainer>
   );
 }
+
+function CollapsibleCard({
+  icon: Icon,
+  title,
+  description,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  summary: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card className="p-0 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/40 transition-colors"
+        aria-expanded={open}
+      >
+        <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+          <Icon className="size-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-sm">{title}</div>
+          {open ? (
+            <div className="text-xs text-muted-foreground truncate">{description}</div>
+          ) : (
+            <div className="text-xs text-muted-foreground truncate">{summary}</div>
+          )}
+        </div>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
+          {open ? "Close" : "Edit"}
+        </span>
+        <ChevronDown
+          className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && <div className="p-6 pt-2 border-t">{children}</div>}
+    </Card>
+  );
+}
