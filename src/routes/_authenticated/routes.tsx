@@ -561,6 +561,8 @@ function RouteFormDialog({
       capacity_label: capacityLabel || null,
       vehicle_number: vehicleNumber || null,
       vehicle_type: vehicleType || null,
+      start_latitude: startLat.trim() ? Number(startLat) : null,
+      start_longitude: startLng.trim() ? Number(startLng) : null,
     };
 
     if (isEdit && route) {
