@@ -43,7 +43,7 @@ const nav: {
   label: string;
   items: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[];
 }[] = [
-  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ALL }] },
+  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: FIN }] },
   {
     label: "Sales",
     items: [
@@ -92,22 +92,22 @@ const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof L
     { to: "/reports", label: "Reports", icon: BarChart3 },
   ],
   salesperson: [
-    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
-    { to: "/invoices", label: "Invoices", icon: ReceiptText },
     { to: "/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
     { to: "/customers", label: "Customers", icon: Users },
+    { to: "/products", label: "Products", icon: Package },
   ],
   driver: [
     { to: "/deliveries", label: "Deliveries", icon: Truck },
     { to: "/daily-demand", label: "Demand", icon: ClipboardList },
     { to: "/customers", label: "Shops", icon: Users },
-    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
+    { to: "/invoices", label: "Invoices", icon: ReceiptText },
   ],
   helper: [
     { to: "/deliveries", label: "Deliveries", icon: Truck },
     { to: "/daily-demand", label: "Demand", icon: ClipboardList },
-    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
     { to: "/inventory", label: "Stock", icon: Boxes },
+    { to: "/products", label: "Products", icon: Package },
   ],
 };
 

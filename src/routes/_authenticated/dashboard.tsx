@@ -32,6 +32,20 @@ import {
 } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  beforeLoad: async () => {
+    const { redirect } = await import("@tanstack/react-router");
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes.user) return;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userRes.user.id);
+    const list = (roles ?? []).map((r) => r.role as string);
+    if (list.includes("admin") || list.includes("manager")) return;
+    if (list.includes("salesperson")) throw redirect({ to: "/orders" });
+    if (list.includes("driver") || list.includes("helper"))
+      throw redirect({ to: "/deliveries" });
+  },
   component: Dashboard,
 });
 
