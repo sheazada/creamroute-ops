@@ -657,6 +657,7 @@ function CollapsibleCard({
   onEdit,
   onCancel,
   onSave,
+  saving = false,
   children,
 }: {
   icon: any;
@@ -671,6 +672,7 @@ function CollapsibleCard({
   onEdit?: () => void;
   onCancel?: () => void;
   onSave?: () => void;
+  saving?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
