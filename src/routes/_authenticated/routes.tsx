@@ -2033,6 +2033,8 @@ function RunEditDialog({
 
 /* ---------------- Run timeline ---------------- */
 
+type FieldChange = { field: string; from: string | null; to: string | null };
+
 type TimelineEvent = {
   at: string;
   kind: "run_created" | "pickup" | "run_started" | "run_ended" | "run_edited"
@@ -2042,7 +2044,28 @@ type TimelineEvent = {
   detail?: string | null;
   location?: { lat: number | null; lng: number | null; acc?: number | null } | null;
   by?: string | null;
+  changes?: FieldChange[] | null;
 };
+
+const FIELD_LABELS: Record<string, string> = {
+  driver_name: "Driver", helper_name: "Helper", vehicle_number: "Vehicle #",
+  vehicle_type: "Vehicle type", odometer_start: "Odo start", odometer_end: "Odo end",
+  started_at: "Started at", ended_at: "Ended at", pickup_confirmed_at: "Pickup at",
+  status: "Status", delivery_status: "Delivery status", notes: "Notes",
+  delivered_at: "Delivered at", received_by: "Received by",
+  collected_amount: "Collected", collected_mode: "Mode", route_id: "Route",
+  assigned_to: "Assigned to", scheduled_date: "Scheduled",
+  pod_photo_url: "POD photo", pod_signature: "POD signature",
+};
+
+function prettyFieldValue(field: string, v: string | null): string {
+  if (v == null || v === "") return "—";
+  if (field === "collected_amount") { const n = Number(v); return Number.isFinite(n) ? inr(Number(v)) : v; }
+  if (field === "pod_photo_url" || field === "pod_signature") return "attached";
+  if (/_at$/.test(field)) { const d = new Date(v); return isNaN(d.getTime()) ? v : fmtDateTime(v); }
+  if (field === "status" || field === "delivery_status") return String(v).replace(/_/g, " ");
+  return v;
+}
 
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString([], {
@@ -2145,19 +2168,9 @@ function RunTimelineDialog({
             : null,
           location: rr.end_latitude != null ? { lat: rr.end_latitude, lng: rr.end_longitude, acc: rr.end_accuracy_m } : null,
         });
-        // Detect edits: updated_at significantly after the last known milestone
-        const milestones = [rr.created_at, rr.pickup_confirmed_at, rr.started_at, rr.ended_at]
-          .filter(Boolean).map((x: string) => new Date(x).getTime());
-        const lastMs = milestones.length ? Math.max(...milestones) : 0;
-        if (rr.updated_at && new Date(rr.updated_at).getTime() - lastMs > 1500) {
-          ev.push({
-            at: rr.updated_at, kind: "run_edited",
-            title: "Run details edited",
-            detail: rr.notes ? `Notes: ${rr.notes}` : null,
-          });
-        }
       }
 
+      // Deliveries: milestone + payment events (edits are covered by audit-log below)
       for (const d of dels ?? []) {
         const dd = d as any;
         const inv = dd.invoice as { invoice_no?: string | null; customer?: { name?: string | null; shop_name?: string | null } | null } | null;
@@ -2193,13 +2206,49 @@ function RunTimelineDialog({
               detail: `${inr(dd.collected_amount)} via ${dd.collected_mode || "cash"}`,
             });
           }
-        } else if (dd.updated_at && dd.status && dd.status !== "planned") {
-          ev.push({
-            at: dd.updated_at, kind: "stop_edited",
-            title: `Stop updated: ${shop}${invNo}`,
-            detail: `Status: ${String(dd.status).replace("_", " ")}`,
-          });
         }
+      }
+
+      // Fetch structured edit-audit rows for this route/date and turn them into diff events
+      const editRows = await (async () => {
+        const orParts: string[] = [];
+        if (runIds.length) orParts.push(`run_id.in.(${runIds.join(",")})`);
+        if (delIds.length) orParts.push(`delivery_id.in.(${delIds.join(",")})`);
+        if (orParts.length === 0) return [];
+        const { data, error } = await supabase
+          .from("edit_audit_logs" as any)
+          .select("record_type, run_id, delivery_id, action, field, old_value, new_value, created_at")
+          .or(orParts.join(","))
+          .eq("action", "updated")
+          .order("created_at", { ascending: true });
+        if (error) { console.warn("edit audit fetch failed", error); return []; }
+        return data ?? [];
+      })();
+
+      // Group edits by (record + second-precision timestamp) so one save = one timeline card
+      const shopByDelivery = new Map<string, string>();
+      for (const d of dels ?? []) {
+        const dd = d as any;
+        const inv = dd.invoice as { invoice_no?: string | null; customer?: { name?: string | null; shop_name?: string | null } | null } | null;
+        const shop = inv?.customer?.shop_name || inv?.customer?.name || "Shop";
+        shopByDelivery.set(dd.id, `${shop}${inv?.invoice_no ? ` · ${inv.invoice_no}` : ""}`);
+      }
+      const groups = new Map<string, { at: string; kind: "run_edited" | "stop_edited"; title: string; changes: FieldChange[] }>();
+      for (const g of editRows as any[]) {
+        const bucket = new Date(g.created_at); bucket.setMilliseconds(0);
+        const key = `${g.record_type}:${g.run_id || g.delivery_id}:${bucket.toISOString()}`;
+        if (!groups.has(key)) {
+          if (g.record_type === "delivery_run") {
+            groups.set(key, { at: g.created_at, kind: "run_edited", title: "Run details edited", changes: [] });
+          } else {
+            const label = shopByDelivery.get(g.delivery_id) || "Stop";
+            groups.set(key, { at: g.created_at, kind: "stop_edited", title: `Stop edited: ${label}`, changes: [] });
+          }
+        }
+        groups.get(key)!.changes.push({ field: g.field, from: g.old_value, to: g.new_value });
+      }
+      for (const grp of groups.values()) {
+        ev.push({ at: grp.at, kind: grp.kind, title: grp.title, changes: grp.changes });
       }
 
       // GPS audit events (attempts + failures)
@@ -2264,6 +2313,19 @@ function RunTimelineDialog({
                     <span className="text-[11px] font-mono text-muted-foreground">{fmtDateTime(e.at)}</span>
                   </div>
                   {e.detail && <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>}
+                  {e.changes && e.changes.length > 0 && (
+                    <ul className="mt-1.5 space-y-1 rounded-md border border-border/70 bg-muted/40 p-2">
+                      {e.changes.map((c, ci) => (
+                        <li key={ci} className="text-[11px] leading-snug">
+                          <span className="font-medium text-foreground">{FIELD_LABELS[c.field] || c.field}</span>
+                          <span className="mx-1.5 text-muted-foreground">·</span>
+                          <span className="line-through text-muted-foreground break-all">{prettyFieldValue(c.field, c.from)}</span>
+                          <span className="mx-1.5 text-muted-foreground">→</span>
+                          <span className="font-medium text-emerald-700 break-all">{prettyFieldValue(c.field, c.to)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {loc && map && (
                     <a href={map} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
                       <MapPin className="size-3" /> {loc}

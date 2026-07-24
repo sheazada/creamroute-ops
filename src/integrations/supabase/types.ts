@@ -254,6 +254,51 @@ export type Database = {
           },
         ]
       }
+      edit_audit_logs: {
+        Row: {
+          action: string
+          changed_by: string | null
+          created_at: string
+          delivery_id: string | null
+          field: string | null
+          id: string
+          new_value: string | null
+          old_value: string | null
+          record_id: string
+          record_type: string
+          route_id: string | null
+          run_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          created_at?: string
+          delivery_id?: string | null
+          field?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          record_id: string
+          record_type: string
+          route_id?: string | null
+          run_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          created_at?: string
+          delivery_id?: string | null
+          field?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          record_id?: string
+          record_type?: string
+          route_id?: string | null
+          run_id?: string | null
+        }
+        Relationships: []
+      }
       gps_audit_logs: {
         Row: {
           accuracy: number | null
