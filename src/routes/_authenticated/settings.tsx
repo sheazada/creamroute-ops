@@ -17,7 +17,17 @@ import {
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark } from "lucide-react";
-import { getBusiness, saveBusiness, type BusinessProfile } from "@/lib/business";
+import {
+  getBusiness,
+  saveBusiness,
+  validateBusiness,
+  maskMiddle,
+  maskTail,
+  maskVpa,
+  type BusinessProfile,
+  type BusinessValidationErrors,
+} from "@/lib/business";
+import { MaskedInput } from "@/components/masked-input";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: Settings,
@@ -93,7 +103,16 @@ function Settings() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [errors, setErrors] = useState<BusinessValidationErrors>({});
+  const err = (k: keyof BusinessProfile) => errors[k];
+
   const saveBiz = () => {
+    const { ok, errors: e } = validateBusiness(biz);
+    setErrors(e);
+    if (!ok) {
+      toast.error("Please fix the highlighted fields before saving");
+      return;
+    }
     saveBusiness(biz);
     toast.success("Business profile saved — reflects on all new invoices");
   };
@@ -107,79 +126,106 @@ function Settings() {
           icon={Building2}
           title="Business identity"
           description="Shown on every invoice header, print copy and PDF."
-          summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + biz.gstin : ""}` : "Not set — tap to add"}
+          summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + maskMiddle(biz.gstin, 2, 4) : ""}` : "Not set — tap to add"}
           storageKey={me?.userId ? `settings:section:${me.userId}:business` : undefined}
           readOnly={!isAdmin}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5 col-span-2">
-                <Label>Trade name</Label>
-                <Input value={biz.name} onChange={(e) => setField("name", e.target.value)} />
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Legal name (optional)</Label>
+              <FieldRow label="Trade name" error={err("name")} colSpan={2}>
+                <Input
+                  value={biz.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  aria-invalid={!!err("name")}
+                />
+              </FieldRow>
+              <FieldRow label="Legal name (optional)" error={err("legal_name")} colSpan={2}>
                 <Input
                   value={biz.legal_name ?? ""}
                   onChange={(e) => setField("legal_name", e.target.value)}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>GSTIN</Label>
-                <Input value={biz.gstin} onChange={(e) => setField("gstin", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>FSSAI</Label>
-                <Input
+              </FieldRow>
+              <FieldRow label="GSTIN" error={err("gstin")} hint="15 chars • state+PAN+entity+Z+checksum">
+                <MaskedInput
+                  value={biz.gstin}
+                  onChange={(e) => setField("gstin", e.target.value)}
+                  mask={(v) => maskMiddle(v, 2, 4)}
+                  uppercase
+                  maxLength={15}
+                  invalid={!!err("gstin")}
+                  placeholder="07AAAAA0000A1Z5"
+                />
+              </FieldRow>
+              <FieldRow label="FSSAI" error={err("fssai")}>
+                <MaskedInput
                   value={biz.fssai ?? ""}
                   onChange={(e) => setField("fssai", e.target.value)}
+                  mask={(v) => maskTail(v, 4)}
+                  maxLength={14}
+                  inputMode="numeric"
+                  invalid={!!err("fssai")}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>PAN</Label>
-                <Input value={biz.pan ?? ""} onChange={(e) => setField("pan", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>State (GST)</Label>
+              </FieldRow>
+              <FieldRow label="PAN" error={err("pan")}>
+                <MaskedInput
+                  value={biz.pan ?? ""}
+                  onChange={(e) => setField("pan", e.target.value)}
+                  mask={(v) => maskMiddle(v, 2, 3)}
+                  uppercase
+                  maxLength={10}
+                  invalid={!!err("pan")}
+                  placeholder="AAAAA1234A"
+                />
+              </FieldRow>
+              <FieldRow label="State (GST)" error={err("state")}>
                 <Input
                   value={biz.state ?? ""}
                   onChange={(e) => setField("state", e.target.value)}
                   placeholder="Delhi"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>State code</Label>
+              </FieldRow>
+              <FieldRow label="State code" error={err("state_code")}>
                 <Input
                   value={biz.state_code ?? ""}
-                  onChange={(e) => setField("state_code", e.target.value)}
+                  onChange={(e) => setField("state_code", e.target.value.replace(/\D/g, ""))}
                   placeholder="07"
                   maxLength={2}
+                  inputMode="numeric"
+                  aria-invalid={!!err("state_code")}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Invoice prefix</Label>
+              </FieldRow>
+              <FieldRow label="Invoice prefix" error={err("invoice_prefix")}>
                 <Input
                   value={biz.invoice_prefix ?? ""}
                   onChange={(e) => setField("invoice_prefix", e.target.value)}
                   placeholder="INV"
+                  maxLength={8}
+                  aria-invalid={!!err("invoice_prefix")}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Mobile</Label>
-                <Input value={biz.mobile} onChange={(e) => setField("mobile", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Email</Label>
-                <Input value={biz.email} onChange={(e) => setField("email", e.target.value)} />
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Address</Label>
+              </FieldRow>
+              <FieldRow label="Mobile" error={err("mobile")}>
+                <Input
+                  value={biz.mobile}
+                  onChange={(e) => setField("mobile", e.target.value)}
+                  aria-invalid={!!err("mobile")}
+                  inputMode="tel"
+                />
+              </FieldRow>
+              <FieldRow label="Email" error={err("email")}>
+                <Input
+                  value={biz.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  aria-invalid={!!err("email")}
+                  inputMode="email"
+                />
+              </FieldRow>
+              <FieldRow label="Address" error={err("address")} colSpan={2}>
                 <Textarea
                   rows={2}
                   value={biz.address}
                   onChange={(e) => setField("address", e.target.value)}
                 />
-              </div>
+              </FieldRow>
             </div>
             <div className="pt-2">
               <Button onClick={saveBiz} size="sm">Save business profile</Button>
@@ -193,7 +239,11 @@ function Settings() {
           description="Printed on invoices. UPI VPA also powers the QR code retailers can scan to pay."
           summary={
             biz.upi_vpa || biz.bank_account
-              ? [biz.upi_vpa, biz.bank_name, biz.bank_account && `A/C ••${String(biz.bank_account).slice(-4)}`]
+              ? [
+                  biz.upi_vpa && maskVpa(biz.upi_vpa),
+                  biz.bank_name,
+                  biz.bank_account && `A/C ••${String(biz.bank_account).slice(-4)}`,
+                ]
                   .filter(Boolean)
                   .join(" · ")
               : "Not set — tap to add"
@@ -202,57 +252,61 @@ function Settings() {
           readOnly={!isAdmin}
         >
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5 col-span-2">
-              <Label>UPI VPA</Label>
-              <Input
+            <FieldRow label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
+              <MaskedInput
                 value={biz.upi_vpa ?? ""}
                 onChange={(e) => setField("upi_vpa", e.target.value)}
+                mask={maskVpa}
                 placeholder="dairyflow@okhdfcbank"
+                invalid={!!err("upi_vpa")}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Bank name</Label>
+            </FieldRow>
+            <FieldRow label="Bank name" error={err("bank_name")}>
               <Input
                 value={biz.bank_name ?? ""}
                 onChange={(e) => setField("bank_name", e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Account holder</Label>
+            </FieldRow>
+            <FieldRow label="Account holder" error={err("bank_holder")}>
               <Input
                 value={biz.bank_holder ?? ""}
                 onChange={(e) => setField("bank_holder", e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Account no.</Label>
-              <Input
+            </FieldRow>
+            <FieldRow label="Account no." error={err("bank_account")}>
+              <MaskedInput
                 value={biz.bank_account ?? ""}
-                onChange={(e) => setField("bank_account", e.target.value)}
+                onChange={(e) => setField("bank_account", e.target.value.replace(/\D/g, ""))}
+                mask={(v) => maskTail(v, 4)}
+                inputMode="numeric"
+                maxLength={18}
+                invalid={!!err("bank_account")}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>IFSC</Label>
-              <Input
+            </FieldRow>
+            <FieldRow label="IFSC" error={err("bank_ifsc")}>
+              <MaskedInput
                 value={biz.bank_ifsc ?? ""}
                 onChange={(e) => setField("bank_ifsc", e.target.value)}
+                mask={(v) => maskMiddle(v, 4, 3)}
+                uppercase
+                maxLength={11}
+                invalid={!!err("bank_ifsc")}
+                placeholder="HDFC0000000"
               />
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label>Branch</Label>
+            </FieldRow>
+            <FieldRow label="Branch" error={err("bank_branch")} colSpan={2}>
               <Input
                 value={biz.bank_branch ?? ""}
                 onChange={(e) => setField("bank_branch", e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label>Invoice terms & conditions</Label>
+            </FieldRow>
+            <FieldRow label="Invoice terms & conditions" error={err("terms")} colSpan={2}>
               <Textarea
                 rows={3}
                 value={biz.terms ?? ""}
                 onChange={(e) => setField("terms", e.target.value)}
               />
-            </div>
+            </FieldRow>
           </div>
           <div className="pt-4">
             <Button onClick={saveBiz} size="sm">Save business profile</Button>
@@ -422,3 +476,29 @@ function CollapsibleCard({
   );
 }
 
+
+function FieldRow({
+  label,
+  error,
+  hint,
+  colSpan = 1,
+  children,
+}: {
+  label: string;
+  error?: string;
+  hint?: string;
+  colSpan?: 1 | 2;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`space-y-1.5 ${colSpan === 2 ? "col-span-2" : ""}`}>
+      <Label>{label}</Label>
+      {children}
+      {error ? (
+        <p className="text-[11px] font-medium text-destructive">{error}</p>
+      ) : hint ? (
+        <p className="text-[11px] text-muted-foreground">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
