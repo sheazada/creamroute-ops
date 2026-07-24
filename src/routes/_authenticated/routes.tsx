@@ -340,6 +340,64 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
     toast.success("Stop removed");
   };
 
+  const [optimizing, setOptimizing] = useState(false);
+  const optimize = async () => {
+    const list = stops ?? [];
+    if (list.length < 2) return toast.info("Need at least 2 stops to optimize");
+    const withGeo = list.filter(
+      (s) => typeof s.customer?.latitude === "number" && typeof s.customer?.longitude === "number",
+    ).length;
+    if (withGeo < 2) {
+      return toast.error(
+        "Add GPS to at least 2 shops first — tap the crosshair on each stop while standing there.",
+      );
+    }
+    setOptimizing(true);
+    const res = optimizeStops(
+      list.map((s) => ({
+        id: s.id,
+        lat: s.customer?.latitude ?? null,
+        lng: s.customer?.longitude ?? null,
+        _raw: s,
+      })),
+      route?.start_latitude != null && route?.start_longitude != null
+        ? { lat: route.start_latitude, lng: route.start_longitude }
+        : null,
+    );
+    const orderedStops = res.ordered.map((o: any) => o._raw as Stop);
+    qc.setQueryData(
+      ["route-stops", routeId],
+      orderedStops.map((s, i) => ({ ...s, sequence: i + 1 })),
+    );
+    await persistOrder(orderedStops);
+    setOptimizing(false);
+    const saved = Math.max(0, res.beforeKm - res.afterKm);
+    toast.success(
+      `Optimized ${res.optimizedCount} stops · ${res.afterKm.toFixed(1)} km` +
+        (saved > 0.05 ? ` (saved ${saved.toFixed(1)} km)` : "") +
+        (res.skippedCount ? ` · ${res.skippedCount} without GPS kept at end` : ""),
+    );
+  };
+
+  const setStopGps = async (customerId: string) => {
+    if (!("geolocation" in navigator)) return toast.error("GPS not available on this device");
+    toast.info("Getting current location…");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const { error } = await supabase
+          .from("customers")
+          .update({ latitude, longitude })
+          .eq("id", customerId);
+        if (error) return toast.error(error.message);
+        toast.success(`Saved GPS · ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        invalidate();
+      },
+      (err) => toast.error(err.message || "Could not get location"),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   const total = stops?.length ?? 0;
   const outstanding = (stops ?? []).reduce((s, x) => s + Number(x.customer?.outstanding ?? 0), 0);
 
