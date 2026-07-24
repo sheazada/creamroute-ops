@@ -620,6 +620,7 @@ export type Database = {
       purchases: {
         Row: {
           bill_no: string
+          challan_url: string | null
           created_at: string
           gst: number
           id: string
@@ -634,6 +635,7 @@ export type Database = {
         }
         Insert: {
           bill_no: string
+          challan_url?: string | null
           created_at?: string
           gst?: number
           id?: string
@@ -648,6 +650,7 @@ export type Database = {
         }
         Update: {
           bill_no?: string
+          challan_url?: string | null
           created_at?: string
           gst?: number
           id?: string
@@ -663,6 +666,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          mode: string
+          notes: string | null
+          payment_date: string
+          payment_no: string
+          purchase_id: string | null
+          reference: string | null
+          supplier_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          mode?: string
+          notes?: string | null
+          payment_date?: string
+          payment_no: string
+          purchase_id?: string | null
+          reference?: string | null
+          supplier_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          mode?: string
+          notes?: string | null
+          payment_date?: string
+          payment_no?: string
+          purchase_id?: string | null
+          reference?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
@@ -744,6 +801,11 @@ export type Database = {
         Returns: undefined
       }
       recalc_invoice: { Args: { _invoice_id: string }; Returns: undefined }
+      recalc_purchase: { Args: { _purchase_id: string }; Returns: undefined }
+      recalc_supplier_outstanding: {
+        Args: { _supplier_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "salesperson" | "driver" | "helper"
