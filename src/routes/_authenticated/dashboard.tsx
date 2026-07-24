@@ -139,6 +139,7 @@ function Dashboard() {
         actions={
           <>
             <Button asChild variant="outline" size="sm"><Link to="/reports">Reports</Link></Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5"><Link to="/orders/new"><ShoppingCart className="size-4" /> Add Sale</Link></Button>
             <Button asChild size="sm" className="gap-1.5"><Link to="/invoices/new"><Plus className="size-4" /> New Invoice</Link></Button>
           </>
         }
