@@ -52,9 +52,9 @@ function RoutePlanning() {
     <PageContainer>
       <PageHeader
         title="Route Planning"
-        subtitle="Group shops into delivery routes and generate daily driver sheets"
-        icon={RouteIcon}
+        description="Group shops into delivery routes and generate daily driver sheets"
       />
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as "plan" | "sheet")}>
         <TabsList>
           <TabsTrigger value="plan"><MapPin className="size-4" /> Plan Routes</TabsTrigger>
