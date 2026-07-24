@@ -762,7 +762,7 @@ function SheetTab({ date }: { date: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("route_stops")
-        .select("route_id, customer_id, sequence, customer:customers(id, address)")
+        .select("route_id, customer_id, sequence, customer:customers(id, address, latitude, longitude)")
         .order("sequence");
       return data ?? [];
     },
@@ -773,7 +773,7 @@ function SheetTab({ date }: { date: string }) {
     queryFn: async (): Promise<InvoiceRow[]> => {
       const { data } = await supabase
         .from("invoices")
-        .select("id, invoice_no, invoice_date, total, balance, customer_id, customer:customers(id, name, shop_name, address, mobile, outstanding), items:invoice_items(id, product_name, quantity, ordered_quantity, delivered_quantity, rate, amount)")
+        .select("id, invoice_no, invoice_date, total, balance, customer_id, customer:customers(id, name, shop_name, address, mobile, outstanding, latitude, longitude), items:invoice_items(id, product_name, quantity, ordered_quantity, delivered_quantity, rate, amount)")
         .eq("invoice_date", date)
         .neq("status", "void");
       return (data ?? []) as unknown as InvoiceRow[];
