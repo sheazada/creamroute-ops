@@ -1,5 +1,6 @@
 // Business profile persisted to localStorage. Used by invoice header, QR, terms, bank block.
 // Replace later with a `company_settings` DB table if the user wants multi-device sync.
+// ✅ Test push from Arena agent — 2026-07-24
 
 export type BusinessProfile = {
   name: string;
