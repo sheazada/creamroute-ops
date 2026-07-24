@@ -135,7 +135,9 @@ function Reports() {
             rows={(data?.purchases ?? []).map((r: any) => [
               shortDate(r.purchase_date),
               r.bill_no || "—",
-              r.supplier?.company || r.supplier?.name || "—",
+              r.supplier_id
+                ? { text: r.supplier?.company || r.supplier?.name || "—", to: "/suppliers/$id", params: { id: r.supplier_id } }
+                : (r.supplier?.company || r.supplier?.name || "—"),
               inr(r.subtotal),
               inr(r.gst),
               inr(r.total),
