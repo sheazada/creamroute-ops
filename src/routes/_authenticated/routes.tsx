@@ -407,22 +407,16 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
   };
 
   const setStopGps = async (customerId: string) => {
-    if (!("geolocation" in navigator)) return toast.error("GPS not available on this device");
     toast.info("Getting current location…");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const { error } = await supabase
-          .from("customers")
-          .update({ latitude, longitude })
-          .eq("id", customerId);
-        if (error) return toast.error(error.message);
-        toast.success(`Saved GPS · ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-        invalidate();
-      },
-      (err) => toast.error(err.message || "Could not get location"),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    const { fix, error } = await captureGpsWithAudit("shop_geotag", { customer_id: customerId, route_id: route?.id ?? null });
+    if (!fix) return toast.error(error?.message || "Could not get location");
+    const { error: uErr } = await supabase
+      .from("customers")
+      .update({ latitude: fix.latitude, longitude: fix.longitude })
+      .eq("id", customerId);
+    if (uErr) return toast.error(uErr.message);
+    toast.success(`Saved GPS · ${fix.latitude.toFixed(5)}, ${fix.longitude.toFixed(5)}`);
+    invalidate();
   };
 
   const total = stops?.length ?? 0;
@@ -550,18 +544,13 @@ function RouteFormDialog({
     }
   }, [open, route]);
 
-  const captureStartHere = () => {
-    if (!("geolocation" in navigator)) return toast.error("GPS not available");
+  const captureStartHere = async () => {
     toast.info("Getting current location…");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setStartLat(pos.coords.latitude.toFixed(6));
-        setStartLng(pos.coords.longitude.toFixed(6));
-        toast.success("Start point set to current location");
-      },
-      (err) => toast.error(err.message || "Could not get location"),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    const { fix, error } = await captureGpsWithAudit("route_start_point", { route_id: route?.id ?? null });
+    if (!fix) return toast.error(error?.message || "Could not get location");
+    setStartLat(fix.latitude.toFixed(6));
+    setStartLng(fix.longitude.toFixed(6));
+    toast.success("Start point set to current location");
   };
 
   const save = async () => {
@@ -1552,13 +1541,20 @@ function DeliverStopDialog({
         if (pErr) throw pErr;
       }
 
-      // 3b. Capture POD GPS (non-blocking on failure)
+      // 3b. Capture POD GPS (non-blocking on failure, logged to gps_audit_logs)
       let podLat: number | null = null, podLng: number | null = null, podAcc: number | null = null, podAt: string | null = null;
-      try {
-        const fix = await getCurrentPosition();
-        podLat = fix.latitude; podLng = fix.longitude; podAcc = fix.accuracy; podAt = fix.capturedAt;
-      } catch (geoErr: any) {
-        toast.warning(`Saved without GPS: ${geoErr.message}`);
+      const podCap = await captureGpsWithAudit("delivery_pod", {
+        delivery_id: delivery.id,
+        invoice_id: inv.id,
+        customer_id: inv.customer?.id ?? null,
+        route_id: route.id === "u" ? null : route.id,
+        run_id: (delivery as any).run_id ?? null,
+      });
+      if (podCap.fix) {
+        podLat = podCap.fix.latitude; podLng = podCap.fix.longitude;
+        podAcc = podCap.fix.accuracy; podAt = podCap.fix.capturedAt;
+      } else if (podCap.error) {
+        toast.warning(`Saved without GPS: ${podCap.error.message}`);
       }
 
       // 4. Update delivery row
@@ -1812,9 +1808,9 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
     setBusy("start");
     const now = new Date().toISOString();
     try {
-      let fix = null as Awaited<ReturnType<typeof getCurrentPosition>> | null;
-      try { fix = await getCurrentPosition(); }
-      catch (e: any) { toast.warning(`Starting without GPS: ${e.message}`); }
+      const cap = await captureGpsWithAudit("run_start", { run_id: run?.id ?? null, route_id: route.id });
+      const fix = cap.fix;
+      if (!fix && cap.error) toast.warning(`Starting without GPS: ${cap.error.message}`);
       const { error } = await supabase.from("delivery_runs").update({
         started_at: run.started_at ?? now,
         status: "in_progress",
@@ -1837,9 +1833,9 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
     setBusy("end");
     const now = new Date().toISOString();
     try {
-      let fix = null as Awaited<ReturnType<typeof getCurrentPosition>> | null;
-      try { fix = await getCurrentPosition(); }
-      catch (e: any) { toast.warning(`Ending without GPS: ${e.message}`); }
+      const cap = await captureGpsWithAudit("run_end", { run_id: run?.id ?? null, route_id: route.id });
+      const fix = cap.fix;
+      if (!fix && cap.error) toast.warning(`Ending without GPS: ${cap.error.message}`);
       const { error } = await supabase.from("delivery_runs").update({
         ended_at: now, status: "completed",
         end_latitude: fix?.latitude ?? run.end_latitude,
