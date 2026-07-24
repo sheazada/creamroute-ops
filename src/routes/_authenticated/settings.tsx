@@ -239,7 +239,11 @@ function Settings() {
           description="Printed on invoices. UPI VPA also powers the QR code retailers can scan to pay."
           summary={
             biz.upi_vpa || biz.bank_account
-              ? [biz.upi_vpa, biz.bank_name, biz.bank_account && `A/C ••${String(biz.bank_account).slice(-4)}`]
+              ? [
+                  biz.upi_vpa && maskVpa(biz.upi_vpa),
+                  biz.bank_name,
+                  biz.bank_account && `A/C ••${String(biz.bank_account).slice(-4)}`,
+                ]
                   .filter(Boolean)
                   .join(" · ")
               : "Not set — tap to add"
@@ -248,57 +252,61 @@ function Settings() {
           readOnly={!isAdmin}
         >
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5 col-span-2">
-              <Label>UPI VPA</Label>
-              <Input
+            <FieldRow label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
+              <MaskedInput
                 value={biz.upi_vpa ?? ""}
                 onChange={(e) => setField("upi_vpa", e.target.value)}
+                mask={maskVpa}
                 placeholder="dairyflow@okhdfcbank"
+                invalid={!!err("upi_vpa")}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Bank name</Label>
+            </FieldRow>
+            <FieldRow label="Bank name" error={err("bank_name")}>
               <Input
                 value={biz.bank_name ?? ""}
                 onChange={(e) => setField("bank_name", e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Account holder</Label>
+            </FieldRow>
+            <FieldRow label="Account holder" error={err("bank_holder")}>
               <Input
                 value={biz.bank_holder ?? ""}
                 onChange={(e) => setField("bank_holder", e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Account no.</Label>
-              <Input
+            </FieldRow>
+            <FieldRow label="Account no." error={err("bank_account")}>
+              <MaskedInput
                 value={biz.bank_account ?? ""}
-                onChange={(e) => setField("bank_account", e.target.value)}
+                onChange={(e) => setField("bank_account", e.target.value.replace(/\D/g, ""))}
+                mask={(v) => maskTail(v, 4)}
+                inputMode="numeric"
+                maxLength={18}
+                invalid={!!err("bank_account")}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>IFSC</Label>
-              <Input
+            </FieldRow>
+            <FieldRow label="IFSC" error={err("bank_ifsc")}>
+              <MaskedInput
                 value={biz.bank_ifsc ?? ""}
                 onChange={(e) => setField("bank_ifsc", e.target.value)}
+                mask={(v) => maskMiddle(v, 4, 3)}
+                uppercase
+                maxLength={11}
+                invalid={!!err("bank_ifsc")}
+                placeholder="HDFC0000000"
               />
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label>Branch</Label>
+            </FieldRow>
+            <FieldRow label="Branch" error={err("bank_branch")} colSpan={2}>
               <Input
                 value={biz.bank_branch ?? ""}
                 onChange={(e) => setField("bank_branch", e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label>Invoice terms & conditions</Label>
+            </FieldRow>
+            <FieldRow label="Invoice terms & conditions" error={err("terms")} colSpan={2}>
               <Textarea
                 rows={3}
                 value={biz.terms ?? ""}
                 onChange={(e) => setField("terms", e.target.value)}
               />
-            </div>
+            </FieldRow>
           </div>
           <div className="pt-4">
             <Button onClick={saveBiz} size="sm">Save business profile</Button>
