@@ -532,8 +532,24 @@ function RouteFormDialog({
       setCapacityLabel(route?.capacity_label ?? "L");
       setVehicleNumber(route?.vehicle_number ?? "");
       setVehicleType(route?.vehicle_type ?? "");
+      setStartLat(route?.start_latitude != null ? String(route.start_latitude) : "");
+      setStartLng(route?.start_longitude != null ? String(route.start_longitude) : "");
     }
   }, [open, route]);
+
+  const captureStartHere = () => {
+    if (!("geolocation" in navigator)) return toast.error("GPS not available");
+    toast.info("Getting current location…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setStartLat(pos.coords.latitude.toFixed(6));
+        setStartLng(pos.coords.longitude.toFixed(6));
+        toast.success("Start point set to current location");
+      },
+      (err) => toast.error(err.message || "Could not get location"),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   const save = async () => {
     if (!name.trim()) return toast.error("Name required");
