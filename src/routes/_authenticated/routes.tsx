@@ -545,7 +545,7 @@ function SheetTab({ date }: { date: string }) {
       {grouped.unassigned.length > 0 && (
         <RouteSheet
           key="unassigned"
-          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null }}
+          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null, vehicle_number: null, vehicle_type: null }}
           invoices={grouped.unassigned}
           date={date}
         />
