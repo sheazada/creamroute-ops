@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Milk, Loader2 } from "lucide-react";
+import { Milk, Loader2, Shield, Users, Truck, HardHat, Briefcase } from "lucide-react";
+import { seedDemoUsers, DEMO_USERS, DEMO_PASSWORD } from "@/lib/dev-users.functions";
+
+const ROLE_ICONS: Record<string, any> = {
+  admin: Shield,
+  manager: Briefcase,
+  salesperson: Users,
+  driver: Truck,
+  helper: HardHat,
+};
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -20,6 +30,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [seeding, setSeeding] = useState(false);
+  const seed = useServerFn(seedDemoUsers);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -27,14 +39,47 @@ function AuthPage() {
     });
   }, [navigate]);
 
+  const doSignIn = async (emailArg: string, passwordArg: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: emailArg, password: passwordArg });
+    if (error) throw error;
+    toast.success("Welcome back");
+    navigate({ to: "/dashboard", replace: true });
+  };
+
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try { await doSignIn(email, password); } catch (err: any) { toast.error(err.message); }
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Welcome back");
-    navigate({ to: "/dashboard", replace: true });
+  };
+
+  const quickLogin = async (roleEmail: string) => {
+    setLoading(true);
+    try {
+      await doSignIn(roleEmail, DEMO_PASSWORD);
+    } catch {
+      try {
+        setSeeding(true);
+        await seed({ data: {} } as any);
+        setSeeding(false);
+        await doSignIn(roleEmail, DEMO_PASSWORD);
+      } catch (e: any) {
+        setSeeding(false);
+        toast.error(e?.message ?? "Quick login failed");
+      }
+    }
+    setLoading(false);
+  };
+
+  const seedNow = async () => {
+    setSeeding(true);
+    try {
+      const res: any = await seed({ data: {} } as any);
+      toast.success(`Demo users ready (${res.created.length} created, ${res.existing.length} refreshed)`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Seed failed");
+    }
+    setSeeding(false);
   };
 
   const signUp = async (e: React.FormEvent) => {
@@ -139,9 +184,42 @@ function AuthPage() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-5 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+          <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-amber-900">Dev quick login</p>
+                <p className="text-[11px] text-amber-800/80">Instant sign-in for each role. Password: <code className="font-mono">{DEMO_PASSWORD}</code></p>
+              </div>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={seedNow} disabled={seeding || loading}>
+                {seeding && <Loader2 className="size-3 animate-spin mr-1" />}
+                Seed
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {DEMO_USERS.map((u) => {
+                const Icon = ROLE_ICONS[u.role] ?? Users;
+                return (
+                  <Button
+                    key={u.role}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 justify-start gap-2 text-xs"
+                    disabled={loading || seeding}
+                    onClick={() => quickLogin(u.email)}
+                  >
+                    <Icon className="size-3.5" />
+                    <span className="capitalize">{u.role}</span>
+                  </Button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-amber-800/70">For development only — remove before production.</p>
+          </div>
+
+          <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">One login for everyone</p>
-            <p>Admin, Manager, Salesperson, Driver and Helper all sign in here. Your role is assigned by your administrator — the app shows only what you need.</p>
+            <p>Admin, Manager, Salesperson, Driver and Helper all sign in here. Your role is assigned by your administrator.</p>
           </div>
 
           <p className="text-xs text-muted-foreground mt-4 text-center">
