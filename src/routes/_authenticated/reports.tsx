@@ -104,6 +104,7 @@ function Reports() {
           <TabsTrigger value="aging">Aging</TabsTrigger>
           <TabsTrigger value="aging-sup">Payables Aging</TabsTrigger>
           <TabsTrigger value="top">Top Products / Customers</TabsTrigger>
+          <TabsTrigger value="shifts">Driver Shifts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales">
@@ -178,6 +179,10 @@ function Reports() {
 
         <TabsContent value="top">
           <TopReport items={data?.items ?? []} invoices={data?.invoices ?? []} />
+        </TabsContent>
+
+        <TabsContent value="shifts">
+          <DriverShifts from={from} to={to} />
         </TabsContent>
       </Tabs>
     </PageContainer>
@@ -597,5 +602,99 @@ ${meta ? `<div class="meta">${esc(meta)}</div>` : ""}
         </table>
       </div>
     </Card>
+  );
+}
+
+function DriverShifts({ from, to }: { from: string; to: string }) {
+  const { data } = useQuery({
+    queryKey: ["driver-shifts", from, to],
+    queryFn: async () => {
+      const { data: runs } = await supabase
+        .from("delivery_runs")
+        .select("id, route_id, run_date, driver_name, helper_name, vehicle_number, odometer_start, odometer_end, started_at, ended_at, status, delivery_status, pickup_confirmed_at, route:routes(name, area)")
+        .gte("run_date", from).lte("run_date", to)
+        .order("run_date", { ascending: false });
+      const rows = runs ?? [];
+      if (rows.length === 0) return { rows: [] as any[] };
+
+      // Fetch deliveries for these (route_id, run_date) pairs
+      const routeIds = Array.from(new Set(rows.map((r: any) => r.route_id)));
+      const dates = Array.from(new Set(rows.map((r: any) => r.run_date)));
+      const { data: dels } = await supabase
+        .from("deliveries")
+        .select("id, invoice_id, route_id, status, collected_amount, scheduled_date, delivered_at, created_at")
+        .in("route_id", routeIds)
+        .or(dates.map((d) => `scheduled_date.eq.${d}`).concat(dates.map((d) => `delivered_at.gte.${d}T00:00:00,delivered_at.lt.${d}T23:59:59`)).join(","));
+      const deliveries = dels ?? [];
+
+      // Fetch invoice_items delivered_quantity for those invoices
+      const invIds = Array.from(new Set(deliveries.map((d: any) => d.invoice_id).filter(Boolean)));
+      const itemsByInv = new Map<string, number>();
+      if (invIds.length) {
+        const { data: items } = await supabase
+          .from("invoice_items")
+          .select("invoice_id, delivered_quantity, quantity")
+          .in("invoice_id", invIds);
+        (items ?? []).forEach((it: any) => {
+          const q = Number(it.delivered_quantity ?? it.quantity ?? 0);
+          itemsByInv.set(it.invoice_id, (itemsByInv.get(it.invoice_id) ?? 0) + q);
+        });
+      }
+
+      const shifts = rows.map((r: any) => {
+        const matchDate = (d: any) => {
+          const sd = d.scheduled_date;
+          const dd = d.delivered_at ? String(d.delivered_at).slice(0, 10) : null;
+          return d.route_id === r.route_id && (sd === r.run_date || dd === r.run_date);
+        };
+        const runDels = deliveries.filter(matchDate);
+        const delivered = runDels.filter((d: any) => d.status === "delivered").length;
+        const partial = runDels.filter((d: any) => d.status === "partially_delivered").length;
+        const failed = runDels.filter((d: any) => d.status === "failed").length;
+        const total = runDels.length;
+        const qty = runDels.reduce((s: number, d: any) => s + (d.invoice_id ? (itemsByInv.get(d.invoice_id) ?? 0) : 0), 0);
+        const collected = runDels.reduce((s: number, d: any) => s + Number(d.collected_amount || 0), 0);
+        const distance = r.odometer_start != null && r.odometer_end != null
+          ? Math.max(Number(r.odometer_end) - Number(r.odometer_start), 0) : null;
+        const duration = r.started_at && r.ended_at
+          ? Math.max(Math.round((new Date(r.ended_at).getTime() - new Date(r.started_at).getTime()) / 60000), 0) : null;
+        return { r, delivered, partial, failed, total, qty, collected, distance, duration };
+      });
+      return { rows: shifts };
+    },
+  });
+
+  const rows = data?.rows ?? [];
+  const fmtDur = (m: number | null) => m == null ? "—" : `${Math.floor(m / 60)}h ${m % 60}m`;
+  const totals = {
+    5: num(rows.reduce((s, x) => s + (x.distance ?? 0), 0), 1) + " km",
+    7: `${rows.reduce((s, x) => s + x.delivered, 0)}/${rows.reduce((s, x) => s + x.total, 0)}`,
+    8: num(rows.reduce((s, x) => s + x.partial, 0)),
+    9: num(rows.reduce((s, x) => s + x.failed, 0)),
+    10: num(rows.reduce((s, x) => s + x.qty, 0), 2),
+    11: inr(rows.reduce((s, x) => s + x.collected, 0)),
+  };
+
+  return (
+    <ReportTable
+      title="Driver Shift Summary"
+      meta={`${from} to ${to} · per delivery run`}
+      headers={["Date", "Route", "Driver", "Vehicle", "Status", "Distance (km)", "Duration", "Delivered/Total", "Partial", "Failed", "Qty", "Collected"]}
+      rows={rows.map((x) => [
+        shortDate(x.r.run_date),
+        x.r.route?.name || "—",
+        x.r.driver_name || "—",
+        x.r.vehicle_number || "—",
+        (x.r.delivery_status || x.r.status || "—").replace(/_/g, " "),
+        x.distance != null ? num(x.distance, 1) : "—",
+        fmtDur(x.duration),
+        `${x.delivered}/${x.total}`,
+        num(x.partial),
+        num(x.failed),
+        num(x.qty, 2),
+        inr(x.collected),
+      ])}
+      totals={totals}
+    />
   );
 }
