@@ -30,7 +30,12 @@ function Invoices() {
       <PageHeader
         title="Invoices"
         description="GST-compliant invoices with CGST/SGST/IGST split."
-        actions={<Button asChild size="sm" className="gap-1.5"><Link to="/invoices/new"><Plus className="size-4" /> Generate Invoice</Link></Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline" className="gap-1.5"><Link to="/orders/new"><ShoppingCart className="size-4" /> Add Sale</Link></Button>
+            <Button asChild size="sm" className="gap-1.5"><Link to="/invoices/new"><Plus className="size-4" /> Generate Invoice</Link></Button>
+          </div>
+        }
       />
       <Card className="p-0 overflow-hidden">
         <div className="p-4 border-b flex items-center gap-3">
