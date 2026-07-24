@@ -516,6 +516,8 @@ function RouteFormDialog({
   const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
   const [vehicleNumber, setVehicleNumber] = useState(route?.vehicle_number ?? "");
   const [vehicleType, setVehicleType] = useState(route?.vehicle_type ?? "");
+  const [startLat, setStartLat] = useState<string>(route?.start_latitude != null ? String(route.start_latitude) : "");
+  const [startLng, setStartLng] = useState<string>(route?.start_longitude != null ? String(route.start_longitude) : "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
