@@ -910,13 +910,36 @@ function SheetTab({ date }: { date: string }) {
         perRouteCount.set(rid, (perRouteCount.get(rid) ?? 0) + 1);
       }
 
+      // Determine which stops are genuinely new (for undo)
+      let createdStops: { route_id: string; customer_id: string }[] = [];
       if (stopInserts.length > 0) {
-        // upsert to respect unique(route_id, customer_id)
+        const custIds = Array.from(new Set(stopInserts.map((s) => s.customer_id)));
+        const { data: existing } = await supabase
+          .from("route_stops")
+          .select("route_id, customer_id")
+          .in("customer_id", custIds);
+        const existingSet = new Set((existing ?? []).map((e: any) => `${e.route_id}::${e.customer_id}`));
+        createdStops = stopInserts
+          .filter((s) => !existingSet.has(`${s.route_id}::${s.customer_id}`))
+          .map((s) => ({ route_id: s.route_id, customer_id: s.customer_id }));
+
         const { error } = await supabase
           .from("route_stops")
           .upsert(stopInserts, { onConflict: "route_id,customer_id", ignoreDuplicates: true });
         if (error) throw error;
       }
+
+      // Capture previous route_id for deliveries about to be updated (for undo)
+      const allDelIds = Array.from(new Set(Array.from(deliveryUpdates.values()).flat()));
+      let deliveryPrev: { id: string; prev_route_id: string | null }[] = [];
+      if (allDelIds.length > 0) {
+        const { data: prevRows } = await supabase
+          .from("deliveries")
+          .select("id, route_id")
+          .in("id", allDelIds);
+        deliveryPrev = (prevRows ?? []).map((r: any) => ({ id: r.id, prev_route_id: r.route_id }));
+      }
+
       for (const [rid, ids] of deliveryUpdates) {
         if (ids.length === 0) continue;
         const { error } = await supabase.from("deliveries").update({ route_id: rid }).in("id", ids);
@@ -925,6 +948,7 @@ function SheetTab({ date }: { date: string }) {
 
       const routesTouched = perRouteCount.size;
       const total = Array.from(perRouteCount.values()).reduce((a, b) => a + b, 0);
+      setLastAssign({ date, createdStops, deliveryPrev, total });
       toast.success(`Auto-assigned ${total} shop${total === 1 ? "" : "s"} across ${routesTouched} route${routesTouched === 1 ? "" : "s"}.`);
       qc.invalidateQueries({ queryKey: ["all-route-stops-with-addr"] });
       qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date] });
@@ -934,6 +958,47 @@ function SheetTab({ date }: { date: string }) {
       toast.error(e?.message || "Auto-assign failed");
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const undoAutoAssign = async () => {
+    if (!lastAssign || lastAssign.date !== date) return;
+    setUndoing(true);
+    try {
+      // Restore delivery route_id assignments
+      const groups = new Map<string, string[]>(); // prev_route_id ("" for null) -> ids
+      lastAssign.deliveryPrev.forEach((d) => {
+        const k = d.prev_route_id ?? "";
+        const arr = groups.get(k) ?? [];
+        arr.push(d.id);
+        groups.set(k, arr);
+      });
+      for (const [prev, ids] of groups) {
+        const { error } = await supabase
+          .from("deliveries")
+          .update({ route_id: prev === "" ? null : prev })
+          .in("id", ids);
+        if (error) throw error;
+      }
+      // Remove newly created route_stops
+      for (const s of lastAssign.createdStops) {
+        const { error } = await supabase
+          .from("route_stops")
+          .delete()
+          .eq("route_id", s.route_id)
+          .eq("customer_id", s.customer_id);
+        if (error) throw error;
+      }
+      toast.success(`Reverted auto-assign of ${lastAssign.total} shop${lastAssign.total === 1 ? "" : "s"}.`);
+      setLastAssign(null);
+      qc.invalidateQueries({ queryKey: ["all-route-stops-with-addr"] });
+      qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date] });
+      qc.invalidateQueries({ queryKey: ["deliveries"] });
+      qc.invalidateQueries({ queryKey: ["route-stops"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Undo failed");
+    } finally {
+      setUndoing(false);
     }
   };
 
