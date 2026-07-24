@@ -735,7 +735,7 @@ type InvoiceRow = {
   balance: number;
   customer_id: string;
   customer: { id: string; name: string; shop_name: string | null; address: string | null; mobile: string | null; outstanding: number } | null;
-  items: { product_name: string; quantity: number; rate: number; amount: number }[];
+  items: { id: string; product_name: string; quantity: number; ordered_quantity: number | null; delivered_quantity: number | null; rate: number; amount: number }[];
 };
 
 function SheetTab({ date }: { date: string }) {
