@@ -84,9 +84,9 @@ export const processQueuedNotifications = createServerFn({ method: "POST" })
       const { error: rpcErr } = await supabaseAdmin.rpc("record_notification_attempt", {
         _id: claimed.id,
         _success: ok,
-        _error: errText,
-        _provider: providerName,
-        _provider_msg: providerMsgId,
+        _error: errText ?? undefined,
+        _provider: providerName ?? undefined,
+        _provider_msg: providerMsgId ?? undefined,
         _suppressed: suppressed,
       });
       if (rpcErr) {
