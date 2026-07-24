@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark } from "lucide-react";
 import { getBusiness, saveBusiness, type BusinessProfile } from "@/lib/business";
 
@@ -108,6 +108,7 @@ function Settings() {
           title="Business identity"
           description="Shown on every invoice header, print copy and PDF."
           summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + biz.gstin : ""}` : "Not set — tap to add"}
+          storageKey={me?.userId ? `settings:section:${me.userId}:business` : undefined}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -196,6 +197,7 @@ function Settings() {
                   .join(" · ")
               : "Not set — tap to add"
           }
+          storageKey={me?.userId ? `settings:section:${me.userId}:payment` : undefined}
         >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5 col-span-2">
@@ -346,6 +348,7 @@ function CollapsibleCard({
   description,
   summary,
   defaultOpen = false,
+  storageKey,
   children,
 }: {
   icon: any;
@@ -353,9 +356,24 @@ function CollapsibleCard({
   description: string;
   summary: string;
   defaultOpen?: boolean;
+  storageKey?: string;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  // Hydrate from localStorage once the per-user storageKey is known.
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      if (stored === "1" || stored === "0") setOpen(stored === "1");
+    } catch {}
+  }, [storageKey]);
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(storageKey, open ? "1" : "0");
+    } catch {}
+  }, [open, storageKey]);
   return (
     <Card className="p-0 overflow-hidden">
       <button
