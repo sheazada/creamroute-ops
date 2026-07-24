@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, shortDate } from "@/lib/format";
-import { Plus } from "lucide-react";
+import { Plus, ScanLine } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/purchases/")({
   component: Purchases,
@@ -22,7 +22,12 @@ function Purchases() {
       <PageHeader
         title="Purchases"
         description="Record stock received from your dairy suppliers."
-        actions={<Button asChild size="sm" className="gap-1.5"><Link to="/purchases/new"><Plus className="size-4" /> New Purchase</Link></Button>}
+        actions={
+          <>
+            <Button asChild variant="outline" size="sm" className="gap-1.5"><Link to="/purchases/challan"><ScanLine className="size-4" /> Scan Challan</Link></Button>
+            <Button asChild size="sm" className="gap-1.5"><Link to="/purchases/new"><Plus className="size-4" /> New Purchase</Link></Button>
+          </>
+        }
       />
       <Card className="p-0 overflow-hidden">
         <table className="w-full text-sm">
