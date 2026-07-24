@@ -30,6 +30,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [seeding, setSeeding] = useState(false);
+  const seed = useServerFn(seedDemoUsers);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -37,14 +39,47 @@ function AuthPage() {
     });
   }, [navigate]);
 
+  const doSignIn = async (emailArg: string, passwordArg: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: emailArg, password: passwordArg });
+    if (error) throw error;
+    toast.success("Welcome back");
+    navigate({ to: "/dashboard", replace: true });
+  };
+
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try { await doSignIn(email, password); } catch (err: any) { toast.error(err.message); }
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Welcome back");
-    navigate({ to: "/dashboard", replace: true });
+  };
+
+  const quickLogin = async (roleEmail: string) => {
+    setLoading(true);
+    try {
+      await doSignIn(roleEmail, DEMO_PASSWORD);
+    } catch {
+      try {
+        setSeeding(true);
+        await seed({ data: {} } as any);
+        setSeeding(false);
+        await doSignIn(roleEmail, DEMO_PASSWORD);
+      } catch (e: any) {
+        setSeeding(false);
+        toast.error(e?.message ?? "Quick login failed");
+      }
+    }
+    setLoading(false);
+  };
+
+  const seedNow = async () => {
+    setSeeding(true);
+    try {
+      const res: any = await seed({ data: {} } as any);
+      toast.success(`Demo users ready (${res.created.length} created, ${res.existing.length} refreshed)`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Seed failed");
+    }
+    setSeeding(false);
   };
 
   const signUp = async (e: React.FormEvent) => {
