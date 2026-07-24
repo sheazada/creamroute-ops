@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
-import { ArrowDown, ArrowUp, Camera, CheckCircle2, MapPin, Plus, Printer, Route as RouteIcon, Trash2, Truck, UserPlus, Wallet } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, CheckCircle2, Download, MapPin, Plus, Printer, Route as RouteIcon, Trash2, Truck, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/routes")({
