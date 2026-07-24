@@ -50,6 +50,8 @@ type RouteRow = {
   capacity_label: string | null;
   vehicle_number: string | null;
   vehicle_type: string | null;
+  start_latitude: number | null;
+  start_longitude: number | null;
 };
 
 type DeliveryRun = {
@@ -81,6 +83,8 @@ type Stop = {
     address: string | null;
     mobile: string | null;
     outstanding: number;
+    latitude: number | null;
+    longitude: number | null;
   } | null;
 };
 
