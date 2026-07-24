@@ -757,6 +757,7 @@ function CollapsibleCard({
                 size="sm"
                 variant="ghost"
                 onClick={() => onCancel?.()}
+                disabled={saving}
               >
                 <X className="size-3.5 mr-1" /> Cancel
               </Button>
@@ -764,9 +765,14 @@ function CollapsibleCard({
                 type="button"
                 size="sm"
                 onClick={() => onSave?.()}
-                disabled={!dirty}
+                disabled={!dirty || saving}
+                aria-busy={saving}
               >
-                <Check className="size-3.5 mr-1" /> Save
+                {saving ? (
+                  <><Loader2 className="size-3.5 mr-1 animate-spin" /> Saving…</>
+                ) : (
+                  <><Check className="size-3.5 mr-1" /> Save</>
+                )}
               </Button>
             </>
           ) : (
