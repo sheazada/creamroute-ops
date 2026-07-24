@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
 import { ArrowDown, ArrowUp, Camera, CheckCircle2, Clock, Crosshair, Download, GripVertical, History, LocateFixed, MapPin, Pencil, Play, Plus, Printer, Route as RouteIcon, Sparkles, Square, Trash2, Truck, UserPlus, Wallet, Wand2, XCircle } from "lucide-react";
 import { optimizeStops } from "@/lib/route-optimize";
-import { getCurrentPosition, fmtLatLng, gmapsUrl, haversineKm } from "@/lib/geo";
+import { getCurrentPosition, captureGpsWithAudit, logGpsAudit, fmtLatLng, gmapsUrl, haversineKm } from "@/lib/geo";
 import { toast } from "sonner";
 import {
   DndContext,
