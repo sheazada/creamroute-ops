@@ -285,10 +285,11 @@ function RouteFormDialog({
   const [helper, setHelper] = useState(route?.helper_name ?? "");
   const [active, setActive] = useState(route?.active ?? true);
   const [notes, setNotes] = useState(route?.notes ?? "");
+  const [capacity, setCapacity] = useState<string>(route?.capacity_units != null ? String(route.capacity_units) : "");
+  const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
   const [saving, setSaving] = useState(false);
 
-  // reset on open
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       setName(route?.name ?? "");
       setArea(route?.area ?? "");
@@ -296,13 +297,20 @@ function RouteFormDialog({
       setHelper(route?.helper_name ?? "");
       setActive(route?.active ?? true);
       setNotes(route?.notes ?? "");
+      setCapacity(route?.capacity_units != null ? String(route.capacity_units) : "");
+      setCapacityLabel(route?.capacity_label ?? "L");
     }
   }, [open, route]);
 
   const save = async () => {
     if (!name.trim()) return toast.error("Name required");
     setSaving(true);
-    const payload = { name: name.trim(), area: area || null, driver_name: driver || null, helper_name: helper || null, active, notes: notes || null };
+    const payload = {
+      name: name.trim(), area: area || null, driver_name: driver || null, helper_name: helper || null,
+      active, notes: notes || null,
+      capacity_units: capacity ? Number(capacity) : null,
+      capacity_label: capacityLabel || null,
+    };
     if (isEdit && route) {
       const { error } = await supabase.from("routes").update(payload).eq("id", route.id);
       setSaving(false);
