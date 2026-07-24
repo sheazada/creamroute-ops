@@ -29,7 +29,26 @@ type RouteRow = {
   notes: string | null;
   capacity_units: number | null;
   capacity_label: string | null;
+  vehicle_number: string | null;
+  vehicle_type: string | null;
 };
+
+type DeliveryRun = {
+  id: string;
+  route_id: string;
+  run_date: string;
+  driver_name: string | null;
+  helper_name: string | null;
+  vehicle_number: string | null;
+  vehicle_type: string | null;
+  odometer_start: number | null;
+  odometer_end: number | null;
+  started_at: string | null;
+  ended_at: string | null;
+  status: string;
+  notes: string | null;
+};
+
 
 type Stop = {
   id: string;
