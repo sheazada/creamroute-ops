@@ -42,9 +42,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       .eq("user_id", userRes.user.id);
     const list = (roles ?? []).map((r) => r.role as string);
     if (list.includes("admin") || list.includes("manager")) return;
-    if (list.includes("salesperson")) throw redirect({ to: "/orders" });
+    if (list.includes("salesperson")) throw redirect({ to: "/invoices" });
     if (list.includes("driver") || list.includes("helper"))
-      throw redirect({ to: "/deliveries" });
+      throw redirect({ to: "/daily-demand" });
   },
   component: Dashboard,
 });
