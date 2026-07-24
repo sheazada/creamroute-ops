@@ -1022,6 +1022,9 @@ function SheetTab({ date }: { date: string }) {
       const total = Array.from(perRouteCount.values()).reduce((a, b) => a + b, 0);
       setLastAssign({ date, createdStops, deliveryPrev, total });
       toast.success(`Auto-assigned ${total} shop${total === 1 ? "" : "s"} across ${routesTouched} route${routesTouched === 1 ? "" : "s"}.`);
+      if (skipped > 0) {
+        toast.warning(`${skipped} shop${skipped === 1 ? "" : "s"} skipped — all eligible routes are at capacity or max stops. Raise the limits or add a route.`);
+      }
       qc.invalidateQueries({ queryKey: ["all-route-stops-with-addr"] });
       qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date] });
       qc.invalidateQueries({ queryKey: ["deliveries"] });
