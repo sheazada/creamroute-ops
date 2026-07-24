@@ -35,7 +35,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) navigate({ to: "/", replace: true });
     });
   }, [navigate]);
 
@@ -43,7 +43,7 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email: emailArg, password: passwordArg });
     if (error) throw error;
     toast.success("Welcome back");
-    navigate({ to: "/dashboard", replace: true });
+    navigate({ to: "/", replace: true });
   };
 
   const signIn = async (e: React.FormEvent) => {
