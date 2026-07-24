@@ -623,6 +623,19 @@ function RouteFormDialog({
               </Select>
             </div>
           </div>
+          <div className="rounded-md border p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Start point (depot / pickup)</Label>
+              <Button type="button" variant="outline" size="sm" onClick={captureStartHere} className="gap-1.5 h-8">
+                <LocateFixed className="size-3.5" /> Use my location
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Latitude</Label><Input value={startLat} onChange={(e) => setStartLat(e.target.value)} placeholder="e.g. 25.2425" inputMode="decimal" /></div>
+              <div><Label className="text-xs">Longitude</Label><Input value={startLng} onChange={(e) => setStartLng(e.target.value)} placeholder="e.g. 86.9842" inputMode="decimal" /></div>
+            </div>
+            <p className="text-xs text-muted-foreground">Used by the sequence optimizer as the driver's starting point.</p>
+          </div>
           <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Landmarks, timing…" /></div>
 
         </div>
