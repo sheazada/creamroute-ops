@@ -165,6 +165,7 @@ export type Database = {
       delivery_runs: {
         Row: {
           created_at: string
+          delivery_status: string
           driver_name: string | null
           end_accuracy_m: number | null
           end_latitude: number | null
@@ -189,6 +190,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_status?: string
           driver_name?: string | null
           end_accuracy_m?: number | null
           end_latitude?: number | null
@@ -213,6 +215,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_status?: string
           driver_name?: string | null
           end_accuracy_m?: number | null
           end_latitude?: number | null
@@ -1037,6 +1040,10 @@ export type Database = {
       }
       recalc_invoice: { Args: { _invoice_id: string }; Returns: undefined }
       recalc_purchase: { Args: { _purchase_id: string }; Returns: undefined }
+      recalc_run_delivery_status: {
+        Args: { _run_id: string }
+        Returns: undefined
+      }
       recalc_supplier_outstanding: {
         Args: { _supplier_id: string }
         Returns: undefined
