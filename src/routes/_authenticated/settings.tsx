@@ -826,19 +826,45 @@ function FieldRow({
   colSpan?: 1 | 2;
   children: React.ReactNode;
 }) {
+  const reactId = React.useId();
+  const baseId = field ? `field-${field}` : reactId;
+  const errorId = `${baseId}-error`;
+  const hintId = `${baseId}-hint`;
+  const describedBy = error ? errorId : hint ? hintId : undefined;
+
+  // Inject aria-describedby / aria-invalid into the input child so screen
+  // readers announce the specific inline message tied to this field.
+  const child = React.isValidElement(children)
+    ? React.cloneElement(children as React.ReactElement<any>, {
+        "aria-describedby": [
+          (children as React.ReactElement<any>).props["aria-describedby"],
+          describedBy,
+        ]
+          .filter(Boolean)
+          .join(" ") || undefined,
+        "aria-invalid":
+          (children as React.ReactElement<any>).props["aria-invalid"] ?? (error ? true : undefined),
+      })
+    : children;
+
   return (
     <div
       data-field={field}
       className={`space-y-1.5 scroll-mt-24 ${colSpan === 2 ? "col-span-2" : ""}`}
     >
       <Label>{label}</Label>
-      {children}
+      {child}
       {error ? (
-        <p className="text-[11px] font-medium text-destructive">{error}</p>
+        <p id={errorId} className="text-[11px] font-medium text-destructive" aria-live="polite">
+          {error}
+        </p>
       ) : hint ? (
-        <p className="text-[11px] text-muted-foreground">{hint}</p>
+        <p id={hintId} className="text-[11px] text-muted-foreground">
+          {hint}
+        </p>
       ) : null}
     </div>
   );
 }
+
 
