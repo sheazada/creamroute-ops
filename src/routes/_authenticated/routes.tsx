@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
-import { ArrowDown, ArrowUp, Camera, CheckCircle2, Download, GripVertical, MapPin, Plus, Printer, Route as RouteIcon, Sparkles, Trash2, Truck, UserPlus, Wallet } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, CheckCircle2, Crosshair, Download, GripVertical, LocateFixed, MapPin, Plus, Printer, Route as RouteIcon, Sparkles, Trash2, Truck, UserPlus, Wallet, Wand2 } from "lucide-react";
+import { optimizeStops } from "@/lib/route-optimize";
 import { toast } from "sonner";
 import {
   DndContext,
