@@ -308,9 +308,6 @@ function Settings() {
                 />
               </FieldRow>
             </div>
-            <div className="pt-2">
-              <Button onClick={saveBiz} size="sm">Save business profile</Button>
-            </div>
           </div>
         </CollapsibleCard>
 
@@ -331,7 +328,13 @@ function Settings() {
           }
           storageKey={me?.userId ? `settings:section:${me.userId}:payment` : undefined}
           readOnly={!isAdmin}
+          editing={editing === "payment"}
+          dirty={editing === "payment" && dirty}
+          onEdit={() => startEdit("payment")}
+          onCancel={cancelEdit}
+          onSave={saveBiz}
         >
+
           <div className="grid grid-cols-2 gap-3">
             <FieldRow label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
               <MaskedInput
