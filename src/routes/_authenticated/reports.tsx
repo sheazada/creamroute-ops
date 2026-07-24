@@ -31,7 +31,7 @@ function Reports() {
         supabase.from("invoices").select("id, invoice_no, invoice_date, customer_id, subtotal, cgst, sgst, igst, total, paid, balance, status, customer:customers(name, shop_name, gstin)").gte("invoice_date", from).lte("invoice_date", toEnd).order("invoice_date"),
         supabase.from("invoice_items").select("product_name, hsn, quantity, taxable, tax_amount, gst_rate, amount, invoice:invoices!inner(invoice_date, customer_id, cgst, igst)").gte("invoice.invoice_date", from).lte("invoice.invoice_date", toEnd),
         supabase.from("payments").select("payment_no, payment_date, amount, mode, reference, customer_id, invoice_id, customer:customers(name, shop_name)").gte("payment_date", from).lte("payment_date", toEnd).order("payment_date"),
-        supabase.from("purchases").select("id, bill_no, purchase_date, subtotal, gst, total, paid, status, supplier:suppliers(name, company)").gte("purchase_date", from).lte("purchase_date", toEnd).order("purchase_date"),
+        supabase.from("purchases").select("id, bill_no, purchase_date, subtotal, gst, total, paid, status, supplier_id, supplier:suppliers(name, company)").gte("purchase_date", from).lte("purchase_date", toEnd).order("purchase_date"),
         supabase.from("purchase_items").select("product_name, quantity, rate, gst_rate, amount, purchase:purchases!inner(purchase_date)").gte("purchase.purchase_date", from).lte("purchase.purchase_date", toEnd),
         supabase.from("customers").select("id, name, shop_name, outstanding").order("outstanding", { ascending: false }),
         supabase.from("suppliers").select("id, name, company, outstanding").order("outstanding", { ascending: false }),
