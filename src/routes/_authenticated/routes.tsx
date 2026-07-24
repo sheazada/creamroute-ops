@@ -2181,16 +2181,47 @@ function RunTimelineDialog({
         }
       }
 
+      // Fetch structured edit-audit rows for this route/date and turn them into diff events
+      const editRows = await (async () => {
+        const orParts: string[] = [];
+        if (runIds.length) orParts.push(`run_id.in.(${runIds.join(",")})`);
+        if (delIds.length) orParts.push(`delivery_id.in.(${delIds.join(",")})`);
+        if (orParts.length === 0) return [];
+        const { data, error } = await supabase
+          .from("edit_audit_logs" as any)
+          .select("record_type, run_id, delivery_id, action, field, old_value, new_value, created_at")
+          .or(orParts.join(","))
+          .eq("action", "updated")
+          .order("created_at", { ascending: true });
+        if (error) { console.warn("edit audit fetch failed", error); return []; }
+        return data ?? [];
+      })();
+
+      // Group edits by (record + second-precision timestamp) so one save = one timeline card
+      const shopByDelivery = new Map<string, string>();
       for (const d of dels ?? []) {
         const dd = d as any;
         const inv = dd.invoice as { invoice_no?: string | null; customer?: { name?: string | null; shop_name?: string | null } | null } | null;
         const shop = inv?.customer?.shop_name || inv?.customer?.name || "Shop";
-        const invNo = inv?.invoice_no ? ` · ${inv.invoice_no}` : "";
-        if (dd.created_at) ev.push({
-          at: dd.created_at, kind: "en_route",
-          title: `Assigned to route: ${shop}`,
-          detail: invNo || null,
-        });
+        shopByDelivery.set(dd.id, `${shop}${inv?.invoice_no ? ` · ${inv.invoice_no}` : ""}`);
+      }
+      const groups = new Map<string, { at: string; kind: "run_edited" | "stop_edited"; title: string; changes: FieldChange[] }>();
+      for (const g of editRows as any[]) {
+        const bucket = new Date(g.created_at); bucket.setMilliseconds(0);
+        const key = `${g.record_type}:${g.run_id || g.delivery_id}:${bucket.toISOString()}`;
+        if (!groups.has(key)) {
+          if (g.record_type === "delivery_run") {
+            groups.set(key, { at: g.created_at, kind: "run_edited", title: "Run details edited", changes: [] });
+          } else {
+            const label = shopByDelivery.get(g.delivery_id) || "Stop";
+            groups.set(key, { at: g.created_at, kind: "stop_edited", title: `Stop edited: ${label}`, changes: [] });
+          }
+        }
+        groups.get(key)!.changes.push({ field: g.field, from: g.old_value, to: g.new_value });
+      }
+      for (const grp of groups.values()) {
+        ev.push({ at: grp.at, kind: grp.kind, title: grp.title, changes: grp.changes });
+      }
         if (dd.delivered_at) {
           const kind: TimelineEvent["kind"] =
             dd.status === "delivered" ? "delivered" :
