@@ -200,8 +200,25 @@ function Settings() {
     if (!ok) {
       const count = Object.keys(e).length;
       toast.error(count === 1 ? "1 field needs attention" : `${count} fields need attention`);
+      // Scroll to first invalid field in the currently editing section (fallback: any section).
+      const order = editing
+        ? [...SECTION_FIELDS[editing], ...SECTION_FIELDS[editing === "business" ? "payment" : "business"]]
+        : [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment];
+      const firstKey = order.find((k) => !!e[k]);
+      if (firstKey) {
+        requestAnimationFrame(() => {
+          const el = document.querySelector<HTMLElement>(`[data-field="${firstKey}"]`);
+          if (!el) return;
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          const focusable = el.querySelector<HTMLElement>(
+            "input, textarea, select, [tabindex]:not([tabindex='-1'])",
+          );
+          focusable?.focus({ preventScroll: true });
+        });
+      }
       return;
     }
+
     saveBusiness(biz);
     const section = editing;
     setEditing(null);
