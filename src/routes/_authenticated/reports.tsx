@@ -472,6 +472,13 @@ function SupplierLedger({ from, to, suppliers }: { from: string; to: string; sup
           </SelectContent>
         </Select>
         {selected && <span className="text-xs text-muted-foreground">Current payable: <b className="text-foreground">{inr(selected.outstanding)}</b></span>}
+        {selected && (
+          <Button asChild size="sm" variant="outline" className="gap-1.5 h-8">
+            <Link to="/suppliers/$id" params={{ id: selected.id }}>
+              <ExternalLink className="size-3.5" /> Open supplier page
+            </Link>
+          </Button>
+        )}
       </div>
       {!id ? (
         <Card className="p-10 text-center text-muted-foreground text-sm">Select a supplier to view their statement of account.</Card>
