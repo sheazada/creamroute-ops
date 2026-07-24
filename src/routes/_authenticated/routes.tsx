@@ -1916,11 +1916,13 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
             <LocateFixed className="size-4" /> {busy === "end" ? "Getting GPS…" : "End run (capture GPS)"}
           </Button>
         )}
+        <Button size="sm" variant="outline" onClick={() => setMapOpen(true)} className="gap-1.5"><MapPin className="size-4" /> Map</Button>
         <Button size="sm" variant="outline" onClick={() => setTimelineOpen(true)} className="gap-1.5"><History className="size-4" /> Timeline</Button>
         <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>Details</Button>
       </div>
       <RunEditDialog open={editOpen} onClose={() => setEditOpen(false)} route={route} date={date} run={run ?? null} onSaved={invalidate} />
       <RunTimelineDialog open={timelineOpen} onClose={() => setTimelineOpen(false)} route={route} date={date} invoiceIds={invoiceIds} />
+      <RunMapDialog open={mapOpen} onClose={() => setMapOpen(false)} route={route} date={date} invoiceIds={invoiceIds} />
     </div>
   );
 }
