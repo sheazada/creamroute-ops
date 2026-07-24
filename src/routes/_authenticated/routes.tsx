@@ -763,7 +763,7 @@ function SheetTab({ date }: { date: string }) {
     queryFn: async (): Promise<InvoiceRow[]> => {
       const { data } = await supabase
         .from("invoices")
-        .select("id, invoice_no, invoice_date, total, balance, customer_id, customer:customers(id, name, shop_name, address, mobile, outstanding), items:invoice_items(product_name, quantity, rate, amount)")
+        .select("id, invoice_no, invoice_date, total, balance, customer_id, customer:customers(id, name, shop_name, address, mobile, outstanding), items:invoice_items(id, product_name, quantity, ordered_quantity, delivered_quantity, rate, amount)")
         .eq("invoice_date", date)
         .neq("status", "void");
       return (data ?? []) as unknown as InvoiceRow[];
