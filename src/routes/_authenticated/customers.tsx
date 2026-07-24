@@ -159,8 +159,12 @@ function Customers() {
                   <td className="px-6 py-3 text-right font-mono">{inr(c.credit_limit)}</td>
                   <td className={`px-6 py-3 text-right font-mono font-semibold ${Number(c.outstanding) > 0 ? "text-destructive" : ""}`}>{inr(c.outstanding)}</td>
                   <td className="px-6 py-3"><ReminderActions customer={c} /></td>
+                  <td className="px-6 py-3"><NotifyBadges customer={c} /></td>
                   <td className="px-6 py-3 text-right">
-                    <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary hover:underline">Invoice</Link>
+                    <div className="flex items-center gap-2 justify-end">
+                      <EditCustomerButton customer={c} />
+                      <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary hover:underline">Invoice</Link>
+                    </div>
                   </td>
                 </tr>
               ))}
