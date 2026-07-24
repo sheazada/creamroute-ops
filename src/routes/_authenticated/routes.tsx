@@ -214,6 +214,7 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
               <span>Driver: <b className="text-foreground">{route?.driver_name || "—"}</b></span>
               <span>Helper: <b className="text-foreground">{route?.helper_name || "—"}</b></span>
               <span>Stops: <b className="text-foreground">{total}</b></span>
+              <span>Capacity: <b className="text-foreground">{route?.capacity_units ? `${num(route.capacity_units, 0)} ${route.capacity_label || ""}` : "—"}</b></span>
               <span>Outstanding: <b className="text-foreground">{inr(outstanding)}</b></span>
             </div>
             {route?.notes && <div className="mt-2 text-xs text-muted-foreground italic">{route.notes}</div>}
