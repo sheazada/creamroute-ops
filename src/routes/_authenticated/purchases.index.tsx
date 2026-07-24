@@ -46,8 +46,14 @@ function Purchases() {
               <tr key={p.id} className="hover:bg-muted/30">
                 <td className="px-6 py-3 font-mono text-xs">{p.bill_no}</td>
                 <td className="px-6 py-3">
-                  <div className="font-medium">{p.supplier?.name}</div>
-                  <div className="text-xs text-muted-foreground">{p.supplier?.company}</div>
+                  {p.supplier_id ? (
+                    <Link to="/suppliers/$id" params={{ id: p.supplier_id }} className="hover:text-primary">
+                      <div className="font-medium">{p.supplier?.name}</div>
+                      <div className="text-xs text-muted-foreground">{p.supplier?.company}</div>
+                    </Link>
+                  ) : (
+                    <div className="font-medium">{p.supplier?.name ?? "—"}</div>
+                  )}
                 </td>
                 <td className="px-6 py-3 text-muted-foreground">{shortDate(p.purchase_date)}</td>
                 <td className="px-6 py-3 text-right font-mono font-semibold">{inr(p.total)}</td>

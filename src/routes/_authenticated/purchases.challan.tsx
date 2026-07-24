@@ -121,6 +121,20 @@ function ChallanOcr() {
     if (unmapped.length) return toast.error(`Match ${unmapped.length} unmapped product${unmapped.length === 1 ? "" : "s"} to catalog products`);
 
     setSaving(true);
+
+    // Upload challan file to storage if provided
+    let challanUrl: string | null = null;
+    if (file) {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${supplierId}/${Date.now()}-${billNo.replace(/[^a-zA-Z0-9]+/g, "_")}.${ext}`;
+      const up = await supabase.storage.from("challans").upload(path, file, { upsert: false, contentType: file.type });
+      if (up.error) {
+        setSaving(false);
+        return toast.error(`Challan upload failed: ${up.error.message}`);
+      }
+      challanUrl = path;
+    }
+
     const { data: p, error } = await supabase.from("purchases").insert({
       bill_no: billNo,
       supplier_id: supplierId,
@@ -128,6 +142,7 @@ function ChallanOcr() {
       subtotal: totals.subtotal,
       gst: totals.gst,
       total: totals.total,
+      challan_url: challanUrl,
       notes: extraction?.notes ?? null,
     }).select().single();
 
@@ -163,7 +178,7 @@ function ChallanOcr() {
 
     setSaving(false);
     toast.success("Purchase approved and stock updated");
-    nav({ to: "/purchases" });
+    nav({ to: "/suppliers/$id", params: { id: supplierId } });
   };
 
   return (
