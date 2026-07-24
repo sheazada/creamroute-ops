@@ -254,6 +254,102 @@ export type Database = {
           },
         ]
       }
+      gps_audit_logs: {
+        Row: {
+          accuracy: number | null
+          created_at: string
+          customer_id: string | null
+          delivery_id: string | null
+          error_code: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          invoice_id: string | null
+          latitude: number | null
+          longitude: number | null
+          metadata: Json | null
+          route_id: string | null
+          run_id: string | null
+          success: boolean
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string
+          customer_id?: string | null
+          delivery_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          invoice_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          metadata?: Json | null
+          route_id?: string | null
+          run_id?: string | null
+          success: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string
+          customer_id?: string | null
+          delivery_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          invoice_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          metadata?: Json | null
+          route_id?: string | null
+          run_id?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gps_audit_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gps_audit_logs_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gps_audit_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gps_audit_logs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gps_audit_logs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           created_at: string
