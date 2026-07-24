@@ -486,14 +486,28 @@ function ReportTable({
   headers, rows, totals, title, meta,
 }: {
   headers: string[];
-  rows: (string | number)[][];
+  rows: Cell[][];
   totals?: Record<number, string>;
   title?: string;
   meta?: string;
 }) {
+  const cellText = (c: Cell): string => (typeof c === "object" && c !== null ? c.text : String(c));
+  const cellNode = (c: Cell): ReactNode => {
+    if (typeof c === "object" && c !== null) {
+      if (c.to) {
+        return (
+          <Link to={c.to as any} params={c.params as any} className="text-primary hover:underline inline-flex items-center gap-1">
+            {c.text} <ExternalLink className="size-3 opacity-60" />
+          </Link>
+        );
+      }
+      return c.text;
+    }
+    return c;
+  };
   const filename = (title || "report").replace(/\s+/g, "-").toLowerCase();
   const exportCsv = () => {
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [headers, ...rows.map((r) => r.map(cellText))].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
