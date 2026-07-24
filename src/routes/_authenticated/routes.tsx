@@ -1689,6 +1689,13 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
         <Badge variant={run?.status === "completed" ? "outline" : run?.status === "in_progress" ? "default" : "secondary"} className="capitalize">
           {run?.status?.replace("_", " ") || "not started"}
         </Badge>
+        {run?.delivery_status && (
+          <>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground">Auto:</span>
+            <StatusBadge status={run.delivery_status} />
+          </>
+        )}
         {run?.pickup_confirmed_at && (
           <Badge variant="outline" className="gap-1 text-emerald-700 border-emerald-300 bg-emerald-50">
             <CheckCircle2 className="size-3" /> Pickup {fmtTime(run.pickup_confirmed_at)}
