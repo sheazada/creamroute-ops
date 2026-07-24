@@ -241,8 +241,50 @@ function Settings() {
     enableBeforeUnload: false,
   });
 
+  const sectionErrorItems = (section: Section) =>
+    SECTION_FIELDS[section]
+      .filter((k) => !!errors[k])
+      .map((k) => ({ field: k, label: FIELD_LABELS[k] ?? String(k), message: errors[k]! }));
+
+  const renderSectionBanner = (section: Section) => {
+    const items = sectionErrorItems(section);
+    if (savedFlash === section) {
+      return (
+        <div className="mb-3 flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-800">
+          <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-semibold">
+              {section === "payment" ? "Payment & bank saved" : "Business identity saved"}
+            </div>
+            <div className="text-emerald-700/90">
+              Changes are live and will appear on every new invoice.
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (items.length === 0) return null;
+    return (
+      <div className="mb-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+        <AlertCircle className="size-4 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="font-semibold">
+            {items.length === 1 ? "1 field needs attention" : `${items.length} fields need attention`}
+          </div>
+          <ul className="mt-1 space-y-0.5 list-disc list-inside">
+            {items.map((it) => (
+              <li key={String(it.field)}>
+                <span className="font-medium">{it.label}:</span> {it.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  };
 
   return (
+
     <PageContainer>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
       {dirty && (
