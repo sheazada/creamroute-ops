@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
 import { ArrowDown, ArrowUp, Camera, CheckCircle2, Clock, Crosshair, Download, GripVertical, History, LocateFixed, MapPin, Pencil, Play, Plus, Printer, Route as RouteIcon, Sparkles, Square, Trash2, Truck, UserPlus, Wallet, Wand2, XCircle } from "lucide-react";
 import { optimizeStops } from "@/lib/route-optimize";
-import { getCurrentPosition, fmtLatLng, gmapsUrl, haversineKm } from "@/lib/geo";
+import { getCurrentPosition, captureGpsWithAudit, logGpsAudit, fmtLatLng, gmapsUrl, haversineKm } from "@/lib/geo";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -407,22 +407,16 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
   };
 
   const setStopGps = async (customerId: string) => {
-    if (!("geolocation" in navigator)) return toast.error("GPS not available on this device");
     toast.info("Getting current location…");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const { error } = await supabase
-          .from("customers")
-          .update({ latitude, longitude })
-          .eq("id", customerId);
-        if (error) return toast.error(error.message);
-        toast.success(`Saved GPS · ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-        invalidate();
-      },
-      (err) => toast.error(err.message || "Could not get location"),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    const { fix, error } = await captureGpsWithAudit("shop_geotag", { customer_id: customerId, route_id: route?.id ?? null });
+    if (!fix) return toast.error(error?.message || "Could not get location");
+    const { error: uErr } = await supabase
+      .from("customers")
+      .update({ latitude: fix.latitude, longitude: fix.longitude })
+      .eq("id", customerId);
+    if (uErr) return toast.error(uErr.message);
+    toast.success(`Saved GPS · ${fix.latitude.toFixed(5)}, ${fix.longitude.toFixed(5)}`);
+    invalidate();
   };
 
   const total = stops?.length ?? 0;
@@ -550,18 +544,13 @@ function RouteFormDialog({
     }
   }, [open, route]);
 
-  const captureStartHere = () => {
-    if (!("geolocation" in navigator)) return toast.error("GPS not available");
+  const captureStartHere = async () => {
     toast.info("Getting current location…");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setStartLat(pos.coords.latitude.toFixed(6));
-        setStartLng(pos.coords.longitude.toFixed(6));
-        toast.success("Start point set to current location");
-      },
-      (err) => toast.error(err.message || "Could not get location"),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    const { fix, error } = await captureGpsWithAudit("route_start_point", { route_id: route?.id ?? null });
+    if (!fix) return toast.error(error?.message || "Could not get location");
+    setStartLat(fix.latitude.toFixed(6));
+    setStartLng(fix.longitude.toFixed(6));
+    toast.success("Start point set to current location");
   };
 
   const save = async () => {
@@ -1552,13 +1541,20 @@ function DeliverStopDialog({
         if (pErr) throw pErr;
       }
 
-      // 3b. Capture POD GPS (non-blocking on failure)
+      // 3b. Capture POD GPS (non-blocking on failure, logged to gps_audit_logs)
       let podLat: number | null = null, podLng: number | null = null, podAcc: number | null = null, podAt: string | null = null;
-      try {
-        const fix = await getCurrentPosition();
-        podLat = fix.latitude; podLng = fix.longitude; podAcc = fix.accuracy; podAt = fix.capturedAt;
-      } catch (geoErr: any) {
-        toast.warning(`Saved without GPS: ${geoErr.message}`);
+      const podCap = await captureGpsWithAudit("delivery_pod", {
+        delivery_id: delivery.id,
+        invoice_id: inv.id,
+        customer_id: inv.customer?.id ?? null,
+        route_id: route.id === "u" ? null : route.id,
+        run_id: (delivery as any).run_id ?? null,
+      });
+      if (podCap.fix) {
+        podLat = podCap.fix.latitude; podLng = podCap.fix.longitude;
+        podAcc = podCap.fix.accuracy; podAt = podCap.fix.capturedAt;
+      } else if (podCap.error) {
+        toast.warning(`Saved without GPS: ${podCap.error.message}`);
       }
 
       // 4. Update delivery row
@@ -1812,9 +1808,9 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
     setBusy("start");
     const now = new Date().toISOString();
     try {
-      let fix = null as Awaited<ReturnType<typeof getCurrentPosition>> | null;
-      try { fix = await getCurrentPosition(); }
-      catch (e: any) { toast.warning(`Starting without GPS: ${e.message}`); }
+      const cap = await captureGpsWithAudit("run_start", { run_id: run?.id ?? null, route_id: route.id });
+      const fix = cap.fix;
+      if (!fix && cap.error) toast.warning(`Starting without GPS: ${cap.error.message}`);
       const { error } = await supabase.from("delivery_runs").update({
         started_at: run.started_at ?? now,
         status: "in_progress",
@@ -1837,9 +1833,9 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
     setBusy("end");
     const now = new Date().toISOString();
     try {
-      let fix = null as Awaited<ReturnType<typeof getCurrentPosition>> | null;
-      try { fix = await getCurrentPosition(); }
-      catch (e: any) { toast.warning(`Ending without GPS: ${e.message}`); }
+      const cap = await captureGpsWithAudit("run_end", { run_id: run?.id ?? null, route_id: route.id });
+      const fix = cap.fix;
+      if (!fix && cap.error) toast.warning(`Ending without GPS: ${cap.error.message}`);
       const { error } = await supabase.from("delivery_runs").update({
         ended_at: now, status: "completed",
         end_latitude: fix?.latitude ?? run.end_latitude,
@@ -2035,7 +2031,8 @@ function RunEditDialog({
 type TimelineEvent = {
   at: string;
   kind: "run_created" | "pickup" | "run_started" | "run_ended" | "run_edited"
-      | "delivered" | "partial" | "failed" | "en_route" | "stop_edited" | "payment";
+      | "delivered" | "partial" | "failed" | "en_route" | "stop_edited" | "payment"
+      | "gps_ok" | "gps_failed";
   title: string;
   detail?: string | null;
   location?: { lat: number | null; lng: number | null; acc?: number | null } | null;
@@ -2062,6 +2059,8 @@ function eventStyle(kind: TimelineEvent["kind"]) {
     case "run_edited": return { Icon: Pencil, cls: "bg-slate-100 text-slate-700 border-slate-300" };
     case "stop_edited": return { Icon: Pencil, cls: "bg-slate-100 text-slate-700 border-slate-300" };
     case "payment": return { Icon: Wallet, cls: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    case "gps_ok": return { Icon: MapPin, cls: "bg-sky-100 text-sky-700 border-sky-300" };
+    case "gps_failed": return { Icon: XCircle, cls: "bg-amber-100 text-amber-700 border-amber-300" };
     default: return { Icon: Clock, cls: "bg-muted text-foreground border-border" };
   }
 }
@@ -2089,6 +2088,27 @@ function RunTimelineDialog({
           .select("id, invoice_id, status, delivered_at, created_at, updated_at, received_by, collected_amount, collected_mode, pod_latitude, pod_longitude, pod_accuracy_m, pod_captured_at, invoice:invoices(invoice_no, customer:customers(name, shop_name))")
           .in("invoice_id", invoiceIds);
         if (error) throw error;
+        return data ?? [];
+      })();
+
+      // Fetch GPS audit rows scoped to this route+date (via run_id list + route_id fallback)
+      const runIds = (runs ?? []).map((r: any) => r.id);
+      const delIds = (dels ?? []).map((d: any) => d.id);
+      const dayStart = new Date(`${date}T00:00:00`).toISOString();
+      const dayEnd = new Date(`${date}T23:59:59.999`).toISOString();
+      const gpsRows = await (async () => {
+        let q = supabase
+          .from("gps_audit_logs" as any)
+          .select("id, event_type, success, latitude, longitude, accuracy, error_code, error_message, run_id, delivery_id, route_id, customer_id, created_at")
+          .gte("created_at", dayStart).lte("created_at", dayEnd)
+          .order("created_at", { ascending: true });
+        // Match rows for this route OR any of its runs/deliveries
+        const orParts = [`route_id.eq.${route.id}`];
+        if (runIds.length) orParts.push(`run_id.in.(${runIds.join(",")})`);
+        if (delIds.length) orParts.push(`delivery_id.in.(${delIds.join(",")})`);
+        q = q.or(orParts.join(","));
+        const { data, error } = await q;
+        if (error) { console.warn("gps audit fetch failed", error); return []; }
         return data ?? [];
       })();
 
@@ -2173,6 +2193,29 @@ function RunTimelineDialog({
             at: dd.updated_at, kind: "stop_edited",
             title: `Stop updated: ${shop}${invNo}`,
             detail: `Status: ${String(dd.status).replace("_", " ")}`,
+          });
+        }
+      }
+
+      // GPS audit events (attempts + failures)
+      const eventLabel: Record<string, string> = {
+        run_start: "Run start", run_end: "Run end", pickup_confirm: "Pickup",
+        delivery_pod: "Delivery POD", shop_geotag: "Shop geotag", route_start_point: "Route start point",
+      };
+      for (const g of gpsRows as any[]) {
+        const label = eventLabel[g.event_type] || g.event_type;
+        if (g.success) {
+          ev.push({
+            at: g.created_at, kind: "gps_ok",
+            title: `GPS captured · ${label}`,
+            detail: g.accuracy != null ? `±${Math.round(g.accuracy)}m accuracy` : null,
+            location: g.latitude != null ? { lat: g.latitude, lng: g.longitude, acc: g.accuracy } : null,
+          });
+        } else {
+          ev.push({
+            at: g.created_at, kind: "gps_failed",
+            title: `GPS failed · ${label}`,
+            detail: [g.error_code, g.error_message].filter(Boolean).join(" · ") || "Unknown error",
           });
         }
       }
