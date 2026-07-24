@@ -1300,6 +1300,20 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
       {/* Pickup summary + capacity bar */}
 
       <div className="px-5 py-3 border-b space-y-3">
+        {route.max_stops != null && route.max_stops > 0 && (
+          <div>
+            <div className="flex items-center justify-between text-[11px] mb-1">
+              <span className="font-semibold uppercase tracking-wider text-muted-foreground">Stops used</span>
+              <span className={`font-mono ${invoices.length > route.max_stops ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                {invoices.length} / {route.max_stops}
+                {invoices.length > route.max_stops && ` · OVER by ${invoices.length - route.max_stops}`}
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div className={`h-full ${invoices.length > route.max_stops ? "bg-destructive" : "bg-primary"}`} style={{ width: `${Math.min(100, (invoices.length / route.max_stops) * 100)}%` }} />
+            </div>
+          </div>
+        )}
         {cap > 0 && (
           <div>
             <div className="flex items-center justify-between text-[11px] mb-1">
