@@ -1104,11 +1104,25 @@ function SheetTab({ date }: { date: string }) {
           <div className="text-sm flex-1 min-w-0">
             Last auto-assign added <b>{lastAssign.total}</b> shop{lastAssign.total === 1 ? "" : "s"} for {shortDate(date)}.
           </div>
-          <Button size="sm" variant="outline" onClick={undoAutoAssign} disabled={undoing || assigning} className="gap-1.5">
-            {undoing ? "Undoing…" : "Undo auto-assign"}
+          <Button size="sm" variant="outline" onClick={() => setUndoPreviewOpen(true)} disabled={undoing || assigning} className="gap-1.5">
+            {undoing ? "Undoing…" : "Preview & undo"}
           </Button>
         </Card>
       )}
+      <UndoAutoAssignPreview
+        open={undoPreviewOpen}
+        onOpenChange={setUndoPreviewOpen}
+        lastAssign={lastAssign}
+        routes={routes ?? []}
+        invoices={invoices ?? []}
+        stops={stops ?? []}
+        undoing={undoing}
+        onConfirm={async () => {
+          await undoAutoAssign();
+          setUndoPreviewOpen(false);
+        }}
+      />
+
       {(routes ?? []).map((r) => {
         const list = grouped.byRoute.get(r.id) ?? [];
         if (list.length === 0) return null;
