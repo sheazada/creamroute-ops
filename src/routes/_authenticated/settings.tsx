@@ -392,10 +392,8 @@ function Settings() {
               />
             </FieldRow>
           </div>
-          <div className="pt-4">
-            <Button onClick={saveBiz} size="sm">Save business profile</Button>
-          </div>
         </CollapsibleCard>
+
 
         <Card className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
