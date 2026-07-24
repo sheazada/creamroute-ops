@@ -314,7 +314,7 @@ function Settings() {
           <div className="space-y-3">
             {renderSectionBanner("business")}
             <div className="grid grid-cols-2 gap-3">
-              <FieldRow label="Trade name" error={err("name")} colSpan={2}>
+              <FieldRow field="name" label="Trade name" error={err("name")} colSpan={2}>
 
                 <Input
                   value={biz.name}
@@ -322,13 +322,13 @@ function Settings() {
                   aria-invalid={!!err("name")}
                 />
               </FieldRow>
-              <FieldRow label="Legal name (optional)" error={err("legal_name")} colSpan={2}>
+              <FieldRow field="legal_name" label="Legal name (optional)" error={err("legal_name")} colSpan={2}>
                 <Input
                   value={biz.legal_name ?? ""}
                   onChange={(e) => setField("legal_name", e.target.value)}
                 />
               </FieldRow>
-              <FieldRow label="GSTIN" error={err("gstin")} hint="15 chars • state+PAN+entity+Z+checksum">
+              <FieldRow field="gstin" label="GSTIN" error={err("gstin")} hint="15 chars • state+PAN+entity+Z+checksum">
                 <MaskedInput
                   value={biz.gstin}
                   onChange={(e) => setField("gstin", e.target.value)}
@@ -339,7 +339,7 @@ function Settings() {
                   placeholder="07AAAAA0000A1Z5"
                 />
               </FieldRow>
-              <FieldRow label="FSSAI" error={err("fssai")}>
+              <FieldRow field="fssai" label="FSSAI" error={err("fssai")}>
                 <MaskedInput
                   value={biz.fssai ?? ""}
                   onChange={(e) => setField("fssai", e.target.value)}
@@ -349,7 +349,7 @@ function Settings() {
                   invalid={!!err("fssai")}
                 />
               </FieldRow>
-              <FieldRow label="PAN" error={err("pan")}>
+              <FieldRow field="pan" label="PAN" error={err("pan")}>
                 <MaskedInput
                   value={biz.pan ?? ""}
                   onChange={(e) => setField("pan", e.target.value)}
@@ -360,14 +360,14 @@ function Settings() {
                   placeholder="AAAAA1234A"
                 />
               </FieldRow>
-              <FieldRow label="State (GST)" error={err("state")}>
+              <FieldRow field="state" label="State (GST)" error={err("state")}>
                 <Input
                   value={biz.state ?? ""}
                   onChange={(e) => setField("state", e.target.value)}
                   placeholder="Delhi"
                 />
               </FieldRow>
-              <FieldRow label="State code" error={err("state_code")}>
+              <FieldRow field="state_code" label="State code" error={err("state_code")}>
                 <Input
                   value={biz.state_code ?? ""}
                   onChange={(e) => setField("state_code", e.target.value.replace(/\D/g, ""))}
@@ -377,7 +377,7 @@ function Settings() {
                   aria-invalid={!!err("state_code")}
                 />
               </FieldRow>
-              <FieldRow label="Invoice prefix" error={err("invoice_prefix")}>
+              <FieldRow field="invoice_prefix" label="Invoice prefix" error={err("invoice_prefix")}>
                 <Input
                   value={biz.invoice_prefix ?? ""}
                   onChange={(e) => setField("invoice_prefix", e.target.value)}
@@ -386,7 +386,7 @@ function Settings() {
                   aria-invalid={!!err("invoice_prefix")}
                 />
               </FieldRow>
-              <FieldRow label="Mobile" error={err("mobile")}>
+              <FieldRow field="mobile" label="Mobile" error={err("mobile")}>
                 <Input
                   value={biz.mobile}
                   onChange={(e) => setField("mobile", e.target.value)}
@@ -394,7 +394,7 @@ function Settings() {
                   inputMode="tel"
                 />
               </FieldRow>
-              <FieldRow label="Email" error={err("email")}>
+              <FieldRow field="email" label="Email" error={err("email")}>
                 <Input
                   value={biz.email}
                   onChange={(e) => setField("email", e.target.value)}
@@ -402,7 +402,7 @@ function Settings() {
                   inputMode="email"
                 />
               </FieldRow>
-              <FieldRow label="Address" error={err("address")} colSpan={2}>
+              <FieldRow field="address" label="Address" error={err("address")} colSpan={2}>
                 <Textarea
                   rows={2}
                   value={biz.address}
@@ -438,7 +438,7 @@ function Settings() {
         >
           {renderSectionBanner("payment")}
           <div className="grid grid-cols-2 gap-3">
-            <FieldRow label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
+            <FieldRow field="upi_vpa" label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
               <MaskedInput
                 value={biz.upi_vpa ?? ""}
                 onChange={(e) => setField("upi_vpa", e.target.value)}
@@ -447,19 +447,19 @@ function Settings() {
                 invalid={!!err("upi_vpa")}
               />
             </FieldRow>
-            <FieldRow label="Bank name" error={err("bank_name")}>
+            <FieldRow field="bank_name" label="Bank name" error={err("bank_name")}>
               <Input
                 value={biz.bank_name ?? ""}
                 onChange={(e) => setField("bank_name", e.target.value)}
               />
             </FieldRow>
-            <FieldRow label="Account holder" error={err("bank_holder")}>
+            <FieldRow field="bank_holder" label="Account holder" error={err("bank_holder")}>
               <Input
                 value={biz.bank_holder ?? ""}
                 onChange={(e) => setField("bank_holder", e.target.value)}
               />
             </FieldRow>
-            <FieldRow label="Account no." error={err("bank_account")}>
+            <FieldRow field="bank_account" label="Account no." error={err("bank_account")}>
               <MaskedInput
                 value={biz.bank_account ?? ""}
                 onChange={(e) => setField("bank_account", e.target.value.replace(/\D/g, ""))}
@@ -469,7 +469,7 @@ function Settings() {
                 invalid={!!err("bank_account")}
               />
             </FieldRow>
-            <FieldRow label="IFSC" error={err("bank_ifsc")}>
+            <FieldRow field="bank_ifsc" label="IFSC" error={err("bank_ifsc")}>
               <MaskedInput
                 value={biz.bank_ifsc ?? ""}
                 onChange={(e) => setField("bank_ifsc", e.target.value)}
@@ -480,13 +480,13 @@ function Settings() {
                 placeholder="HDFC0000000"
               />
             </FieldRow>
-            <FieldRow label="Branch" error={err("bank_branch")} colSpan={2}>
+            <FieldRow field="bank_branch" label="Branch" error={err("bank_branch")} colSpan={2}>
               <Input
                 value={biz.bank_branch ?? ""}
                 onChange={(e) => setField("bank_branch", e.target.value)}
               />
             </FieldRow>
-            <FieldRow label="Invoice terms & conditions" error={err("terms")} colSpan={2}>
+            <FieldRow field="terms" label="Invoice terms & conditions" error={err("terms")} colSpan={2}>
               <Textarea
                 rows={3}
                 value={biz.terms ?? ""}
