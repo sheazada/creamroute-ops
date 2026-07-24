@@ -192,18 +192,34 @@ function Settings() {
     });
   };
 
+  const [savedFlash, setSavedFlash] = useState<Section | null>(null);
+
   const saveBiz = () => {
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
     if (!ok) {
-      toast.error("Please fix the highlighted fields before saving");
+      const count = Object.keys(e).length;
+      toast.error(count === 1 ? "1 field needs attention" : `${count} fields need attention`);
       return;
     }
     saveBusiness(biz);
+    const section = editing;
     setEditing(null);
     setSnapshot(null);
-    toast.success("Business profile saved — reflects on all new invoices");
+    setErrors({});
+    if (section) {
+      setSavedFlash(section);
+      window.setTimeout(() => {
+        setSavedFlash((cur) => (cur === section ? null : cur));
+      }, 4000);
+    }
+    toast.success(
+      section === "payment"
+        ? "Payment & bank details saved — new invoices will use them"
+        : "Business identity saved — new invoices will use it",
+    );
   };
+
 
   // Warn on browser unload while there are unsaved changes.
   useEffect(() => {
