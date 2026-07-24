@@ -18,7 +18,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle } from "lucide-react";
+import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getBusiness } from "@/lib/business";
 
@@ -120,7 +121,9 @@ function Customers() {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <StatusBadge status={c.status} />
+                <NotifyBadges customer={c} />
                 <ReminderActions customer={c} />
+                <EditCustomerButton customer={c} />
                 <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary ml-auto hover:underline">Invoice →</Link>
               </div>
             </div>
@@ -138,12 +141,13 @@ function Customers() {
                 <th className="text-right px-6 py-3 font-semibold">Credit Limit</th>
                 <th className="text-right px-6 py-3 font-semibold">Outstanding</th>
                 <th className="text-left px-6 py-3 font-semibold">Remind</th>
+                <th className="text-left px-6 py-3 font-semibold">Notify</th>
                 <th></th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No customers.</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No customers.</td></tr>
               )}
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-muted/30">
@@ -156,8 +160,12 @@ function Customers() {
                   <td className="px-6 py-3 text-right font-mono">{inr(c.credit_limit)}</td>
                   <td className={`px-6 py-3 text-right font-mono font-semibold ${Number(c.outstanding) > 0 ? "text-destructive" : ""}`}>{inr(c.outstanding)}</td>
                   <td className="px-6 py-3"><ReminderActions customer={c} /></td>
+                  <td className="px-6 py-3"><NotifyBadges customer={c} /></td>
                   <td className="px-6 py-3 text-right">
-                    <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary hover:underline">Invoice</Link>
+                    <div className="flex items-center gap-2 justify-end">
+                      <EditCustomerButton customer={c} />
+                      <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary hover:underline">Invoice</Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -215,14 +223,67 @@ function ReminderActions({ customer }: { customer: any }) {
   );
 }
 
-function CustomerDialog({ onSaved }: { onSaved: () => void }) {
-  const [f, setF] = useState({ name: "", shop_name: "", mobile: "", email: "", gstin: "", address: "", credit_limit: "0", notes: "" });
+function EditCustomerButton({ customer }: { customer: any }) {
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="size-8" title="Edit customer">
+          <Pencil className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <CustomerDialog
+        customer={customer}
+        onSaved={() => {
+          setOpen(false);
+          qc.invalidateQueries({ queryKey: ["customers"] });
+        }}
+      />
+    </Dialog>
+  );
+}
+
+function NotifyBadges({ customer }: { customer: any }) {
+  const email = customer.notify_email !== false;
+  const sms = customer.notify_sms !== false;
+  if (email && sms) {
+    return <span className="text-[10px] font-medium text-muted-foreground">Email · SMS</span>;
+  }
+  if (!email && !sms) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
+        <BellOff className="size-3" /> Muted
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] font-medium text-muted-foreground">
+      {email ? "Email only" : "SMS only"}
+    </span>
+  );
+}
+
+function CustomerDialog({ onSaved, customer }: { onSaved: () => void; customer?: any }) {
+  const isEdit = !!customer;
+  const [f, setF] = useState({
+    name: customer?.name ?? "",
+    shop_name: customer?.shop_name ?? "",
+    mobile: customer?.mobile ?? "",
+    email: customer?.email ?? "",
+    gstin: customer?.gstin ?? "",
+    address: customer?.address ?? "",
+    credit_limit: String(customer?.credit_limit ?? "0"),
+    notes: customer?.notes ?? "",
+    notify_email: customer?.notify_email ?? true,
+    notify_sms: customer?.notify_sms ?? true,
+  });
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     if (!f.name) return toast.error("Name required");
     setSaving(true);
-    const { error } = await supabase.from("customers").insert({
+    const payload = {
       name: f.name,
       shop_name: f.shop_name || null,
       mobile: f.mobile || null,
@@ -231,16 +292,21 @@ function CustomerDialog({ onSaved }: { onSaved: () => void }) {
       address: f.address || null,
       credit_limit: Number(f.credit_limit) || 0,
       notes: f.notes || null,
-    });
+      notify_email: !!f.notify_email,
+      notify_sms: !!f.notify_sms,
+    };
+    const { error } = isEdit
+      ? await supabase.from("customers").update(payload).eq("id", customer.id)
+      : await supabase.from("customers").insert(payload);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Customer added");
+    toast.success(isEdit ? "Customer updated" : "Customer added");
     onSaved();
   };
 
   return (
     <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle>Add Customer</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>{isEdit ? "Edit Customer" : "Add Customer"}</DialogTitle></DialogHeader>
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 space-y-1.5">
           <Label>Contact name *</Label>
@@ -274,9 +340,26 @@ function CustomerDialog({ onSaved }: { onSaved: () => void }) {
           <Label>Notes</Label>
           <Textarea rows={2} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
         </div>
+        <div className="col-span-2 rounded-md border p-3 space-y-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notification preferences</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Email updates</div>
+              <div className="text-xs text-muted-foreground">Send delivery status emails to this retailer.</div>
+            </div>
+            <Switch checked={!!f.notify_email} onCheckedChange={(v) => setF({ ...f, notify_email: v })} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">SMS updates</div>
+              <div className="text-xs text-muted-foreground">Send delivery status SMS to this retailer.</div>
+            </div>
+            <Switch checked={!!f.notify_sms} onCheckedChange={(v) => setF({ ...f, notify_sms: v })} />
+          </div>
+        </div>
       </div>
       <DialogFooter>
-        <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save customer"}</Button>
+        <Button onClick={save} disabled={saving}>{saving ? "Saving…" : isEdit ? "Save changes" : "Save customer"}</Button>
       </DialogFooter>
     </DialogContent>
   );
