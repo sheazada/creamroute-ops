@@ -12,7 +12,7 @@ export default defineMcp({
   title: "Dairy Distribution ERP",
   version: "0.1.0",
   instructions:
-    "Read-only tools for the dairy distribution ERP: list customers (retail shops), products, recent invoices, pending deliveries, and today's pickup demand from Sudha Dairy. Every call runs as the signed-in user and respects role-based row-level security.",
+    "Read-only tools for the dairy distribution ERP. Every call runs as the signed-in user and is filtered by role: admin & manager can use all tools; salesperson can list customers, products, invoices, and daily demand; driver & helper can list customers, products, daily demand, and pending deliveries. Tools called by a role that isn't permitted return a friendly error explaining which roles are allowed.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

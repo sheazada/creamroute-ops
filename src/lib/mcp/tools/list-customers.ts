@@ -1,13 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
-import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
+import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-
-function sb(ctx: ToolContext) {
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+import { sb, requireRole } from "./_roles";
 
 export default defineTool({
   name: "list_customers",
@@ -21,7 +14,8 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ search, with_dues_only, limit }, ctx) => {
-    if (!ctx.isAuthenticated()) return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    const denied = await requireRole(ctx, "list_customers");
+    if (denied) return denied;
     let q = sb(ctx)
       .from("customers")
       .select("id, name, phone, area, outstanding")
