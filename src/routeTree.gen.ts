@@ -21,6 +21,7 @@ import { Route as AuthenticatedReconcileRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticated/payments'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
+import { Route as AuthenticatedDeliveryStatusRouteImport } from './routes/_authenticated/delivery-status'
 import { Route as AuthenticatedDeliveriesRouteImport } from './routes/_authenticated/deliveries'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDailyDemandRouteImport } from './routes/_authenticated/daily-demand'
@@ -98,6 +99,12 @@ const AuthenticatedInventoryRoute = AuthenticatedInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDeliveryStatusRoute =
+  AuthenticatedDeliveryStatusRouteImport.update({
+    id: '/delivery-status',
+    path: '/delivery-status',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDeliveriesRoute = AuthenticatedDeliveriesRouteImport.update({
   id: '/deliveries',
   path: '/deliveries',
@@ -205,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/daily-demand': typeof AuthenticatedDailyDemandRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/payments': typeof AuthenticatedPaymentsRoute
   '/products': typeof AuthenticatedProductsRoute
@@ -235,6 +243,7 @@ export interface FileRoutesByTo {
   '/daily-demand': typeof AuthenticatedDailyDemandRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/payments': typeof AuthenticatedPaymentsRoute
   '/products': typeof AuthenticatedProductsRoute
@@ -267,6 +276,7 @@ export interface FileRoutesById {
   '/_authenticated/daily-demand': typeof AuthenticatedDailyDemandRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/_authenticated/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/payments': typeof AuthenticatedPaymentsRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/daily-demand'
     | '/dashboard'
     | '/deliveries'
+    | '/delivery-status'
     | '/inventory'
     | '/payments'
     | '/products'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/daily-demand'
     | '/dashboard'
     | '/deliveries'
+    | '/delivery-status'
     | '/inventory'
     | '/payments'
     | '/products'
@@ -360,6 +372,7 @@ export interface FileRouteTypes {
     | '/_authenticated/daily-demand'
     | '/_authenticated/dashboard'
     | '/_authenticated/deliveries'
+    | '/_authenticated/delivery-status'
     | '/_authenticated/inventory'
     | '/_authenticated/payments'
     | '/_authenticated/products'
@@ -476,6 +489,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/inventory'
       preLoaderRoute: typeof AuthenticatedInventoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/delivery-status': {
+      id: '/_authenticated/delivery-status'
+      path: '/delivery-status'
+      fullPath: '/delivery-status'
+      preLoaderRoute: typeof AuthenticatedDeliveryStatusRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/deliveries': {
@@ -619,6 +639,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDailyDemandRoute: typeof AuthenticatedDailyDemandRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDeliveriesRoute: typeof AuthenticatedDeliveriesRoute
+  AuthenticatedDeliveryStatusRoute: typeof AuthenticatedDeliveryStatusRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedPaymentsRoute: typeof AuthenticatedPaymentsRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
@@ -642,6 +663,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDailyDemandRoute: AuthenticatedDailyDemandRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDeliveriesRoute: AuthenticatedDeliveriesRoute,
+  AuthenticatedDeliveryStatusRoute: AuthenticatedDeliveryStatusRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedPaymentsRoute: AuthenticatedPaymentsRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
