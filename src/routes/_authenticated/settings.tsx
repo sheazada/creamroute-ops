@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 import {
   getBusiness,
@@ -193,8 +193,12 @@ function Settings() {
   };
 
   const [savedFlash, setSavedFlash] = useState<Section | null>(null);
+  const [savingSection, setSavingSection] = useState<Section | null>(null);
 
-  const saveBiz = () => {
+  const saveBiz = async () => {
+    // Guard against double-submit (Enter key, banner + card, rapid clicks).
+    if (savingSection) return;
+    const section = editing;
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
     if (!ok) {
@@ -219,23 +223,33 @@ function Settings() {
       return;
     }
 
-    saveBusiness(biz);
-    const section = editing;
-    setEditing(null);
-    setSnapshot(null);
-    setErrors({});
-    if (section) {
-      setSavedFlash(section);
-      window.setTimeout(() => {
-        setSavedFlash((cur) => (cur === section ? null : cur));
-      }, 4000);
+    if (section) setSavingSection(section);
+    try {
+      // Small awaited tick so the loading state renders even for synchronous
+      // local persistence — and gives room for a real network call later.
+      await new Promise((r) => setTimeout(r, 250));
+      saveBusiness(biz);
+      setEditing(null);
+      setSnapshot(null);
+      setErrors({});
+      if (section) {
+        setSavedFlash(section);
+        window.setTimeout(() => {
+          setSavedFlash((cur) => (cur === section ? null : cur));
+        }, 4000);
+      }
+      toast.success(
+        section === "payment"
+          ? "Payment & bank details saved — new invoices will use them"
+          : "Business identity saved — new invoices will use it",
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSavingSection(null);
     }
-    toast.success(
-      section === "payment"
-        ? "Payment & bank details saved — new invoices will use them"
-        : "Business identity saved — new invoices will use it",
-    );
   };
+
 
 
   // Warn on browser unload while there are unsaved changes.
@@ -308,10 +322,13 @@ function Settings() {
         <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
           <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" className="h-7" onClick={cancelEdit}>Discard</Button>
-            <Button size="sm" className="h-7" onClick={saveBiz}>Save</Button>
+            <Button size="sm" variant="ghost" className="h-7" onClick={cancelEdit} disabled={!!savingSection}>Discard</Button>
+            <Button size="sm" className="h-7" onClick={saveBiz} disabled={!!savingSection}>
+              {savingSection ? (<><Loader2 className="size-3.5 mr-1 animate-spin" /> Saving…</>) : "Save"}
+            </Button>
           </div>
         </div>
+
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -327,6 +344,7 @@ function Settings() {
           onEdit={() => startEdit("business")}
           onCancel={cancelEdit}
           onSave={saveBiz}
+          saving={savingSection === "business"}
         >
           <div className="space-y-3">
             {renderSectionBanner("business")}
@@ -452,6 +470,7 @@ function Settings() {
           onEdit={() => startEdit("payment")}
           onCancel={cancelEdit}
           onSave={saveBiz}
+          saving={savingSection === "payment"}
         >
           {renderSectionBanner("payment")}
           <div className="grid grid-cols-2 gap-3">
@@ -638,6 +657,7 @@ function CollapsibleCard({
   onEdit,
   onCancel,
   onSave,
+  saving = false,
   children,
 }: {
   icon: any;
@@ -652,6 +672,7 @@ function CollapsibleCard({
   onEdit?: () => void;
   onCancel?: () => void;
   onSave?: () => void;
+  saving?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -736,6 +757,7 @@ function CollapsibleCard({
                 size="sm"
                 variant="ghost"
                 onClick={() => onCancel?.()}
+                disabled={saving}
               >
                 <X className="size-3.5 mr-1" /> Cancel
               </Button>
@@ -743,9 +765,14 @@ function CollapsibleCard({
                 type="button"
                 size="sm"
                 onClick={() => onSave?.()}
-                disabled={!dirty}
+                disabled={!dirty || saving}
+                aria-busy={saving}
               >
-                <Check className="size-3.5 mr-1" /> Save
+                {saving ? (
+                  <><Loader2 className="size-3.5 mr-1 animate-spin" /> Saving…</>
+                ) : (
+                  <><Check className="size-3.5 mr-1" /> Save</>
+                )}
               </Button>
             </>
           ) : (
