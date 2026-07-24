@@ -169,9 +169,8 @@ function NotificationsPage() {
   return (
     <PageContainer>
       <PageHeader
-        icon={Bell}
         title="Notification Center"
-        subtitle="Delivery alert history with per-row retry for failed sends."
+        description="Delivery alert history with per-row retry for failed sends."
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5" disabled={isFetching}>
@@ -191,6 +190,7 @@ function NotificationsPage() {
           </div>
         }
       />
+
 
       <Card className="p-3 flex flex-wrap items-center gap-3">
         <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)} className="w-auto">
