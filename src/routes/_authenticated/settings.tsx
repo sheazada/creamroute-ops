@@ -476,3 +476,29 @@ function CollapsibleCard({
   );
 }
 
+
+function FieldRow({
+  label,
+  error,
+  hint,
+  colSpan = 1,
+  children,
+}: {
+  label: string;
+  error?: string;
+  hint?: string;
+  colSpan?: 1 | 2;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`space-y-1.5 ${colSpan === 2 ? "col-span-2" : ""}`}>
+      <Label>{label}</Label>
+      {children}
+      {error ? (
+        <p className="text-[11px] font-medium text-destructive">{error}</p>
+      ) : hint ? (
+        <p className="text-[11px] text-muted-foreground">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
