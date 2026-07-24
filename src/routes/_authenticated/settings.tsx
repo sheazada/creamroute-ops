@@ -254,6 +254,24 @@ function Settings() {
     if (showErrorSummary && Object.keys(errors).length === 0) setShowErrorSummary(false);
   }, [errors, showErrorSummary]);
 
+  // Screen-reader status line for save progress/completion. We keep a single
+  // polite live region and rewrite its text so AT users hear "Saving…" when
+  // a save starts and "…saved" when it finishes.
+  const [saveStatus, setSaveStatus] = useState("");
+  useEffect(() => {
+    if (!savingSection) return;
+    const label = savingSection === "payment" ? "Payment & bank" : "Business identity";
+    setSaveStatus(`Saving ${label} changes…`);
+  }, [savingSection]);
+  useEffect(() => {
+    if (!savedFlash) return;
+    const label = savedFlash === "payment" ? "Payment & bank" : "Business identity";
+    setSaveStatus(`${label} saved successfully.`);
+    const t = window.setTimeout(() => setSaveStatus(""), 4000);
+    return () => window.clearTimeout(t);
+  }, [savedFlash]);
+
+
   const saveBiz = async () => {
     // Guard against double-submit (Enter key, banner + card, rapid clicks).
     if (savingSection) return;
@@ -394,6 +412,10 @@ function Settings() {
   return (
 
     <PageContainer>
+      {/* Polite SR-only live region: announces save start and completion. */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {saveStatus}
+      </div>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
       {showErrorSummary && Object.keys(errors).length > 0 && (() => {
         const items = [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment]
