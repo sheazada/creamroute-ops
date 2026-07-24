@@ -348,6 +348,10 @@ function RouteFormDialog({
             <div><Label>Driver</Label><Input value={driver} onChange={(e) => setDriver(e.target.value)} /></div>
             <div><Label>Helper</Label><Input value={helper} onChange={(e) => setHelper(e.target.value)} /></div>
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2"><Label>Vehicle capacity</Label><Input type="number" inputMode="decimal" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g. 400" /></div>
+            <div><Label>Unit</Label><Input value={capacityLabel} onChange={(e) => setCapacityLabel(e.target.value)} placeholder="L / crates / kg" /></div>
+          </div>
           <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Landmarks, timing…" /></div>
         </div>
         <DialogFooter>
