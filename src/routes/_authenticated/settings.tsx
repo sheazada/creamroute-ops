@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
@@ -228,6 +228,31 @@ function Settings() {
 
   const [savedFlash, setSavedFlash] = useState<Section | null>(null);
   const [savingSection, setSavingSection] = useState<Section | null>(null);
+  const [showErrorSummary, setShowErrorSummary] = useState(false);
+  const errorSummaryRef = useRef<HTMLDivElement | null>(null);
+
+  const sectionForField = (k: keyof BusinessProfile): Section | null => {
+    if ((SECTION_FIELDS.business as (keyof BusinessProfile)[]).includes(k)) return "business";
+    if ((SECTION_FIELDS.payment as (keyof BusinessProfile)[]).includes(k)) return "payment";
+    return null;
+  };
+
+  const focusField = (k: keyof BusinessProfile) => {
+    const section = sectionForField(k);
+    if (section && editing !== section) startEdit(section);
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-field="${k}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = el.querySelector<HTMLElement>(
+        "input, textarea, select, [tabindex]:not([tabindex='-1'])",
+      );
+      focusable?.focus({ preventScroll: true });
+    });
+  };
+  useEffect(() => {
+    if (showErrorSummary && Object.keys(errors).length === 0) setShowErrorSummary(false);
+  }, [errors, showErrorSummary]);
 
   const saveBiz = async () => {
     // Guard against double-submit (Enter key, banner + card, rapid clicks).
@@ -238,13 +263,19 @@ function Settings() {
     if (!ok) {
       const count = Object.keys(e).length;
       toast.error(count === 1 ? "1 field needs attention" : `${count} fields need attention`);
+      setShowErrorSummary(true);
+      // Scroll the page-level summary into view for sighted + AT users, then jump to first field.
+      requestAnimationFrame(() => {
+        errorSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        errorSummaryRef.current?.focus({ preventScroll: true });
+      });
       // Scroll to first invalid field in the currently editing section (fallback: any section).
       const order = editing
         ? [...SECTION_FIELDS[editing], ...SECTION_FIELDS[editing === "business" ? "payment" : "business"]]
         : [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment];
       const firstKey = order.find((k) => !!e[k]);
       if (firstKey) {
-        requestAnimationFrame(() => {
+        window.setTimeout(() => {
           const el = document.querySelector<HTMLElement>(`[data-field="${firstKey}"]`);
           if (!el) return;
           el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -252,7 +283,7 @@ function Settings() {
             "input, textarea, select, [tabindex]:not([tabindex='-1'])",
           );
           focusable?.focus({ preventScroll: true });
-        });
+        }, 350);
       }
       return;
     }
@@ -266,6 +297,7 @@ function Settings() {
       setEditing(null);
       setSnapshot(null);
       setErrors({});
+      setShowErrorSummary(false);
       if (section) {
         setSavedFlash(section);
         window.setTimeout(() => {
@@ -363,6 +395,73 @@ function Settings() {
 
     <PageContainer>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
+      {showErrorSummary && Object.keys(errors).length > 0 && (() => {
+        const items = [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment]
+          .filter((k) => !!errors[k])
+          .map((k) => ({
+            field: k,
+            label: FIELD_LABELS[k] ?? String(k),
+            message: errors[k]!,
+            section: sectionForField(k),
+          }));
+        return (
+          <div
+            ref={errorSummaryRef}
+            tabIndex={-1}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            aria-labelledby="settings-error-summary-title"
+            className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+          >
+            <div className="flex items-start gap-2">
+              <AlertCircle className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex-1">
+                <h2 id="settings-error-summary-title" className="font-semibold">
+                  {items.length === 1
+                    ? "Please fix 1 field before saving"
+                    : `Please fix ${items.length} fields before saving`}
+                </h2>
+                <p className="text-xs text-destructive/80 mt-0.5">
+                  Select a link to jump straight to the field.
+                </p>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  {items.map((it) => (
+                    <li key={String(it.field)}>
+                      <a
+                        href={`#field-${String(it.field)}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          focusField(it.field);
+                        }}
+                        className="font-medium underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 rounded-sm"
+                      >
+                        {it.label}
+                      </a>
+                      <span className="text-destructive/90">
+                        {" "}— {it.message}
+                        {it.section && (
+                          <span className="text-destructive/60">
+                            {" "}({it.section === "payment" ? "Payment & bank" : "Business identity"})
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowErrorSummary(false)}
+                className="text-destructive/70 hover:text-destructive text-xs px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                aria-label="Dismiss error summary"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        );
+      })()}
       {dirty && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
           <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
@@ -895,6 +994,7 @@ function FieldRow({
 
   return (
     <div
+      id={field ? `field-${field}` : undefined}
       data-field={field}
       className={`space-y-1.5 scroll-mt-24 ${colSpan === 2 ? "col-span-2" : ""}`}
     >
