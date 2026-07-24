@@ -313,7 +313,7 @@ function PayablesAging({ from: _f, to: _t }: { from: string; to: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("purchases")
-        .select("id, bill_no, purchase_date, total, paid, status, supplier:suppliers(name, company)")
+        .select("id, bill_no, purchase_date, total, paid, status, supplier_id, supplier:suppliers(name, company)")
         .neq("status", "paid")
         .neq("status", "void")
         .order("purchase_date");
@@ -321,13 +321,14 @@ function PayablesAging({ from: _f, to: _t }: { from: string; to: string }) {
     },
   });
   const today = new Date();
-  const buckets = new Map<string, { c0: number; c30: number; c60: number; c90: number; c90p: number; total: number }>();
+  const buckets = new Map<string, { name: string; supplier_id: string | null; c0: number; c30: number; c60: number; c90: number; c90p: number; total: number }>();
   for (const p of data ?? []) {
     const bal = Number(p.total) - Number(p.paid);
     if (bal <= 0) continue;
     const days = Math.floor((today.getTime() - new Date(p.purchase_date).getTime()) / 86400000);
-    const key = (p as any).supplier?.company || (p as any).supplier?.name || "—";
-    const cur = buckets.get(key) ?? { c0: 0, c30: 0, c60: 0, c90: 0, c90p: 0, total: 0 };
+    const name = (p as any).supplier?.company || (p as any).supplier?.name || "—";
+    const key = (p as any).supplier_id || `name:${name}`;
+    const cur = buckets.get(key) ?? { name, supplier_id: (p as any).supplier_id ?? null, c0: 0, c30: 0, c60: 0, c90: 0, c90p: 0, total: 0 };
     if (days <= 30) cur.c0 += bal;
     else if (days <= 60) cur.c30 += bal;
     else if (days <= 90) cur.c60 += bal;
@@ -336,13 +337,16 @@ function PayablesAging({ from: _f, to: _t }: { from: string; to: string }) {
     cur.total += bal;
     buckets.set(key, cur);
   }
-  const rows = Array.from(buckets.entries()).sort((a, b) => b[1].total - a[1].total);
-  const sum = (k: keyof (typeof rows)[0][1]) => rows.reduce((s, [, v]) => s + (v[k] as number), 0);
+  const rows = Array.from(buckets.values()).sort((a, b) => b.total - a.total);
+  const sum = (k: "c0" | "c30" | "c60" | "c90" | "c90p" | "total") => rows.reduce((s, v) => s + v[k], 0);
   return (
     <ReportTable
       title="Payables Aging"
       headers={["Supplier", "0–30", "31–60", "61–90", "91–120", "120+", "Total"]}
-      rows={rows.map(([n, v]) => [n, inr(v.c0), inr(v.c30), inr(v.c60), inr(v.c90), inr(v.c90p), inr(v.total)])}
+      rows={rows.map((v) => [
+        v.supplier_id ? { text: v.name, to: "/suppliers/$id", params: { id: v.supplier_id } } : v.name,
+        inr(v.c0), inr(v.c30), inr(v.c60), inr(v.c90), inr(v.c90p), inr(v.total),
+      ])}
       totals={{ 1: inr(sum("c0")), 2: inr(sum("c30")), 3: inr(sum("c60")), 4: inr(sum("c90")), 5: inr(sum("c90p")), 6: inr(sum("total")) }}
     />
   );
