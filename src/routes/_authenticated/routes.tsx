@@ -620,6 +620,7 @@ function RouteFormDialog({
             <div className="col-span-2"><Label>Vehicle capacity</Label><Input type="number" inputMode="decimal" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g. 400" /></div>
             <div><Label>Unit</Label><Input value={capacityLabel} onChange={(e) => setCapacityLabel(e.target.value)} placeholder="L / crates / kg" /></div>
           </div>
+          <div><Label>Max stops per run</Label><Input type="number" inputMode="numeric" value={maxStops} onChange={(e) => setMaxStops(e.target.value)} placeholder="e.g. 25 (leave blank for no limit)" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Vehicle number</Label><Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. BR10AB1234" /></div>
             <div><Label>Vehicle type</Label>
