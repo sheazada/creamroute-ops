@@ -69,6 +69,13 @@ type DeliveryRun = {
   ended_at: string | null;
   status: string;
   notes: string | null;
+  pickup_confirmed_at: string | null;
+  start_latitude: number | null;
+  start_longitude: number | null;
+  start_accuracy_m: number | null;
+  end_latitude: number | null;
+  end_longitude: number | null;
+  end_accuracy_m: number | null;
 };
 
 
