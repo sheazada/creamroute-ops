@@ -987,7 +987,7 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
     queryFn: async () => {
       const { data } = await supabase
         .from("deliveries")
-        .select("id, invoice_id, status, delivered_at, received_by, pod_photo_url, pod_signature, collected_amount, collected_mode, route_id")
+        .select("id, invoice_id, status, delivered_at, received_by, pod_photo_url, pod_signature, collected_amount, collected_mode, route_id, pod_latitude, pod_longitude, pod_accuracy_m, pod_captured_at")
         .in("invoice_id", invoiceIds);
       return (data ?? []) as DeliveryRow[];
     },
