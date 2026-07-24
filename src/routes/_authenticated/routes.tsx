@@ -2284,3 +2284,163 @@ function RunTimelineDialog({
   );
 }
 
+
+/* ---------------- Run map dialog ---------------- */
+
+function RunMapDialog({
+  open, onClose, route, date, invoiceIds,
+}: { open: boolean; onClose: () => void; route: RouteRow; date: string; invoiceIds: string[] }) {
+  const { data, isLoading } = useQuery({
+    enabled: open,
+    queryKey: ["run-map", route.id, date, invoiceIds.join(",")],
+    queryFn: async () => {
+      const { data: runs } = await supabase
+        .from("delivery_runs").select("*")
+        .eq("route_id", route.id).eq("run_date", date)
+        .order("created_at", { ascending: true });
+
+      const dels = invoiceIds.length === 0 ? [] : (await supabase
+        .from("deliveries")
+        .select("id, invoice_id, status, delivered_at, pod_latitude, pod_longitude, pod_accuracy_m, pod_captured_at, invoice:invoices(invoice_no, customer:customers(id, name, shop_name, latitude, longitude))")
+        .in("invoice_id", invoiceIds)).data ?? [];
+
+      const runIds = (runs ?? []).map((r: any) => r.id);
+      const delIds = (dels ?? []).map((d: any) => d.id);
+      const dayStart = new Date(`${date}T00:00:00`).toISOString();
+      const dayEnd = new Date(`${date}T23:59:59.999`).toISOString();
+      const orParts = [`route_id.eq.${route.id}`];
+      if (runIds.length) orParts.push(`run_id.in.(${runIds.join(",")})`);
+      if (delIds.length) orParts.push(`delivery_id.in.(${delIds.join(",")})`);
+      const { data: gps } = await supabase
+        .from("gps_audit_logs" as any)
+        .select("id, event_type, success, latitude, longitude, accuracy, created_at, run_id, delivery_id")
+        .gte("created_at", dayStart).lte("created_at", dayEnd)
+        .or(orParts.join(","));
+
+      return { runs: runs ?? [], dels, gps: gps ?? [] } as any;
+    },
+  });
+
+  // Load ordered stop sequence to number POD markers
+  const { data: stops } = useQuery({
+    enabled: open,
+    queryKey: ["route-stops-for-map", route.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("route_stops").select("customer_id, sequence")
+        .eq("route_id", route.id).order("sequence", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const points = useMemo(() => {
+    if (!data) return [] as import("@/components/RunMap").MapPoint[];
+    const pts: import("@/components/RunMap").MapPoint[] = [];
+    if (route.start_latitude != null && route.start_longitude != null) {
+      pts.push({
+        id: `route-start-${route.id}`,
+        kind: "pickup_start",
+        lat: Number(route.start_latitude), lng: Number(route.start_longitude),
+        title: `Route start · ${route.name}`,
+        subtitle: "Configured pickup / start point",
+      });
+    }
+    const orderMap = new Map<string, number>();
+    (stops ?? []).forEach((s: any, i: number) => orderMap.set(s.customer_id, i + 1));
+
+    for (const r of data.runs as any[]) {
+      if (r.start_latitude != null) pts.push({
+        id: `run-start-${r.id}`, kind: "run_start",
+        lat: Number(r.start_latitude), lng: Number(r.start_longitude),
+        title: "Run started", accuracy: r.start_accuracy_m, when: r.started_at,
+        subtitle: [r.driver_name, r.vehicle_number].filter(Boolean).join(" · ") || undefined,
+      });
+      if (r.end_latitude != null) pts.push({
+        id: `run-end-${r.id}`, kind: "run_end",
+        lat: Number(r.end_latitude), lng: Number(r.end_longitude),
+        title: "Run ended", accuracy: r.end_accuracy_m, when: r.ended_at,
+      });
+    }
+
+    for (const d of data.dels as any[]) {
+      const shop = d.invoice?.customer?.shop_name || d.invoice?.customer?.name || "Shop";
+      const invNo = d.invoice?.invoice_no ? ` · ${d.invoice.invoice_no}` : "";
+      const cid = d.invoice?.customer?.id;
+      const ord = cid ? orderMap.get(cid) ?? null : null;
+      if (d.pod_latitude != null) {
+        pts.push({
+          id: `pod-${d.id}`, kind: "pod",
+          lat: Number(d.pod_latitude), lng: Number(d.pod_longitude),
+          title: `POD · ${shop}${invNo}`,
+          subtitle: `Status: ${String(d.status || "").replace("_", " ")}`,
+          accuracy: d.pod_accuracy_m, when: d.pod_captured_at || d.delivered_at,
+          order: ord,
+        });
+      } else if (d.invoice?.customer?.latitude != null && d.invoice?.customer?.longitude != null) {
+        pts.push({
+          id: `shop-${d.id}`, kind: "shop",
+          lat: Number(d.invoice.customer.latitude), lng: Number(d.invoice.customer.longitude),
+          title: `Shop · ${shop}${invNo}`,
+          subtitle: "Geotagged shop location (no POD captured yet)",
+          order: ord,
+        });
+      }
+    }
+
+    for (const g of data.gps as any[]) {
+      if (g.latitude == null || g.longitude == null) continue;
+      // avoid duplicates with run start/end/pod already added
+      if (g.run_id || g.delivery_id) continue;
+      pts.push({
+        id: `gps-${g.id}`, kind: g.success ? "gps_ok" : "gps_failed",
+        lat: Number(g.latitude), lng: Number(g.longitude),
+        title: `GPS · ${g.event_type}`, accuracy: g.accuracy, when: g.created_at,
+      });
+    }
+    return pts;
+  }, [data, stops, route]);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { pod: 0, run_start: 0, run_end: 0, pickup_start: 0, shop: 0 };
+    points.forEach(p => { c[p.kind] = (c[p.kind] ?? 0) + 1; });
+    return c;
+  }, [points]);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MapPin className="size-5 text-primary" />
+            Map · {route.name}
+          </DialogTitle>
+          <div className="text-xs text-muted-foreground">
+            {shortDate(date)} · pickup, POD and captured GPS points
+          </div>
+        </DialogHeader>
+
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Badge variant="outline" className="border-amber-300 text-amber-700">● Pickup/start ({counts.pickup_start})</Badge>
+          <Badge variant="outline" className="border-emerald-300 text-emerald-700">● Run start ({counts.run_start})</Badge>
+          <Badge variant="outline" className="border-red-300 text-red-700">● Run end ({counts.run_end})</Badge>
+          <Badge variant="outline" className="border-blue-300 text-blue-700">● POD ({counts.pod})</Badge>
+          <Badge variant="outline" className="border-slate-300 text-slate-700">● Shop ({counts.shop})</Badge>
+        </div>
+
+        {isLoading ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">Loading map…</div>
+        ) : (
+          <ClientOnly fallback={<div className="h-[480px] rounded-md border bg-muted/30" />}>
+            <Suspense fallback={<div className="h-[480px] rounded-md border bg-muted/30" />}>
+              <RunMap points={points} height={520} />
+            </Suspense>
+          </ClientOnly>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
