@@ -2534,3 +2534,142 @@ function RunMapDialog({
     </Dialog>
   );
 }
+
+// -------- Undo auto-assign preview --------
+function UndoAutoAssignPreview({
+  open,
+  onOpenChange,
+  lastAssign,
+  routes,
+  invoices,
+  stops,
+  undoing,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  lastAssign: {
+    date: string;
+    createdStops: { route_id: string; customer_id: string }[];
+    deliveryPrev: { id: string; customer_id: string; invoice_no: string | null; prev_route_id: string | null; new_route_id: string }[];
+    total: number;
+  } | null;
+  routes: RouteRow[];
+  invoices: InvoiceRow[];
+  stops: any[];
+  undoing: boolean;
+  onConfirm: () => void | Promise<void>;
+}) {
+  const routeName = (id: string | null | undefined) => {
+    if (!id) return "— Unassigned —";
+    return routes.find((r) => r.id === id)?.name ?? "(deleted route)";
+  };
+  const custName = useMemo(() => {
+    const m = new Map<string, string>();
+    invoices.forEach((inv: any) => {
+      if (inv.customer_id && inv.customer) {
+        m.set(inv.customer_id, inv.customer.shop_name || inv.customer.name || "Shop");
+      }
+    });
+    stops.forEach((s: any) => {
+      if (s.customer_id && !m.has(s.customer_id)) {
+        m.set(s.customer_id, s.customer?.shop_name || s.customer?.name || s.customer?.address || "Shop");
+      }
+    });
+    return m;
+  }, [invoices, stops]);
+
+  if (!lastAssign) return null;
+
+  // Group created stops by route
+  const stopsByRoute = new Map<string, string[]>();
+  lastAssign.createdStops.forEach((s) => {
+    const arr = stopsByRoute.get(s.route_id) ?? [];
+    arr.push(custName.get(s.customer_id) ?? "Shop");
+    stopsByRoute.set(s.route_id, arr);
+  });
+
+  // Group deliveries by (prev -> new)
+  const reassignByPair = new Map<string, { prev: string | null; next: string; items: { shop: string; invoice: string | null }[] }>();
+  lastAssign.deliveryPrev.forEach((d) => {
+    const key = `${d.prev_route_id ?? ""}::${d.new_route_id}`;
+    const entry = reassignByPair.get(key) ?? { prev: d.prev_route_id, next: d.new_route_id, items: [] };
+    entry.items.push({ shop: custName.get(d.customer_id) ?? "Shop", invoice: d.invoice_no });
+    reassignByPair.set(key, entry);
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Undo auto-assign — impact preview</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-1">
+          <div className="text-muted-foreground">
+            Reverting the last auto-assign for <b>{shortDate(lastAssign.date)}</b>. Review the changes below, then confirm.
+          </div>
+
+          <section>
+            <div className="font-medium mb-2 flex items-center gap-2">
+              <Trash2 className="size-4 text-rose-600" />
+              Route stops to remove <Badge variant="secondary">{lastAssign.createdStops.length}</Badge>
+            </div>
+            {stopsByRoute.size === 0 ? (
+              <div className="text-muted-foreground text-xs pl-6">No new stops were created.</div>
+            ) : (
+              <div className="space-y-2 pl-6">
+                {Array.from(stopsByRoute.entries()).map(([rid, shops]) => (
+                  <div key={rid} className="rounded border border-rose-200 bg-rose-50 p-2">
+                    <div className="font-medium">{routeName(rid)} <span className="text-muted-foreground font-normal">— removing {shops.length}</span></div>
+                    <ul className="mt-1 space-y-0.5">
+                      {shops.map((s, i) => (
+                        <li key={i} className="text-xs line-through decoration-rose-400">{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="font-medium mb-2 flex items-center gap-2">
+              <RouteIcon className="size-4 text-primary" />
+              Delivery re-assignments <Badge variant="secondary">{lastAssign.deliveryPrev.length}</Badge>
+            </div>
+            {reassignByPair.size === 0 ? (
+              <div className="text-muted-foreground text-xs pl-6">No deliveries were re-routed.</div>
+            ) : (
+              <div className="space-y-2 pl-6">
+                {Array.from(reassignByPair.values()).map((g, i) => (
+                  <div key={i} className="rounded border border-amber-200 bg-amber-50 p-2">
+                    <div className="text-xs flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="bg-rose-50 border-rose-200 text-rose-700 line-through">{routeName(g.next)}</Badge>
+                      <span className="text-muted-foreground">→ revert to</span>
+                      <Badge variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700">{routeName(g.prev)}</Badge>
+                      <span className="text-muted-foreground">({g.items.length})</span>
+                    </div>
+                    <ul className="mt-1 space-y-0.5">
+                      {g.items.map((it, j) => (
+                        <li key={j} className="text-xs">
+                          {it.shop}
+                          {it.invoice ? <span className="text-muted-foreground"> · #{it.invoice}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={undoing}>Cancel</Button>
+          <Button onClick={onConfirm} disabled={undoing} className="gap-1.5">
+            {undoing ? "Undoing…" : "Confirm undo"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
