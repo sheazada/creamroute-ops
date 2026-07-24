@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useState } from "react";
-import { ShieldCheck, User as UserIcon } from "lucide-react";
+import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark } from "lucide-react";
 import { getBusiness, saveBusiness, type BusinessProfile } from "@/lib/business";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -103,11 +103,12 @@ function Settings() {
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="font-semibold mb-1">Business identity</h3>
-          <p className="text-xs text-muted-foreground mb-4">
-            Shown on every invoice header, print copy and PDF.
-          </p>
+        <CollapsibleCard
+          icon={Building2}
+          title="Business identity"
+          description="Shown on every invoice header, print copy and PDF."
+          summary={biz.name ? `${biz.name}${biz.gstin ? " · GSTIN " + biz.gstin : ""}` : "Not set — tap to add"}
+        >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2">
@@ -178,14 +179,24 @@ function Settings() {
                 />
               </div>
             </div>
+            <div className="pt-2">
+              <Button onClick={saveBiz} size="sm">Save business profile</Button>
+            </div>
           </div>
-        </Card>
+        </CollapsibleCard>
 
-        <Card className="p-6">
-          <h3 className="font-semibold mb-1">Payment & bank</h3>
-          <p className="text-xs text-muted-foreground mb-4">
-            Printed on invoices. UPI VPA also powers the QR code retailers can scan to pay.
-          </p>
+        <CollapsibleCard
+          icon={Landmark}
+          title="Payment & bank"
+          description="Printed on invoices. UPI VPA also powers the QR code retailers can scan to pay."
+          summary={
+            biz.upi_vpa || biz.bank_account
+              ? [biz.upi_vpa, biz.bank_name, biz.bank_account && `A/C ••${String(biz.bank_account).slice(-4)}`]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Not set — tap to add"
+          }
+        >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5 col-span-2">
               <Label>UPI VPA</Label>
@@ -240,9 +251,9 @@ function Settings() {
             </div>
           </div>
           <div className="pt-4">
-            <Button onClick={saveBiz}>Save business profile</Button>
+            <Button onClick={saveBiz} size="sm">Save business profile</Button>
           </div>
-        </Card>
+        </CollapsibleCard>
 
         <Card className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
@@ -326,5 +337,52 @@ function Settings() {
         </Card>
       </div>
     </PageContainer>
+  );
+}
+
+function CollapsibleCard({
+  icon: Icon,
+  title,
+  description,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  summary: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card className="p-0 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/40 transition-colors"
+        aria-expanded={open}
+      >
+        <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+          <Icon className="size-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-sm">{title}</div>
+          {open ? (
+            <div className="text-xs text-muted-foreground truncate">{description}</div>
+          ) : (
+            <div className="text-xs text-muted-foreground truncate">{summary}</div>
+          )}
+        </div>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
+          {open ? "Close" : "Edit"}
+        </span>
+        <ChevronDown
+          className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && <div className="p-6 pt-2 border-t">{children}</div>}
+    </Card>
   );
 }
