@@ -392,6 +392,73 @@ function Settings() {
 
     <PageContainer>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
+      {showErrorSummary && Object.keys(errors).length > 0 && (() => {
+        const items = [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment]
+          .filter((k) => !!errors[k])
+          .map((k) => ({
+            field: k,
+            label: FIELD_LABELS[k] ?? String(k),
+            message: errors[k]!,
+            section: sectionForField(k),
+          }));
+        return (
+          <div
+            ref={errorSummaryRef}
+            tabIndex={-1}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            aria-labelledby="settings-error-summary-title"
+            className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+          >
+            <div className="flex items-start gap-2">
+              <AlertCircle className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex-1">
+                <h2 id="settings-error-summary-title" className="font-semibold">
+                  {items.length === 1
+                    ? "Please fix 1 field before saving"
+                    : `Please fix ${items.length} fields before saving`}
+                </h2>
+                <p className="text-xs text-destructive/80 mt-0.5">
+                  Select a link to jump straight to the field.
+                </p>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  {items.map((it) => (
+                    <li key={String(it.field)}>
+                      <a
+                        href={`#field-${String(it.field)}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          focusField(it.field);
+                        }}
+                        className="font-medium underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 rounded-sm"
+                      >
+                        {it.label}
+                      </a>
+                      <span className="text-destructive/90">
+                        {" "}— {it.message}
+                        {it.section && (
+                          <span className="text-destructive/60">
+                            {" "}({it.section === "payment" ? "Payment & bank" : "Business identity"})
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowErrorSummary(false)}
+                className="text-destructive/70 hover:text-destructive text-xs px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                aria-label="Dismiss error summary"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        );
+      })()}
       {dirty && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
           <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
