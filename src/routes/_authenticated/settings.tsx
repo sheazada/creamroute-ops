@@ -250,6 +250,9 @@ function Settings() {
       focusable?.focus({ preventScroll: true });
     });
   };
+  useEffect(() => {
+    if (showErrorSummary && Object.keys(errors).length === 0) setShowErrorSummary(false);
+  }, [errors, showErrorSummary]);
 
   const saveBiz = async () => {
     // Guard against double-submit (Enter key, banner + card, rapid clicks).
