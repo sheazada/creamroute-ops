@@ -184,8 +184,8 @@ function Settings() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const [errors, setErrors] = useState<BusinessValidationErrors>({});
   const err = (k: keyof BusinessProfile) => errors[k];
+
 
   // Edit / Save / Cancel state per section (only one section editable at a time)
   const [editing, setEditing] = useState<Section | null>(null);
