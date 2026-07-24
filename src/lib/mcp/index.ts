@@ -4,6 +4,8 @@ import listProducts from "./tools/list-products";
 import recentInvoices from "./tools/recent-invoices";
 import dailyDemand from "./tools/daily-demand";
 import pendingDeliveries from "./tools/pending-deliveries";
+import markDeliveryCollected from "./tools/mark-delivery-collected";
+import uploadPodProof from "./tools/upload-pod-proof";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
