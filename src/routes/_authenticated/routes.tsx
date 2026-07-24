@@ -950,6 +950,7 @@ function SheetTab({ date }: { date: string }) {
 
       const stopInserts: { route_id: string; customer_id: string; sequence: number }[] = [];
       const deliveryUpdates = new Map<string, string[]>(); // route_id -> delivery ids
+      const delMeta = new Map<string, { customer_id: string; invoice_no: string | null; new_route_id: string }>();
       const perRouteCount = new Map<string, number>();
       const seen = new Set<string>(); // route+customer dedupe
       let skipped = 0;
@@ -969,6 +970,7 @@ function SheetTab({ date }: { date: string }) {
           const arr = deliveryUpdates.get(rid) ?? [];
           arr.push(delId);
           deliveryUpdates.set(rid, arr);
+          delMeta.set(delId, { customer_id: inv.customer_id, invoice_no: (inv as any).invoice_no ?? null, new_route_id: rid });
         }
         // Reserve a slot on the chosen route so subsequent picks respect capacity.
         routeLoad.set(rid, (routeLoad.get(rid) ?? 0) + 1);
@@ -996,13 +998,22 @@ function SheetTab({ date }: { date: string }) {
 
       // Capture previous route_id for deliveries about to be updated (for undo)
       const allDelIds = Array.from(new Set(Array.from(deliveryUpdates.values()).flat()));
-      let deliveryPrev: { id: string; prev_route_id: string | null }[] = [];
+      let deliveryPrev: { id: string; customer_id: string; invoice_no: string | null; prev_route_id: string | null; new_route_id: string }[] = [];
       if (allDelIds.length > 0) {
         const { data: prevRows } = await supabase
           .from("deliveries")
           .select("id, route_id")
           .in("id", allDelIds);
-        deliveryPrev = (prevRows ?? []).map((r: any) => ({ id: r.id, prev_route_id: r.route_id }));
+        deliveryPrev = (prevRows ?? []).map((r: any) => {
+          const meta = delMeta.get(r.id);
+          return {
+            id: r.id,
+            customer_id: meta?.customer_id ?? "",
+            invoice_no: meta?.invoice_no ?? null,
+            prev_route_id: r.route_id,
+            new_route_id: meta?.new_route_id ?? "",
+          };
+        });
       }
 
       for (const [rid, ids] of deliveryUpdates) {
@@ -1014,6 +1025,7 @@ function SheetTab({ date }: { date: string }) {
       const routesTouched = perRouteCount.size;
       const total = Array.from(perRouteCount.values()).reduce((a, b) => a + b, 0);
       setLastAssign({ date, createdStops, deliveryPrev, total });
+
       toast.success(`Auto-assigned ${total} shop${total === 1 ? "" : "s"} across ${routesTouched} route${routesTouched === 1 ? "" : "s"}.`);
       if (skipped > 0) {
         toast.warning(`${skipped} shop${skipped === 1 ? "" : "s"} skipped — all eligible routes are at capacity or max stops. Raise the limits or add a route.`);
