@@ -281,8 +281,13 @@ function Settings() {
     const items = sectionErrorItems(section);
     if (savedFlash === section) {
       return (
-        <div className="mb-3 flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-800">
-          <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+        <div
+          className="mb-3 flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-800"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <CheckCircle2 className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
           <div className="flex-1">
             <div className="font-semibold">
               {section === "payment" ? "Payment & bank saved" : "Business identity saved"}
@@ -296,8 +301,13 @@ function Settings() {
     }
     if (items.length === 0) return null;
     return (
-      <div className="mb-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-        <AlertCircle className="size-4 shrink-0 mt-0.5" />
+      <div
+        className="mb-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <AlertCircle className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
         <div className="flex-1">
           <div className="font-semibold">
             {items.length === 1 ? "1 field needs attention" : `${items.length} fields need attention`}
@@ -313,6 +323,7 @@ function Settings() {
       </div>
     );
   };
+
 
   return (
 
