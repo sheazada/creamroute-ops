@@ -436,6 +436,109 @@ export type Database = {
           },
         ]
       }
+      notification_logs: {
+        Row: {
+          attempts: number
+          body: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at: string
+          customer_id: string | null
+          delivery_id: string | null
+          id: string
+          idempotency_key: string | null
+          invoice_id: string | null
+          last_attempt_at: string | null
+          last_error: string | null
+          max_attempts: number
+          next_retry_at: string | null
+          provider: string | null
+          provider_message_id: string | null
+          recipient: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          subject: string | null
+          template: string | null
+          template_data: Json
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          body?: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          customer_id?: string | null
+          delivery_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          invoice_id?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          recipient: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          subject?: string | null
+          template?: string | null
+          template_data?: Json
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          body?: string | null
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          customer_id?: string | null
+          delivery_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          invoice_id?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          recipient?: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          subject?: string | null
+          template?: string | null
+          template_data?: Json
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           amount: number
@@ -1051,9 +1154,59 @@ export type Database = {
         Args: { _supplier_id: string }
         Returns: undefined
       }
+      record_notification_attempt: {
+        Args: {
+          _error?: string
+          _id: string
+          _provider?: string
+          _provider_msg?: string
+          _success: boolean
+          _suppressed?: boolean
+        }
+        Returns: {
+          attempts: number
+          body: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at: string
+          customer_id: string | null
+          delivery_id: string | null
+          id: string
+          idempotency_key: string | null
+          invoice_id: string | null
+          last_attempt_at: string | null
+          last_error: string | null
+          max_attempts: number
+          next_retry_at: string | null
+          provider: string | null
+          provider_message_id: string | null
+          recipient: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          subject: string | null
+          template: string | null
+          template_data: Json
+          triggered_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "notification_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "salesperson" | "driver" | "helper"
+      notification_channel: "email" | "sms" | "whatsapp"
+      notification_status:
+        | "queued"
+        | "sending"
+        | "sent"
+        | "failed"
+        | "suppressed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1182,6 +1335,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "salesperson", "driver", "helper"],
+      notification_channel: ["email", "sms", "whatsapp"],
+      notification_status: [
+        "queued",
+        "sending",
+        "sent",
+        "failed",
+        "suppressed",
+        "cancelled",
+      ],
     },
   },
 } as const
