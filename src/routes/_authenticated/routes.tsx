@@ -2197,6 +2197,29 @@ function RunTimelineDialog({
         }
       }
 
+      // GPS audit events (attempts + failures)
+      const eventLabel: Record<string, string> = {
+        run_start: "Run start", run_end: "Run end", pickup_confirm: "Pickup",
+        delivery_pod: "Delivery POD", shop_geotag: "Shop geotag", route_start_point: "Route start point",
+      };
+      for (const g of gpsRows as any[]) {
+        const label = eventLabel[g.event_type] || g.event_type;
+        if (g.success) {
+          ev.push({
+            at: g.created_at, kind: "gps_ok",
+            title: `GPS captured · ${label}`,
+            detail: g.accuracy != null ? `±${Math.round(g.accuracy)}m accuracy` : null,
+            location: g.latitude != null ? { lat: g.latitude, lng: g.longitude, acc: g.accuracy } : null,
+          });
+        } else {
+          ev.push({
+            at: g.created_at, kind: "gps_failed",
+            title: `GPS failed · ${label}`,
+            detail: [g.error_code, g.error_message].filter(Boolean).join(" · ") || "Unknown error",
+          });
+        }
+      }
+
       return ev.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
     },
   });
