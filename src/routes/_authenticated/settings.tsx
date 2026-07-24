@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -14,9 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
-import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check } from "lucide-react";
 import {
   getBusiness,
   saveBusiness,
@@ -32,6 +43,8 @@ import { MaskedInput } from "@/components/masked-input";
 export const Route = createFileRoute("/_authenticated/settings")({
   component: Settings,
 });
+
+type Section = "business" | "payment";
 
 type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
 const ROLES: { value: Role; label: string; hint: string }[] = [
