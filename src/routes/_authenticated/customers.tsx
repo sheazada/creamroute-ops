@@ -123,6 +123,7 @@ function Customers() {
                 <StatusBadge status={c.status} />
                 <NotifyBadges customer={c} />
                 <ReminderActions customer={c} />
+                <CustomerNotificationsButton customer={c} />
                 <EditCustomerButton customer={c} />
                 <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary ml-auto hover:underline">Invoice →</Link>
               </div>
