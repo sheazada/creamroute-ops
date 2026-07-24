@@ -542,6 +542,7 @@ function RouteFormDialog({
       setNotes(route?.notes ?? "");
       setCapacity(route?.capacity_units != null ? String(route.capacity_units) : "");
       setCapacityLabel(route?.capacity_label ?? "L");
+      setMaxStops(route?.max_stops != null ? String(route.max_stops) : "");
       setVehicleNumber(route?.vehicle_number ?? "");
       setVehicleType(route?.vehicle_type ?? "");
       setStartLat(route?.start_latitude != null ? String(route.start_latitude) : "");
