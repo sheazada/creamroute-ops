@@ -808,12 +808,14 @@ function SheetTab({ date }: { date: string }) {
   const qc = useQueryClient();
   const [assigning, setAssigning] = useState(false);
   const [undoing, setUndoing] = useState(false);
+  const [undoPreviewOpen, setUndoPreviewOpen] = useState(false);
   const [lastAssign, setLastAssign] = useState<{
     date: string;
     createdStops: { route_id: string; customer_id: string }[];
-    deliveryPrev: { id: string; prev_route_id: string | null }[];
+    deliveryPrev: { id: string; customer_id: string; invoice_no: string | null; prev_route_id: string | null; new_route_id: string }[];
     total: number;
   } | null>(null);
+
 
   const tokens = (s?: string | null) =>
     (s ?? "")
