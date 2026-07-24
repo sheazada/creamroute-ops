@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check } from "lucide-react";
+import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check, AlertCircle, CheckCircle2 } from "lucide-react";
+
 import {
   getBusiness,
   saveBusiness,
@@ -45,6 +46,39 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 type Section = "business" | "payment";
+
+// Friendly labels used in the error summary banner.
+const FIELD_LABELS: Partial<Record<keyof BusinessProfile, string>> = {
+  name: "Trade name",
+  legal_name: "Legal name",
+  gstin: "GSTIN",
+  fssai: "FSSAI",
+  pan: "PAN",
+  state: "State (GST)",
+  state_code: "State code",
+  invoice_prefix: "Invoice prefix",
+  mobile: "Mobile",
+  email: "Email",
+  address: "Address",
+  upi_vpa: "UPI VPA",
+  bank_name: "Bank name",
+  bank_holder: "Account holder",
+  bank_account: "Account number",
+  bank_ifsc: "IFSC",
+  bank_branch: "Branch",
+  terms: "Invoice terms",
+};
+
+const SECTION_FIELDS: Record<Section, (keyof BusinessProfile)[]> = {
+  business: [
+    "name", "legal_name", "gstin", "fssai", "pan", "state", "state_code",
+    "invoice_prefix", "mobile", "email", "address",
+  ],
+  payment: [
+    "upi_vpa", "bank_name", "bank_holder", "bank_account", "bank_ifsc",
+    "bank_branch", "terms",
+  ],
+};
 
 type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
 const ROLES: { value: Role; label: string; hint: string }[] = [
@@ -158,18 +192,34 @@ function Settings() {
     });
   };
 
+  const [savedFlash, setSavedFlash] = useState<Section | null>(null);
+
   const saveBiz = () => {
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
     if (!ok) {
-      toast.error("Please fix the highlighted fields before saving");
+      const count = Object.keys(e).length;
+      toast.error(count === 1 ? "1 field needs attention" : `${count} fields need attention`);
       return;
     }
     saveBusiness(biz);
+    const section = editing;
     setEditing(null);
     setSnapshot(null);
-    toast.success("Business profile saved — reflects on all new invoices");
+    setErrors({});
+    if (section) {
+      setSavedFlash(section);
+      window.setTimeout(() => {
+        setSavedFlash((cur) => (cur === section ? null : cur));
+      }, 4000);
+    }
+    toast.success(
+      section === "payment"
+        ? "Payment & bank details saved — new invoices will use them"
+        : "Business identity saved — new invoices will use it",
+    );
   };
+
 
   // Warn on browser unload while there are unsaved changes.
   useEffect(() => {
@@ -191,8 +241,50 @@ function Settings() {
     enableBeforeUnload: false,
   });
 
+  const sectionErrorItems = (section: Section) =>
+    SECTION_FIELDS[section]
+      .filter((k) => !!errors[k])
+      .map((k) => ({ field: k, label: FIELD_LABELS[k] ?? String(k), message: errors[k]! }));
+
+  const renderSectionBanner = (section: Section) => {
+    const items = sectionErrorItems(section);
+    if (savedFlash === section) {
+      return (
+        <div className="mb-3 flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-800">
+          <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-semibold">
+              {section === "payment" ? "Payment & bank saved" : "Business identity saved"}
+            </div>
+            <div className="text-emerald-700/90">
+              Changes are live and will appear on every new invoice.
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (items.length === 0) return null;
+    return (
+      <div className="mb-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+        <AlertCircle className="size-4 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="font-semibold">
+            {items.length === 1 ? "1 field needs attention" : `${items.length} fields need attention`}
+          </div>
+          <ul className="mt-1 space-y-0.5 list-disc list-inside">
+            {items.map((it) => (
+              <li key={String(it.field)}>
+                <span className="font-medium">{it.label}:</span> {it.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  };
 
   return (
+
     <PageContainer>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
       {dirty && (
@@ -220,6 +312,7 @@ function Settings() {
           onSave={saveBiz}
         >
           <div className="space-y-3">
+            {renderSectionBanner("business")}
             <div className="grid grid-cols-2 gap-3">
               <FieldRow label="Trade name" error={err("name")} colSpan={2}>
 
@@ -343,7 +436,7 @@ function Settings() {
           onCancel={cancelEdit}
           onSave={saveBiz}
         >
-
+          {renderSectionBanner("payment")}
           <div className="grid grid-cols-2 gap-3">
             <FieldRow label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
               <MaskedInput
