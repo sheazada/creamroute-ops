@@ -568,7 +568,7 @@ ${meta ? `<div class="meta">${esc(meta)}</div>` : ""}
             {rows.length === 0 && <tr><td colSpan={headers.length} className="text-center py-12 text-muted-foreground">No data.</td></tr>}
             {rows.map((r, i) => (
               <tr key={i} className="hover:bg-muted/30">
-                {r.map((c, j) => <td key={j} className={`px-4 py-2.5 whitespace-nowrap ${j === 0 ? "font-medium" : "text-right font-mono text-xs"}`}>{c}</td>)}
+                {r.map((c, j) => <td key={j} className={`px-4 py-2.5 whitespace-nowrap ${j === 0 ? "font-medium" : "text-right font-mono text-xs"}`}>{cellNode(c)}</td>)}
               </tr>
             ))}
             {totals && rows.length > 0 && (
