@@ -72,6 +72,7 @@ export type Database = {
           notes: string | null
           order_id: string | null
           route: string | null
+          route_id: string | null
           status: string
           updated_at: string
         }
@@ -84,6 +85,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           route?: string | null
+          route_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -96,6 +98,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           route?: string | null
+          route_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -112,6 +115,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
             referencedColumns: ["id"]
           },
         ]
@@ -672,6 +682,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      route_stops: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          route_id: string
+          sequence: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          route_id: string
+          sequence?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          route_id?: string
+          sequence?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_stops_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_stops_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routes: {
+        Row: {
+          active: boolean
+          area: string | null
+          created_at: string
+          driver_name: string | null
+          helper_name: string | null
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          area?: string | null
+          created_at?: string
+          driver_name?: string | null
+          helper_name?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          area?: string | null
+          created_at?: string
+          driver_name?: string | null
+          helper_name?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       supplier_payments: {
         Row: {
