@@ -100,8 +100,8 @@ const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof L
   driver: [
     { to: "/deliveries", label: "Deliveries", icon: Truck },
     { to: "/daily-demand", label: "Demand", icon: ClipboardList },
-    { to: "/customers", label: "Shops", icon: Users },
-    { to: "/invoices", label: "Invoices", icon: ReceiptText },
+    { to: "/products", label: "Products", icon: Package },
+    { to: "/inventory", label: "Stock", icon: Boxes },
   ],
   helper: [
     { to: "/deliveries", label: "Deliveries", icon: Truck },
