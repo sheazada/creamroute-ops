@@ -1894,13 +1894,15 @@ function RunTimelineDialog({
         .order("created_at", { ascending: true });
       if (rErr) throw rErr;
 
-      // Fetch deliveries assigned to this route for this date
-      const { data: dels, error: dErr } = await supabase
-        .from("deliveries")
-        .select("id, invoice_id, status, delivered_at, created_at, updated_at, received_by, collected_amount, collected_mode, pod_latitude, pod_longitude, pod_accuracy_m, pod_captured_at, invoice:invoices(invoice_no, customer:customers(name, shop_name))")
-        .eq("route_id", route.id)
-        .eq("delivery_date", date);
-      if (dErr) throw dErr;
+      // Fetch deliveries for the invoices shown on this route sheet (date scoped)
+      const dels = invoiceIds.length === 0 ? [] : await (async () => {
+        const { data, error } = await supabase
+          .from("deliveries")
+          .select("id, invoice_id, status, delivered_at, created_at, updated_at, received_by, collected_amount, collected_mode, pod_latitude, pod_longitude, pod_accuracy_m, pod_captured_at, invoice:invoices(invoice_no, customer:customers(name, shop_name))")
+          .in("invoice_id", invoiceIds);
+        if (error) throw error;
+        return data ?? [];
+      })();
 
       const ev: TimelineEvent[] = [];
 
