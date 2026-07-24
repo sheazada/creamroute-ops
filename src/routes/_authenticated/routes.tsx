@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
-import { ArrowDown, ArrowUp, Camera, CheckCircle2, Crosshair, Download, GripVertical, LocateFixed, MapPin, Plus, Printer, Route as RouteIcon, Sparkles, Trash2, Truck, UserPlus, Wallet, Wand2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, CheckCircle2, Clock, Crosshair, Download, GripVertical, History, LocateFixed, MapPin, Pencil, Play, Plus, Printer, Route as RouteIcon, Sparkles, Square, Trash2, Truck, UserPlus, Wallet, Wand2, XCircle } from "lucide-react";
 import { optimizeStops } from "@/lib/route-optimize";
 import { getCurrentPosition, fmtLatLng, gmapsUrl } from "@/lib/geo";
 import { toast } from "sonner";
