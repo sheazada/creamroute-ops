@@ -379,7 +379,25 @@ function RouteFormDialog({
             <div className="col-span-2"><Label>Vehicle capacity</Label><Input type="number" inputMode="decimal" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g. 400" /></div>
             <div><Label>Unit</Label><Input value={capacityLabel} onChange={(e) => setCapacityLabel(e.target.value)} placeholder="L / crates / kg" /></div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Vehicle number</Label><Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. BR10AB1234" /></div>
+            <div><Label>Vehicle type</Label>
+              <Select value={vehicleType || "none"} onValueChange={(v) => setVehicleType(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  <SelectItem value="bike">Bike</SelectItem>
+                  <SelectItem value="auto">Auto / Rickshaw</SelectItem>
+                  <SelectItem value="tempo">Tempo</SelectItem>
+                  <SelectItem value="mini_truck">Mini truck</SelectItem>
+                  <SelectItem value="truck">Truck</SelectItem>
+                  <SelectItem value="van">Refrigerated van</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Landmarks, timing…" /></div>
+
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
