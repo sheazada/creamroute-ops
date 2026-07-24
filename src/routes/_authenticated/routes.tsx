@@ -1607,6 +1607,20 @@ function DeliverStopDialog({
         pod_captured_at: podAt ?? (delivery as any).pod_captured_at ?? null,
       }).eq("id", delivery.id);
       if (dErr) throw dErr;
+
+      // 5. Enqueue retailer notifications (idempotent) and kick off dispatch.
+      // Fire-and-forget so a provider outage never blocks the delivery save.
+      try {
+        const { enqueued } = await enqueueNotifs({ data: { deliveryId: delivery.id } });
+        if (enqueued > 0) {
+          processNotifs({ data: { limit: 10 } }).catch((err) => {
+            console.warn("notification dispatch failed:", err);
+          });
+        }
+      } catch (err) {
+        console.warn("notification enqueue failed:", err);
+      }
+
       toast.success(
         finalStatus === "delivered" ? "Delivered" :
         finalStatus === "partially_delivered" ? "Marked partially delivered" :
