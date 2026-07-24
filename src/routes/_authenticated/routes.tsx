@@ -1525,6 +1525,26 @@ function DeliverStopDialog({
               <div className="text-[11px] text-muted-foreground mt-1">Existing photo on file · uploading a new one will replace it.</div>
             )}
           </div>
+
+          {delivery?.pod_latitude != null && delivery?.pod_longitude != null && (
+            <div className="rounded-md border bg-muted/30 p-2 text-xs flex items-center gap-2">
+              <MapPin className="size-3.5 text-primary" />
+              <span>Last POD location:</span>
+              <a
+                href={gmapsUrl(delivery.pod_latitude, delivery.pod_longitude)!}
+                target="_blank" rel="noreferrer"
+                className="font-mono text-primary hover:underline"
+              >
+                {fmtLatLng(delivery.pod_latitude, delivery.pod_longitude)}
+              </a>
+              {delivery.pod_accuracy_m != null && (
+                <span className="text-muted-foreground">±{Math.round(delivery.pod_accuracy_m)}m</span>
+              )}
+            </div>
+          )}
+          <div className="text-[11px] text-muted-foreground">
+            A fresh GPS location will be captured when you save this delivery.
+          </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
