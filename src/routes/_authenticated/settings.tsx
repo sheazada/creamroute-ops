@@ -99,11 +99,43 @@ const roleStyles: Record<Role, string> = {
   helper: "bg-violet-500/10 text-violet-700 ring-violet-500/20",
 };
 
+const BlurValidateContext = React.createContext<((field: string) => void) | null>(null);
+
 function Settings() {
   const qc = useQueryClient();
   const [biz, setBiz] = useState<BusinessProfile>(() => getBusiness());
-  const setField = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) =>
+  const [errors, setErrorsInner] = useState<BusinessValidationErrors>({});
+  const setErrors = setErrorsInner;
+  const setField = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) => {
     setBiz((b) => ({ ...b, [k]: v }));
+    // Clear a previously announced error for this field as soon as the user
+    // starts fixing it, so screen readers stop reading a stale message.
+    setErrorsInner((prev) => {
+      if (!(k in prev)) return prev;
+      const next = { ...prev };
+      delete next[k];
+      return next;
+    });
+  };
+
+  const validateFieldOnBlur = React.useCallback(
+    (field: string) => {
+      const key = field as keyof BusinessProfile;
+      // Re-run the full validator (cross-field rules like GSTIN⇄PAN⇄state code).
+      setBiz((current) => {
+        const { errors: e } = validateBusiness(current);
+        setErrorsInner((prev) => {
+          const next = { ...prev };
+          if (e[key]) next[key] = e[key]!;
+          else delete next[key];
+          return next;
+        });
+        return current;
+      });
+    },
+    [],
+  );
+
 
   const { data: me } = useQuery({
     queryKey: ["me-settings"],
@@ -152,8 +184,8 @@ function Settings() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const [errors, setErrors] = useState<BusinessValidationErrors>({});
   const err = (k: keyof BusinessProfile) => errors[k];
+
 
   // Edit / Save / Cancel state per section (only one section editable at a time)
   const [editing, setEditing] = useState<Section | null>(null);
@@ -344,7 +376,9 @@ function Settings() {
 
       )}
 
+      <BlurValidateContext.Provider value={editing ? validateFieldOnBlur : null}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         <CollapsibleCard
           icon={Building2}
           title="Business identity"
@@ -627,6 +661,8 @@ function Settings() {
           </div>
         </Card>
       </div>
+      </BlurValidateContext.Provider>
+
 
       <AlertDialog open={!!confirm} onOpenChange={(o) => { if (!o) setConfirm(null); }}>
         <AlertDialogContent>
@@ -834,8 +870,11 @@ function FieldRow({
   const hintId = `${baseId}-hint`;
   const describedBy = error ? errorId : hint ? hintId : undefined;
 
-  // Inject aria-describedby / aria-invalid into the input child so screen
-  // readers announce the specific inline message tied to this field.
+  const onBlurValidate = React.useContext(BlurValidateContext);
+
+  // Inject aria-describedby / aria-invalid / onBlur into the input child so
+  // screen readers announce the specific inline message tied to this field —
+  // and so validation runs as soon as focus leaves the field.
   const child = React.isValidElement(children)
     ? React.cloneElement(children as React.ReactElement<any>, {
         "aria-describedby": [
@@ -846,8 +885,13 @@ function FieldRow({
           .join(" ") || undefined,
         "aria-invalid":
           (children as React.ReactElement<any>).props["aria-invalid"] ?? (error ? true : undefined),
+        onBlur: (e: React.FocusEvent<HTMLElement>) => {
+          (children as React.ReactElement<any>).props.onBlur?.(e);
+          if (field && onBlurValidate) onBlurValidate(field);
+        },
       })
     : children;
+
 
   return (
     <div
