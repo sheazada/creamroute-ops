@@ -79,6 +79,10 @@ export type Database = {
           invoice_id: string | null
           notes: string | null
           order_id: string | null
+          pod_accuracy_m: number | null
+          pod_captured_at: string | null
+          pod_latitude: number | null
+          pod_longitude: number | null
           pod_photo_url: string | null
           pod_signature: string | null
           received_by: string | null
@@ -98,6 +102,10 @@ export type Database = {
           invoice_id?: string | null
           notes?: string | null
           order_id?: string | null
+          pod_accuracy_m?: number | null
+          pod_captured_at?: string | null
+          pod_latitude?: number | null
+          pod_longitude?: number | null
           pod_photo_url?: string | null
           pod_signature?: string | null
           received_by?: string | null
@@ -117,6 +125,10 @@ export type Database = {
           invoice_id?: string | null
           notes?: string | null
           order_id?: string | null
+          pod_accuracy_m?: number | null
+          pod_captured_at?: string | null
+          pod_latitude?: number | null
+          pod_longitude?: number | null
           pod_photo_url?: string | null
           pod_signature?: string | null
           received_by?: string | null
@@ -154,14 +166,21 @@ export type Database = {
         Row: {
           created_at: string
           driver_name: string | null
+          end_accuracy_m: number | null
+          end_latitude: number | null
+          end_longitude: number | null
           ended_at: string | null
           helper_name: string | null
           id: string
           notes: string | null
           odometer_end: number | null
           odometer_start: number | null
+          pickup_confirmed_at: string | null
           route_id: string
           run_date: string
+          start_accuracy_m: number | null
+          start_latitude: number | null
+          start_longitude: number | null
           started_at: string | null
           status: string
           updated_at: string
@@ -171,14 +190,21 @@ export type Database = {
         Insert: {
           created_at?: string
           driver_name?: string | null
+          end_accuracy_m?: number | null
+          end_latitude?: number | null
+          end_longitude?: number | null
           ended_at?: string | null
           helper_name?: string | null
           id?: string
           notes?: string | null
           odometer_end?: number | null
           odometer_start?: number | null
+          pickup_confirmed_at?: string | null
           route_id: string
           run_date?: string
+          start_accuracy_m?: number | null
+          start_latitude?: number | null
+          start_longitude?: number | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -188,14 +214,21 @@ export type Database = {
         Update: {
           created_at?: string
           driver_name?: string | null
+          end_accuracy_m?: number | null
+          end_latitude?: number | null
+          end_longitude?: number | null
           ended_at?: string | null
           helper_name?: string | null
           id?: string
           notes?: string | null
           odometer_end?: number | null
           odometer_start?: number | null
+          pickup_confirmed_at?: string | null
           route_id?: string
           run_date?: string
+          start_accuracy_m?: number | null
+          start_latitude?: number | null
+          start_longitude?: number | null
           started_at?: string | null
           status?: string
           updated_at?: string
