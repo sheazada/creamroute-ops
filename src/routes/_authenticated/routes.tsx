@@ -751,8 +751,10 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
         </div>
       </div>
 
+      {route.id !== "u" && <RunPanel route={route} date={date} />}
 
       {/* Pickup summary + capacity bar */}
+
       <div className="px-5 py-3 border-b space-y-3">
         {cap > 0 && (
           <div>
