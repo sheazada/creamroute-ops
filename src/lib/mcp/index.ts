@@ -1,0 +1,21 @@
+import { auth, defineMcp } from "@lovable.dev/mcp-js";
+import listCustomers from "./tools/list-customers";
+import listProducts from "./tools/list-products";
+import recentInvoices from "./tools/recent-invoices";
+import dailyDemand from "./tools/daily-demand";
+import pendingDeliveries from "./tools/pending-deliveries";
+
+const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
+
+export default defineMcp({
+  name: "dairy-erp-mcp",
+  title: "Dairy Distribution ERP",
+  version: "0.1.0",
+  instructions:
+    "Read-only tools for the dairy distribution ERP: list customers (retail shops), products, recent invoices, pending deliveries, and today's pickup demand from Sudha Dairy. Every call runs as the signed-in user and respects role-based row-level security.",
+  auth: auth.oauth.issuer({
+    issuer: `https://${projectRef}.supabase.co/auth/v1`,
+    acceptedAudiences: "authenticated",
+  }),
+  tools: [listCustomers, listProducts, recentInvoices, dailyDemand, pendingDeliveries],
+});
