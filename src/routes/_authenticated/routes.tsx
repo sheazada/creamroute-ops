@@ -946,7 +946,7 @@ function SheetTab({ date }: { date: string }) {
       const seen = new Set<string>(); // route+customer dedupe
 
       for (const inv of unassigned) {
-        const rid = pickRoute(inv.customer?.address);
+        const rid = pickRoute(inv.customer);
         if (!rid) continue;
         const key = `${rid}::${inv.customer_id}`;
         if (!seen.has(key)) {
