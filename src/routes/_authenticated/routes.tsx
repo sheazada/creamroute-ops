@@ -1572,7 +1572,7 @@ function durationMin(a: string | null, b: string | null) {
   return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
 }
 
-function RunPanel({ route, date }: { route: RouteRow; date: string }) {
+function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; invoiceIds: string[] }) {
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
