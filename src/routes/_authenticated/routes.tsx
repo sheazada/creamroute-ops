@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -11,8 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { inr, num, isoDate, shortDate } from "@/lib/format";
-import { ArrowDown, ArrowUp, MapPin, Plus, Printer, Route as RouteIcon, Trash2, Truck, UserPlus, X } from "lucide-react";
+import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
+import { ArrowDown, ArrowUp, Camera, CheckCircle2, MapPin, Plus, Printer, Route as RouteIcon, Trash2, Truck, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/routes")({
@@ -27,6 +27,8 @@ type RouteRow = {
   helper_name: string | null;
   active: boolean;
   notes: string | null;
+  capacity_units: number | null;
+  capacity_label: string | null;
 };
 
 type Stop = {
@@ -212,6 +214,7 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
               <span>Driver: <b className="text-foreground">{route?.driver_name || "—"}</b></span>
               <span>Helper: <b className="text-foreground">{route?.helper_name || "—"}</b></span>
               <span>Stops: <b className="text-foreground">{total}</b></span>
+              <span>Capacity: <b className="text-foreground">{route?.capacity_units ? `${num(route.capacity_units, 0)} ${route.capacity_label || ""}` : "—"}</b></span>
               <span>Outstanding: <b className="text-foreground">{inr(outstanding)}</b></span>
             </div>
             {route?.notes && <div className="mt-2 text-xs text-muted-foreground italic">{route.notes}</div>}
@@ -283,10 +286,11 @@ function RouteFormDialog({
   const [helper, setHelper] = useState(route?.helper_name ?? "");
   const [active, setActive] = useState(route?.active ?? true);
   const [notes, setNotes] = useState(route?.notes ?? "");
+  const [capacity, setCapacity] = useState<string>(route?.capacity_units != null ? String(route.capacity_units) : "");
+  const [capacityLabel, setCapacityLabel] = useState(route?.capacity_label ?? "L");
   const [saving, setSaving] = useState(false);
 
-  // reset on open
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       setName(route?.name ?? "");
       setArea(route?.area ?? "");
@@ -294,13 +298,20 @@ function RouteFormDialog({
       setHelper(route?.helper_name ?? "");
       setActive(route?.active ?? true);
       setNotes(route?.notes ?? "");
+      setCapacity(route?.capacity_units != null ? String(route.capacity_units) : "");
+      setCapacityLabel(route?.capacity_label ?? "L");
     }
   }, [open, route]);
 
   const save = async () => {
     if (!name.trim()) return toast.error("Name required");
     setSaving(true);
-    const payload = { name: name.trim(), area: area || null, driver_name: driver || null, helper_name: helper || null, active, notes: notes || null };
+    const payload = {
+      name: name.trim(), area: area || null, driver_name: driver || null, helper_name: helper || null,
+      active, notes: notes || null,
+      capacity_units: capacity ? Number(capacity) : null,
+      capacity_label: capacityLabel || null,
+    };
     if (isEdit && route) {
       const { error } = await supabase.from("routes").update(payload).eq("id", route.id);
       setSaving(false);
@@ -337,6 +348,10 @@ function RouteFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Driver</Label><Input value={driver} onChange={(e) => setDriver(e.target.value)} /></div>
             <div><Label>Helper</Label><Input value={helper} onChange={(e) => setHelper(e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2"><Label>Vehicle capacity</Label><Input type="number" inputMode="decimal" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g. 400" /></div>
+            <div><Label>Unit</Label><Input value={capacityLabel} onChange={(e) => setCapacityLabel(e.target.value)} placeholder="L / crates / kg" /></div>
           </div>
           <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Landmarks, timing…" /></div>
         </div>
@@ -511,7 +526,7 @@ function SheetTab({ date }: { date: string }) {
       {grouped.unassigned.length > 0 && (
         <RouteSheet
           key="unassigned"
-          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route" }}
+          route={{ id: "u", name: "Unassigned shops", area: null, driver_name: null, helper_name: null, active: true, notes: "Shops not yet on any route", capacity_units: null, capacity_label: null }}
           invoices={grouped.unassigned}
           date={date}
         />
@@ -520,7 +535,41 @@ function SheetTab({ date }: { date: string }) {
   );
 }
 
+type DeliveryRow = {
+  id: string;
+  invoice_id: string;
+  status: string;
+  delivered_at: string | null;
+  received_by: string | null;
+  pod_photo_url: string | null;
+  pod_signature: string | null;
+  collected_amount: number | null;
+  collected_mode: string | null;
+  route_id: string | null;
+};
+
 function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: InvoiceRow[]; date: string }) {
+  const qc = useQueryClient();
+  const [podFor, setPodFor] = useState<{ inv: InvoiceRow; delivery: DeliveryRow | null } | null>(null);
+
+  const invoiceIds = invoices.map((i) => i.id);
+  const { data: deliveries } = useQuery({
+    queryKey: ["deliveries-for-sheet", date, invoiceIds.join(",")],
+    enabled: invoiceIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("deliveries")
+        .select("id, invoice_id, status, delivered_at, received_by, pod_photo_url, pod_signature, collected_amount, collected_mode, route_id")
+        .in("invoice_id", invoiceIds);
+      return (data ?? []) as DeliveryRow[];
+    },
+  });
+  const dByInv = useMemo(() => {
+    const m = new Map<string, DeliveryRow>();
+    (deliveries ?? []).forEach((d) => m.set(d.invoice_id, d));
+    return m;
+  }, [deliveries]);
+
   const pickup = useMemo(() => {
     const m = new Map<string, number>();
     invoices.forEach((inv) => inv.items?.forEach((it) => {
@@ -531,6 +580,34 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
 
   const totalValue = invoices.reduce((s, i) => s + Number(i.total), 0);
   const totalDue = invoices.reduce((s, i) => s + Number(i.balance), 0);
+  const load = pickup.reduce((s, p) => s + p.qty, 0);
+  const cap = Number(route.capacity_units || 0);
+  const pct = cap > 0 ? Math.min(100, (load / cap) * 100) : 0;
+  const over = cap > 0 && load > cap;
+
+  const doneCount = invoices.filter((i) => dByInv.get(i.id)?.status === "delivered").length;
+
+  const setStatus = async (delId: string | undefined, invId: string, status: string) => {
+    if (!delId) return;
+    const patch: any = { status, route_id: route.id === "u" ? null : route.id };
+    if (status === "delivered") patch.delivered_at = new Date().toISOString();
+    if (status !== "delivered") patch.delivered_at = null;
+    const { error } = await supabase.from("deliveries").update(patch).eq("id", delId);
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date, invoiceIds.join(",")] });
+    qc.invalidateQueries({ queryKey: ["deliveries"] });
+  };
+
+  const assignAll = async () => {
+    if (route.id === "u") return;
+    const ids = (deliveries ?? []).filter((d) => d.route_id !== route.id).map((d) => d.id);
+    if (ids.length === 0) return toast.info("All stops already on this route");
+    const { error } = await supabase.from("deliveries").update({ route_id: route.id }).in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`Linked ${ids.length} delivery${ids.length === 1 ? "" : "ies"} to ${route.name}`);
+    qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date, invoiceIds.join(",")] });
+    qc.invalidateQueries({ queryKey: ["deliveries"] });
+  };
 
   return (
     <Card className="overflow-hidden print:break-inside-avoid print:mb-6">
@@ -541,27 +618,46 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
             {route.area && <span className="text-xs text-muted-foreground font-normal">· {route.area}</span>}
           </div>
           <div className="text-xs text-muted-foreground">
-            {shortDate(date)} · {invoices.length} stop{invoices.length === 1 ? "" : "s"}
+            {shortDate(date)} · {invoices.length} stop{invoices.length === 1 ? "" : "s"} · {doneCount} delivered
             {route.driver_name ? ` · Driver: ${route.driver_name}` : ""}
             {route.helper_name ? ` · Helper: ${route.helper_name}` : ""}
           </div>
         </div>
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-3 text-xs">
           <div>Value <span className="font-mono font-semibold">{inr(totalValue)}</span></div>
           <div>Collect <span className="font-mono font-semibold text-destructive">{inr(totalDue)}</span></div>
+          {route.id !== "u" && (
+            <Button size="sm" variant="outline" onClick={assignAll} className="no-print">Assign to route</Button>
+          )}
         </div>
       </div>
 
-      {/* Pickup summary */}
-      <div className="px-5 py-3 border-b">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Pickup for this route</div>
-        <div className="flex flex-wrap gap-2">
-          {pickup.map((p) => (
-            <div key={p.product} className="text-xs px-2.5 py-1 rounded-md bg-primary/5 border border-primary/10">
-              <span className="font-medium">{p.product}</span>
-              <span className="ml-2 font-mono font-semibold">{num(p.qty, 2)}</span>
+      {/* Pickup summary + capacity bar */}
+      <div className="px-5 py-3 border-b space-y-3">
+        {cap > 0 && (
+          <div>
+            <div className="flex items-center justify-between text-[11px] mb-1">
+              <span className="font-semibold uppercase tracking-wider text-muted-foreground">Load vs capacity</span>
+              <span className={`font-mono ${over ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                {num(load, 1)} / {num(cap, 0)} {route.capacity_label || ""}
+                {over && ` · OVER by ${num(load - cap, 1)}`}
+              </span>
             </div>
-          ))}
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div className={`h-full ${over ? "bg-destructive" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )}
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Pickup for this route</div>
+          <div className="flex flex-wrap gap-2">
+            {pickup.map((p) => (
+              <div key={p.product} className="text-xs px-2.5 py-1 rounded-md bg-primary/5 border border-primary/10">
+                <span className="font-medium">{p.product}</span>
+                <span className="ml-2 font-mono font-semibold">{num(p.qty, 2)}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -575,46 +671,242 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
               <th className="px-4 py-2 text-left">Items</th>
               <th className="px-4 py-2 text-right">Value</th>
               <th className="px-4 py-2 text-right">Collect</th>
-              <th className="px-4 py-2 text-center w-20 print:hidden">Signed</th>
+              <th className="px-4 py-2 text-center w-44 no-print">Status</th>
+              <th className="px-4 py-2 text-center w-40 no-print">Delivery entry</th>
+              <th className="px-4 py-2 text-center w-20 print:table-cell hidden">Signed</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {invoices.map((inv, i) => (
-              <tr key={inv.id}>
-                <td className="px-4 py-3 align-top font-semibold text-muted-foreground">{i + 1}</td>
-                <td className="px-4 py-3 align-top">
-                  <div className="font-medium">{inv.customer?.shop_name || inv.customer?.name}</div>
-                  <div className="text-xs text-muted-foreground">{inv.customer?.address || "—"}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {inv.customer?.mobile ? `📞 ${inv.customer.mobile} · ` : ""}Inv {inv.invoice_no}
-                  </div>
-                </td>
-                <td className="px-4 py-3 align-top text-xs">
-                  {(inv.items ?? []).map((it, k) => (
-                    <div key={k} className="flex justify-between gap-3 border-b last:border-0 py-0.5">
-                      <span className="truncate">{it.product_name}</span>
-                      <span className="font-mono">{num(it.quantity, 2)}</span>
+            {invoices.map((inv, i) => {
+              const d = dByInv.get(inv.id);
+              const delivered = d?.status === "delivered";
+              return (
+                <tr key={inv.id} className={delivered ? "bg-emerald-500/5" : ""}>
+                  <td className="px-4 py-3 align-top font-semibold text-muted-foreground">{i + 1}</td>
+                  <td className="px-4 py-3 align-top">
+                    <div className="font-medium flex items-center gap-1.5">
+                      {inv.customer?.shop_name || inv.customer?.name}
+                      {delivered && <CheckCircle2 className="size-3.5 text-emerald-600" />}
                     </div>
-                  ))}
-                </td>
-                <td className="px-4 py-3 align-top text-right font-mono">{inr(inv.total)}</td>
-                <td className="px-4 py-3 align-top text-right font-mono font-semibold text-destructive">{inr(inv.balance)}</td>
-                <td className="px-4 py-3 align-top text-center print:hidden">
-                  <span className="inline-block w-16 border-b border-dashed h-5" />
-                </td>
-              </tr>
-            ))}
+                    <div className="text-xs text-muted-foreground">{inv.customer?.address || "—"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {inv.customer?.mobile ? `📞 ${inv.customer.mobile} · ` : ""}Inv {inv.invoice_no}
+                    </div>
+                    {d?.received_by && (
+                      <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">
+                        Received by <b>{d.received_by}</b>
+                        {d.collected_amount ? ` · ${inr(d.collected_amount)} ${(d.collected_mode || "").toUpperCase()}` : ""}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 align-top text-xs">
+                    {(inv.items ?? []).map((it, k) => (
+                      <div key={k} className="flex justify-between gap-3 border-b last:border-0 py-0.5">
+                        <span className="truncate">{it.product_name}</span>
+                        <span className="font-mono">{num(it.quantity, 2)}</span>
+                      </div>
+                    ))}
+                  </td>
+                  <td className="px-4 py-3 align-top text-right font-mono">{inr(inv.total)}</td>
+                  <td className="px-4 py-3 align-top text-right font-mono font-semibold text-destructive">{inr(inv.balance)}</td>
+                  <td className="px-4 py-3 align-top text-center no-print">
+                    <Select value={d?.status ?? "pending"} onValueChange={(v) => setStatus(d?.id, inv.id, v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="out_for_delivery">Out for delivery</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-4 py-3 align-top text-center no-print">
+                    <Button size="sm" variant={delivered ? "outline" : "default"} className="gap-1.5 w-full"
+                      disabled={!d}
+                      onClick={() => setPodFor({ inv, delivery: d ?? null })}>
+                      {delivered ? <><Camera className="size-3.5" /> POD</> : <><Wallet className="size-3.5" /> Deliver</>}
+                    </Button>
+                  </td>
+                  <td className="px-4 py-3 align-top text-center hidden print:table-cell">
+                    <span className="inline-block w-16 border-b border-dashed h-5" />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot className="bg-muted/30 font-semibold">
             <tr>
               <td colSpan={3} className="px-4 py-2 text-right">Totals</td>
               <td className="px-4 py-2 text-right font-mono">{inr(totalValue)}</td>
               <td className="px-4 py-2 text-right font-mono text-destructive">{inr(totalDue)}</td>
-              <td className="print:hidden" />
+              <td className="no-print" colSpan={2} />
+              <td className="hidden print:table-cell" />
             </tr>
           </tfoot>
         </table>
       </div>
+
+      <DeliverStopDialog
+        open={!!podFor}
+        onClose={() => setPodFor(null)}
+        payload={podFor}
+        route={route}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["deliveries-for-sheet", date, invoiceIds.join(",")] });
+          qc.invalidateQueries({ queryKey: ["deliveries"] });
+          qc.invalidateQueries({ queryKey: ["invoices-for-sheet", date] });
+          qc.invalidateQueries({ queryKey: ["customers"] });
+          setPodFor(null);
+        }}
+      />
     </Card>
   );
 }
+
+/* ---------------- Deliver dialog with POD ---------------- */
+
+function DeliverStopDialog({
+  open, onClose, payload, route, onSaved,
+}: {
+  open: boolean; onClose: () => void;
+  payload: { inv: InvoiceRow; delivery: DeliveryRow | null } | null;
+  route: RouteRow; onSaved: () => void;
+}) {
+  const [receivedBy, setReceivedBy] = useState("");
+  const [amount, setAmount] = useState("");
+  const [mode, setMode] = useState<"cash" | "upi" | "bank">("cash");
+  const [reference, setReference] = useState("");
+  const [signature, setSignature] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && payload) {
+      setReceivedBy(payload.delivery?.received_by ?? "");
+      setAmount("");
+      setMode((payload.delivery?.collected_mode as any) ?? "cash");
+      setReference("");
+      setSignature(payload.delivery?.pod_signature ?? "");
+      setFile(null);
+    }
+  }, [open, payload]);
+
+  if (!payload) return null;
+  const { inv, delivery } = payload;
+  const bal = Number(inv.balance);
+
+  const save = async () => {
+    if (!delivery) return toast.error("No delivery record");
+    if (!receivedBy.trim()) return toast.error("Who received it?");
+    setSaving(true);
+    try {
+      let podUrl = delivery.pod_photo_url;
+      if (file) {
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `${inv.id}/${Date.now()}.${ext}`;
+        const up = await supabase.storage.from("pod").upload(path, file, { upsert: true, contentType: file.type });
+        if (up.error) throw up.error;
+        podUrl = path;
+      }
+      const amt = Number(amount || 0);
+      if (amt > 0 && inv.customer) {
+        const { error: pErr } = await supabase.from("payments").insert({
+          payment_no: genDocNo("RCP"),
+          customer_id: inv.customer.id,
+          invoice_id: inv.id,
+          amount: amt,
+          mode,
+          reference: reference || null,
+          notes: `Collected on delivery · route ${route.name}`,
+        });
+        if (pErr) throw pErr;
+      }
+      const { error: dErr } = await supabase.from("deliveries").update({
+        status: "delivered",
+        delivered_at: new Date().toISOString(),
+        received_by: receivedBy.trim(),
+        pod_photo_url: podUrl,
+        pod_signature: signature || null,
+        collected_amount: amt > 0 ? amt : delivery.collected_amount,
+        collected_mode: amt > 0 ? mode : delivery.collected_mode,
+        route_id: route.id === "u" ? null : route.id,
+      }).eq("id", delivery.id);
+      if (dErr) throw dErr;
+      toast.success("Delivery marked with POD");
+      onSaved();
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Delivery · {inv.customer?.shop_name || inv.customer?.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="rounded-lg bg-muted/40 p-3 text-sm flex items-center justify-between">
+            <div>
+              <div className="font-medium">Invoice {inv.invoice_no}</div>
+              <div className="text-xs text-muted-foreground">{inv.items?.length ?? 0} items · {inr(inv.total)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-muted-foreground">Balance</div>
+              <div className="font-mono font-semibold text-destructive">{inr(bal)}</div>
+            </div>
+          </div>
+
+          <div>
+            <Label>Received by *</Label>
+            <Input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} placeholder="Person accepting the goods" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Cash collected</Label>
+              <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={bal > 0 ? String(bal) : "0"} />
+            </div>
+            <div>
+              <Label>Mode</Label>
+              <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="bank">Bank</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {mode !== "cash" && (
+            <div>
+              <Label>Reference</Label>
+              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Txn id / UTR" />
+            </div>
+          )}
+
+          <div>
+            <Label>Signature (typed name)</Label>
+            <Input value={signature} onChange={(e) => setSignature(e.target.value)} placeholder="Signed as…" />
+          </div>
+
+          <div>
+            <Label>Proof photo</Label>
+            <Input type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            {delivery?.pod_photo_url && !file && (
+              <div className="text-[11px] text-muted-foreground mt-1">Existing photo on file · uploading a new one will replace it.</div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Mark Delivered"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

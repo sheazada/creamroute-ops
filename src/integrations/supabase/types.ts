@@ -65,40 +65,58 @@ export type Database = {
       deliveries: {
         Row: {
           assigned_to: string | null
+          collected_amount: number | null
+          collected_mode: string | null
           created_at: string
           delivered_at: string | null
           id: string
           invoice_id: string | null
           notes: string | null
           order_id: string | null
+          pod_photo_url: string | null
+          pod_signature: string | null
+          received_by: string | null
           route: string | null
           route_id: string | null
+          scheduled_date: string | null
           status: string
           updated_at: string
         }
         Insert: {
           assigned_to?: string | null
+          collected_amount?: number | null
+          collected_mode?: string | null
           created_at?: string
           delivered_at?: string | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
           order_id?: string | null
+          pod_photo_url?: string | null
+          pod_signature?: string | null
+          received_by?: string | null
           route?: string | null
           route_id?: string | null
+          scheduled_date?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           assigned_to?: string | null
+          collected_amount?: number | null
+          collected_mode?: string | null
           created_at?: string
           delivered_at?: string | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
           order_id?: string | null
+          pod_photo_url?: string | null
+          pod_signature?: string | null
+          received_by?: string | null
           route?: string | null
           route_id?: string | null
+          scheduled_date?: string | null
           status?: string
           updated_at?: string
         }
@@ -729,6 +747,8 @@ export type Database = {
         Row: {
           active: boolean
           area: string | null
+          capacity_label: string | null
+          capacity_units: number | null
           created_at: string
           driver_name: string | null
           helper_name: string | null
@@ -740,6 +760,8 @@ export type Database = {
         Insert: {
           active?: boolean
           area?: string | null
+          capacity_label?: string | null
+          capacity_units?: number | null
           created_at?: string
           driver_name?: string | null
           helper_name?: string | null
@@ -751,6 +773,8 @@ export type Database = {
         Update: {
           active?: boolean
           area?: string | null
+          capacity_label?: string | null
+          capacity_units?: number | null
           created_at?: string
           driver_name?: string | null
           helper_name?: string | null
