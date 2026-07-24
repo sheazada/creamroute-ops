@@ -10,6 +10,8 @@ export const TOOL_ROLES: Record<string, AppRole[]> = {
   list_recent_invoices: ["admin", "manager", "salesperson"],
   daily_demand: ["admin", "manager", "salesperson", "driver", "helper"],
   list_pending_deliveries: ["admin", "manager", "driver", "helper"],
+  mark_delivery_collected: ["admin", "manager", "driver", "helper"],
+  upload_pod_proof: ["admin", "manager", "driver", "helper"],
 };
 
 export function sb(ctx: ToolContext) {
