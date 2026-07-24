@@ -260,13 +260,19 @@ function Settings() {
     if (!ok) {
       const count = Object.keys(e).length;
       toast.error(count === 1 ? "1 field needs attention" : `${count} fields need attention`);
+      setShowErrorSummary(true);
+      // Scroll the page-level summary into view for sighted + AT users, then jump to first field.
+      requestAnimationFrame(() => {
+        errorSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        errorSummaryRef.current?.focus({ preventScroll: true });
+      });
       // Scroll to first invalid field in the currently editing section (fallback: any section).
       const order = editing
         ? [...SECTION_FIELDS[editing], ...SECTION_FIELDS[editing === "business" ? "payment" : "business"]]
         : [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment];
       const firstKey = order.find((k) => !!e[k]);
       if (firstKey) {
-        requestAnimationFrame(() => {
+        window.setTimeout(() => {
           const el = document.querySelector<HTMLElement>(`[data-field="${firstKey}"]`);
           if (!el) return;
           el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -274,7 +280,7 @@ function Settings() {
             "input, textarea, select, [tabindex]:not([tabindex='-1'])",
           );
           focusable?.focus({ preventScroll: true });
-        });
+        }, 350);
       }
       return;
     }
@@ -288,6 +294,7 @@ function Settings() {
       setEditing(null);
       setSnapshot(null);
       setErrors({});
+      setShowErrorSummary(false);
       if (section) {
         setSavedFlash(section);
         window.setTimeout(() => {
