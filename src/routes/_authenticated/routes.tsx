@@ -1033,3 +1033,207 @@ function DeliverStopDialog({
   );
 }
 
+/* ---------------- Delivery run panel ---------------- */
+
+function fmtTime(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function durationMin(a: string | null, b: string | null) {
+  if (!a || !b) return null;
+  return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
+}
+
+function RunPanel({ route, date }: { route: RouteRow; date: string }) {
+  const qc = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const { data: run } = useQuery({
+    queryKey: ["delivery-run", route.id, date],
+    queryFn: async (): Promise<DeliveryRun | null> => {
+      const { data, error } = await supabase
+        .from("delivery_runs")
+        .select("*")
+        .eq("route_id", route.id)
+        .eq("run_date", date)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as DeliveryRun) ?? null;
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["delivery-run", route.id, date] });
+
+  const startRun = async () => {
+    const now = new Date().toISOString();
+    if (run) {
+      const { error } = await supabase.from("delivery_runs").update({
+        started_at: run.started_at ?? now,
+        status: "in_progress",
+      }).eq("id", run.id);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("delivery_runs").insert({
+        route_id: route.id, run_date: date,
+        driver_name: route.driver_name, helper_name: route.helper_name,
+        vehicle_number: route.vehicle_number, vehicle_type: route.vehicle_type,
+        started_at: now, status: "in_progress",
+      });
+      if (error) return toast.error(error.message);
+    }
+    toast.success("Run started");
+    invalidate();
+  };
+
+  const endRun = async () => {
+    if (!run) return;
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("delivery_runs").update({
+      ended_at: now, status: "completed",
+    }).eq("id", run.id);
+    if (error) return toast.error(error.message);
+    toast.success("Run ended");
+    invalidate();
+  };
+
+  const dur = durationMin(run?.started_at ?? null, run?.ended_at ?? null);
+
+  return (
+    <div className="px-5 py-3 border-b bg-primary/5 flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2 text-xs">
+        <Truck className="size-4 text-primary" />
+        <span className="font-semibold uppercase tracking-wider text-muted-foreground">Delivery run</span>
+        <Badge variant={run?.status === "completed" ? "outline" : run?.status === "in_progress" ? "default" : "secondary"} className="capitalize">
+          {run?.status?.replace("_", " ") || "not started"}
+        </Badge>
+      </div>
+      <div className="flex flex-wrap gap-4 text-xs">
+        <span>Start <b className="font-mono text-foreground">{fmtTime(run?.started_at ?? null)}</b></span>
+        <span>End <b className="font-mono text-foreground">{fmtTime(run?.ended_at ?? null)}</b></span>
+        {dur != null && <span>Duration <b className="font-mono text-foreground">{Math.floor(dur / 60)}h {dur % 60}m</b></span>}
+        {run?.odometer_start != null && (
+          <span>Odo <b className="font-mono text-foreground">{num(run.odometer_start, 0)}{run.odometer_end != null ? ` → ${num(run.odometer_end, 0)} (${num(Number(run.odometer_end) - Number(run.odometer_start), 0)} km)` : ""}</b></span>
+        )}
+      </div>
+      <div className="ml-auto flex gap-2 no-print">
+        {!run?.started_at && (
+          <Button size="sm" onClick={startRun} className="gap-1.5">▶ Start run</Button>
+        )}
+        {run?.started_at && !run?.ended_at && (
+          <Button size="sm" variant="destructive" onClick={endRun} className="gap-1.5">■ End run</Button>
+        )}
+        <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>Details</Button>
+      </div>
+      <RunEditDialog open={editOpen} onClose={() => setEditOpen(false)} route={route} date={date} run={run ?? null} onSaved={invalidate} />
+    </div>
+  );
+}
+
+function RunEditDialog({
+  open, onClose, route, date, run, onSaved,
+}: {
+  open: boolean; onClose: () => void; route: RouteRow; date: string; run: DeliveryRun | null; onSaved: () => void;
+}) {
+  const toLocal = (iso: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const off = d.getTimezoneOffset();
+    return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+  };
+  const fromLocal = (v: string) => (v ? new Date(v).toISOString() : null);
+
+  const [driver, setDriver] = useState("");
+  const [helper, setHelper] = useState("");
+  const [vehicle, setVehicle] = useState("");
+  const [vtype, setVtype] = useState("");
+  const [startedAt, setStartedAt] = useState("");
+  const [endedAt, setEndedAt] = useState("");
+  const [odoS, setOdoS] = useState("");
+  const [odoE, setOdoE] = useState("");
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState("scheduled");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setDriver(run?.driver_name ?? route.driver_name ?? "");
+    setHelper(run?.helper_name ?? route.helper_name ?? "");
+    setVehicle(run?.vehicle_number ?? route.vehicle_number ?? "");
+    setVtype(run?.vehicle_type ?? route.vehicle_type ?? "");
+    setStartedAt(toLocal(run?.started_at ?? null));
+    setEndedAt(toLocal(run?.ended_at ?? null));
+    setOdoS(run?.odometer_start != null ? String(run.odometer_start) : "");
+    setOdoE(run?.odometer_end != null ? String(run.odometer_end) : "");
+    setNotes(run?.notes ?? "");
+    setStatus(run?.status ?? "scheduled");
+  }, [open, run, route]);
+
+  const save = async () => {
+    setSaving(true);
+    const payload = {
+      route_id: route.id, run_date: date,
+      driver_name: driver || null, helper_name: helper || null,
+      vehicle_number: vehicle || null, vehicle_type: vtype || null,
+      started_at: fromLocal(startedAt), ended_at: fromLocal(endedAt),
+      odometer_start: odoS ? Number(odoS) : null,
+      odometer_end: odoE ? Number(odoE) : null,
+      notes: notes || null, status,
+    };
+    const q = run
+      ? supabase.from("delivery_runs").update(payload).eq("id", run.id)
+      : supabase.from("delivery_runs").insert(payload);
+    const { error } = await q;
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Run saved");
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Delivery run · {route.name} · {shortDate(date)}</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Driver</Label><Input value={driver} onChange={(e) => setDriver(e.target.value)} /></div>
+            <div><Label>Helper</Label><Input value={helper} onChange={(e) => setHelper(e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Vehicle number</Label><Input value={vehicle} onChange={(e) => setVehicle(e.target.value.toUpperCase())} /></div>
+            <div><Label>Vehicle type</Label><Input value={vtype} onChange={(e) => setVtype(e.target.value)} placeholder="tempo / mini_truck…" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Started at</Label><Input type="datetime-local" value={startedAt} onChange={(e) => setStartedAt(e.target.value)} /></div>
+            <div><Label>Ended at</Label><Input type="datetime-local" value={endedAt} onChange={(e) => setEndedAt(e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Odometer start (km)</Label><Input type="number" inputMode="decimal" value={odoS} onChange={(e) => setOdoS(e.target.value)} /></div>
+            <div><Label>Odometer end (km)</Label><Input type="number" inputMode="decimal" value={odoE} onChange={(e) => setOdoE(e.target.value)} /></div>
+          </div>
+          <div><Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="in_progress">In progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Fuel, incidents, delays…" /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save run"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
