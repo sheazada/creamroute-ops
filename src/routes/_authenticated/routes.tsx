@@ -430,9 +430,22 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="px-5 py-3 border-b flex items-center justify-between">
-          <div className="text-sm font-semibold">Stops in delivery order</div>
-          <div className="text-xs text-muted-foreground">Drag <GripVertical className="inline size-3 -mt-0.5" /> to reorder, or use arrows</div>
+        <div className="px-5 py-3 border-b flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-sm font-semibold">Stops in delivery order</div>
+            <div className="text-xs text-muted-foreground">Drag <GripVertical className="inline size-3 -mt-0.5" /> to reorder, use arrows, or auto-optimize by GPS.</div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={optimize}
+            disabled={optimizing || (stops ?? []).length < 2}
+            className="gap-1.5"
+            title="Reorder stops using shortest-drive heuristic (nearest-neighbor + 2-opt) based on GPS"
+          >
+            <Wand2 className="size-4" />
+            {optimizing ? "Optimizing…" : "Optimize sequence"}
+          </Button>
         </div>
         {(stops ?? []).length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">No stops yet. Click "Add stops" to assign shops.</div>
@@ -449,6 +462,7 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
                     onMoveUp={() => move(s.id, -1)}
                     onMoveDown={() => move(s.id, 1)}
                     onRemove={() => remove(s.id)}
+                    onSetGps={() => stop.customer && setStopGps(s.customer_id)}
                   />
                 ))}
               </ol>
