@@ -228,6 +228,49 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
     invalidate();
   };
 
+  const persistOrder = async (ordered: Stop[]) => {
+    // Two-phase to avoid unique(route_id, sequence) collisions if such a constraint exists.
+    const offset = 100000;
+    const phase1 = ordered.map((s, i) =>
+      supabase.from("route_stops").update({ sequence: offset + i + 1 }).eq("id", s.id),
+    );
+    const r1 = await Promise.all(phase1);
+    if (r1.some((r) => r.error)) {
+      toast.error("Failed to reorder stops");
+      invalidate();
+      return;
+    }
+    const phase2 = ordered.map((s, i) =>
+      supabase.from("route_stops").update({ sequence: i + 1 }).eq("id", s.id),
+    );
+    const r2 = await Promise.all(phase2);
+    if (r2.some((r) => r.error)) {
+      toast.error("Failed to finalize stop order");
+    } else {
+      toast.success("Stop order updated");
+    }
+    invalidate();
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const list = stops ?? [];
+    const oldIndex = list.findIndex((s) => s.id === active.id);
+    const newIndex = list.findIndex((s) => s.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(list, oldIndex, newIndex);
+    // Optimistic update
+    qc.setQueryData(["route-stops", routeId], reordered.map((s, i) => ({ ...s, sequence: i + 1 })));
+    persistOrder(reordered);
+  };
+
   const remove = async (id: string) => {
     await supabase.from("route_stops").delete().eq("id", id);
     invalidate();
@@ -268,38 +311,31 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
       <Card className="overflow-hidden">
         <div className="px-5 py-3 border-b flex items-center justify-between">
           <div className="text-sm font-semibold">Stops in delivery order</div>
-          <div className="text-xs text-muted-foreground">Use arrows to reorder</div>
+          <div className="text-xs text-muted-foreground">Drag <GripVertical className="inline size-3 -mt-0.5" /> to reorder, or use arrows</div>
         </div>
         {(stops ?? []).length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">No stops yet. Click "Add stops" to assign shops.</div>
         ) : (
-          <ol className="divide-y">
-            {(stops ?? []).map((s, i) => (
-              <li key={s.id} className="px-5 py-3 flex items-center gap-3">
-                <div className="size-8 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold shrink-0">
-                  {i + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{s.customer?.shop_name || s.customer?.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {s.customer?.address || "—"}
-                    {s.customer?.mobile ? ` · ${s.customer.mobile}` : ""}
-                  </div>
-                </div>
-                <div className="text-xs text-right shrink-0">
-                  <div className="text-muted-foreground">Due</div>
-                  <div className="font-mono font-semibold">{inr(s.customer?.outstanding ?? 0)}</div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" onClick={() => move(s.id, -1)} disabled={i === 0} aria-label="Move up"><ArrowUp className="size-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => move(s.id, 1)} disabled={i === (stops?.length ?? 0) - 1} aria-label="Move down"><ArrowDown className="size-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => remove(s.id)} className="text-destructive" aria-label="Remove"><Trash2 className="size-4" /></Button>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={(stops ?? []).map((s) => s.id)} strategy={verticalListSortingStrategy}>
+              <ol className="divide-y">
+                {(stops ?? []).map((s, i) => (
+                  <SortableStopRow
+                    key={s.id}
+                    stop={s}
+                    index={i}
+                    total={stops?.length ?? 0}
+                    onMoveUp={() => move(s.id, -1)}
+                    onMoveDown={() => move(s.id, 1)}
+                    onRemove={() => remove(s.id)}
+                  />
+                ))}
+              </ol>
+            </SortableContext>
+          </DndContext>
         )}
       </Card>
+
 
       <AddStopsDialog
         open={addOpen}
