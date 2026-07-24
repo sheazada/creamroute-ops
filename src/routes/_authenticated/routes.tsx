@@ -974,6 +974,10 @@ type DeliveryRow = {
   collected_amount: number | null;
   collected_mode: string | null;
   route_id: string | null;
+  pod_latitude: number | null;
+  pod_longitude: number | null;
+  pod_accuracy_m: number | null;
+  pod_captured_at: string | null;
 };
 
 function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: InvoiceRow[]; date: string }) {
