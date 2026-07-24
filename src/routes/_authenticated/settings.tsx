@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useState } from "react";
-import { ShieldCheck, User as UserIcon } from "lucide-react";
+import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark } from "lucide-react";
 import { getBusiness, saveBusiness, type BusinessProfile } from "@/lib/business";
 
 export const Route = createFileRoute("/_authenticated/settings")({
