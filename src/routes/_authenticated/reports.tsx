@@ -104,6 +104,7 @@ function Reports() {
           <TabsTrigger value="aging">Aging</TabsTrigger>
           <TabsTrigger value="aging-sup">Payables Aging</TabsTrigger>
           <TabsTrigger value="top">Top Products / Customers</TabsTrigger>
+          <TabsTrigger value="shifts">Driver Shifts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales">
