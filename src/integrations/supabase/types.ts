@@ -1290,6 +1290,10 @@ export type Database = {
         Args: { _delivery_id: string }
         Returns: number
       }
+      enqueue_run_en_route_notifications: {
+        Args: { _run_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
