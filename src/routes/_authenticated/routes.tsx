@@ -2091,6 +2091,27 @@ function RunTimelineDialog({
         return data ?? [];
       })();
 
+      // Fetch GPS audit rows scoped to this route+date (via run_id list + route_id fallback)
+      const runIds = (runs ?? []).map((r: any) => r.id);
+      const delIds = (dels ?? []).map((d: any) => d.id);
+      const dayStart = new Date(`${date}T00:00:00`).toISOString();
+      const dayEnd = new Date(`${date}T23:59:59.999`).toISOString();
+      const gpsRows = await (async () => {
+        let q = supabase
+          .from("gps_audit_logs" as any)
+          .select("id, event_type, success, latitude, longitude, accuracy, error_code, error_message, run_id, delivery_id, route_id, customer_id, created_at")
+          .gte("created_at", dayStart).lte("created_at", dayEnd)
+          .order("created_at", { ascending: true });
+        // Match rows for this route OR any of its runs/deliveries
+        const orParts = [`route_id.eq.${route.id}`];
+        if (runIds.length) orParts.push(`run_id.in.(${runIds.join(",")})`);
+        if (delIds.length) orParts.push(`delivery_id.in.(${delIds.join(",")})`);
+        q = q.or(orParts.join(","));
+        const { data, error } = await q;
+        if (error) { console.warn("gps audit fetch failed", error); return []; }
+        return data ?? [];
+      })();
+
       const ev: TimelineEvent[] = [];
 
       for (const r of runs ?? []) {
