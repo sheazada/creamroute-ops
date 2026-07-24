@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ShieldCheck, User as UserIcon, ChevronDown, Building2, Landmark, Pencil, X, Check, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
