@@ -18,10 +18,11 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff } from "lucide-react";
+import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff, Bell, Send, CheckCircle2, XCircle, Clock, Ban, MessageSquare } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getBusiness } from "@/lib/business";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/customers")({
   component: Customers,
@@ -123,6 +124,7 @@ function Customers() {
                 <StatusBadge status={c.status} />
                 <NotifyBadges customer={c} />
                 <ReminderActions customer={c} />
+                <CustomerNotificationsButton customer={c} />
                 <EditCustomerButton customer={c} />
                 <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary ml-auto hover:underline">Invoice →</Link>
               </div>
@@ -163,6 +165,7 @@ function Customers() {
                   <td className="px-6 py-3"><NotifyBadges customer={c} /></td>
                   <td className="px-6 py-3 text-right">
                     <div className="flex items-center gap-2 justify-end">
+                      <CustomerNotificationsButton customer={c} />
                       <EditCustomerButton customer={c} />
                       <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary hover:underline">Invoice</Link>
                     </div>
@@ -361,6 +364,158 @@ function CustomerDialog({ onSaved, customer }: { onSaved: () => void; customer?:
       <DialogFooter>
         <Button onClick={save} disabled={saving}>{saving ? "Saving…" : isEdit ? "Save changes" : "Save customer"}</Button>
       </DialogFooter>
+    </DialogContent>
+  );
+}
+
+const NOTIF_STATUS_META: Record<string, { label: string; cls: string; icon: any }> = {
+  queued: { label: "Queued", cls: "bg-muted text-muted-foreground ring-border", icon: Clock },
+  sending: { label: "Sending", cls: "bg-primary-soft text-primary ring-primary/20", icon: Send },
+  sent: { label: "Sent", cls: "bg-success/10 text-success ring-success/20", icon: CheckCircle2 },
+  failed: { label: "Failed", cls: "bg-destructive/10 text-destructive ring-destructive/20", icon: XCircle },
+  suppressed: { label: "Suppressed", cls: "bg-warning/15 text-warning-foreground ring-warning/30", icon: Ban },
+  cancelled: { label: "Cancelled", cls: "bg-muted text-muted-foreground ring-border", icon: Ban },
+};
+
+const CHANNEL_META: Record<string, { label: string; icon: any }> = {
+  email: { label: "Email", icon: Mail },
+  sms: { label: "SMS", icon: MessageSquare },
+  whatsapp: { label: "WhatsApp", icon: MessageCircle },
+};
+
+function CustomerNotificationsButton({ customer }: { customer: any }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="size-8" title="Notification history">
+          <Bell className="size-4" />
+        </Button>
+      </DialogTrigger>
+      {open && <CustomerNotificationsDialog customer={customer} />}
+    </Dialog>
+  );
+}
+
+function fmtDateTime(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+}
+
+function CustomerNotificationsDialog({ customer }: { customer: any }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["customer-notifications", customer.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("notification_logs")
+        .select("id, channel, status, recipient, subject, body, template, attempts, max_attempts, last_error, provider, last_attempt_at, next_retry_at, sent_at, created_at, invoice:invoices(invoice_no), delivery_id")
+        .eq("customer_id", customer.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const summary = useMemo(() => {
+    const rows = data ?? [];
+    const byChannel: Record<string, { sent: number; failed: number; queued: number; lastSent: string | null }> = {
+      email: { sent: 0, failed: 0, queued: 0, lastSent: null },
+      sms: { sent: 0, failed: 0, queued: 0, lastSent: null },
+      whatsapp: { sent: 0, failed: 0, queued: 0, lastSent: null },
+    };
+    for (const r of rows as any[]) {
+      const ch = byChannel[r.channel];
+      if (!ch) continue;
+      if (r.status === "sent") {
+        ch.sent += 1;
+        if (!ch.lastSent || (r.sent_at && r.sent_at > ch.lastSent)) ch.lastSent = r.sent_at;
+      } else if (r.status === "failed") ch.failed += 1;
+      else if (r.status === "queued" || r.status === "sending") ch.queued += 1;
+    }
+    return byChannel;
+  }, [data]);
+
+  return (
+    <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Bell className="size-4" /> Notifications · {customer.shop_name || customer.name}
+        </DialogTitle>
+      </DialogHeader>
+
+      <div className="grid grid-cols-3 gap-2">
+        {(["email", "sms", "whatsapp"] as const).map((ch) => {
+          const Icon = CHANNEL_META[ch].icon;
+          const s = summary[ch];
+          return (
+            <div key={ch} className="rounded-md border p-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <Icon className="size-3" /> {CHANNEL_META[ch].label}
+              </div>
+              <div className="mt-1 text-sm font-medium">
+                <span className="text-success">{s.sent}</span>
+                <span className="text-muted-foreground"> sent · </span>
+                <span className="text-destructive">{s.failed}</span>
+                <span className="text-muted-foreground"> failed</span>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                {s.lastSent ? `Last: ${fmtDateTime(s.lastSent)}` : "No sends yet"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex-1 overflow-y-auto -mx-6 px-6 pt-2">
+        {isLoading && <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>}
+        {!isLoading && (data?.length ?? 0) === 0 && (
+          <div className="py-8 text-center text-sm text-muted-foreground">No notifications sent to this customer yet.</div>
+        )}
+        {!isLoading && (data?.length ?? 0) > 0 && (
+          <ol className="relative border-l border-border ml-2 space-y-4">
+            {(data as any[]).map((r) => {
+              const meta = NOTIF_STATUS_META[r.status] ?? NOTIF_STATUS_META.queued;
+              const StatusIcon = meta.icon;
+              const ChIcon = CHANNEL_META[r.channel]?.icon ?? Mail;
+              return (
+                <li key={r.id} className="ml-4">
+                  <span className="absolute -left-[7px] mt-1.5 size-3 rounded-full bg-card ring-2 ring-border" />
+                  <div className="rounded-md border p-3 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset", meta.cls)}>
+                        <StatusIcon className="size-3" /> {meta.label}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <ChIcon className="size-3" /> {CHANNEL_META[r.channel]?.label ?? r.channel}
+                      </span>
+                      {r.invoice?.invoice_no && (
+                        <span className="text-[10px] font-mono text-muted-foreground">#{r.invoice.invoice_no}</span>
+                      )}
+                      <span className="ml-auto text-[10px] text-muted-foreground">{fmtDateTime(r.created_at)}</span>
+                    </div>
+                    {r.subject && <div className="text-sm font-medium truncate">{r.subject}</div>}
+                    <div className="text-xs text-muted-foreground font-mono truncate">→ {r.recipient}</div>
+                    <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+                      <span>Attempts: {r.attempts}/{r.max_attempts}</span>
+                      {r.sent_at && <span>Sent: {fmtDateTime(r.sent_at)}</span>}
+                      {r.last_attempt_at && !r.sent_at && <span>Last try: {fmtDateTime(r.last_attempt_at)}</span>}
+                      {r.next_retry_at && <span>Retry at: {fmtDateTime(r.next_retry_at)}</span>}
+                      {r.provider && <span>via {r.provider}</span>}
+                    </div>
+                    {r.last_error && (
+                      <div className="text-[11px] text-destructive bg-destructive/5 rounded px-2 py-1 border border-destructive/20">
+                        {r.last_error}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
     </DialogContent>
   );
 }
