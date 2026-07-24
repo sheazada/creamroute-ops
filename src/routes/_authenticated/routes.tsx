@@ -1733,7 +1733,7 @@ function RunPanel({ route, date, invoiceIds }: { route: RouteRow; date: string; 
         <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>Details</Button>
       </div>
       <RunEditDialog open={editOpen} onClose={() => setEditOpen(false)} route={route} date={date} run={run ?? null} onSaved={invalidate} />
-      <RunTimelineDialog open={timelineOpen} onClose={() => setTimelineOpen(false)} route={route} date={date} />
+      <RunTimelineDialog open={timelineOpen} onClose={() => setTimelineOpen(false)} route={route} date={date} invoiceIds={invoiceIds} />
     </div>
   );
 }
