@@ -5,7 +5,7 @@ export const Route = createFileRoute("/")({
   ssr: false,
   beforeLoad: async () => {
     const { data: userRes } = await supabase.auth.getUser();
-    if (!userRes.user) throw redirect({ to: "/auth" });
+    if (!userRes.user) throw redirect({ to: "/auth", search: {} });
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
