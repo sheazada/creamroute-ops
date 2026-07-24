@@ -144,6 +144,68 @@ export type Database = {
           },
         ]
       }
+      delivery_runs: {
+        Row: {
+          created_at: string
+          driver_name: string | null
+          ended_at: string | null
+          helper_name: string | null
+          id: string
+          notes: string | null
+          odometer_end: number | null
+          odometer_start: number | null
+          route_id: string
+          run_date: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          vehicle_number: string | null
+          vehicle_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          driver_name?: string | null
+          ended_at?: string | null
+          helper_name?: string | null
+          id?: string
+          notes?: string | null
+          odometer_end?: number | null
+          odometer_start?: number | null
+          route_id: string
+          run_date?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_number?: string | null
+          vehicle_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          driver_name?: string | null
+          ended_at?: string | null
+          helper_name?: string | null
+          id?: string
+          notes?: string | null
+          odometer_end?: number | null
+          odometer_start?: number | null
+          route_id?: string
+          run_date?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_number?: string | null
+          vehicle_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_runs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           created_at: string
@@ -756,6 +818,8 @@ export type Database = {
           name: string
           notes: string | null
           updated_at: string
+          vehicle_number: string | null
+          vehicle_type: string | null
         }
         Insert: {
           active?: boolean
@@ -769,6 +833,8 @@ export type Database = {
           name: string
           notes?: string | null
           updated_at?: string
+          vehicle_number?: string | null
+          vehicle_type?: string | null
         }
         Update: {
           active?: boolean
@@ -782,6 +848,8 @@ export type Database = {
           name?: string
           notes?: string | null
           updated_at?: string
+          vehicle_number?: string | null
+          vehicle_type?: string | null
         }
         Relationships: []
       }
