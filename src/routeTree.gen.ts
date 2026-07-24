@@ -37,6 +37,7 @@ import { Route as AuthenticatedOrdersNewRouteImport } from './routes/_authentica
 import { Route as AuthenticatedInvoicesNewRouteImport } from './routes/_authenticated/invoices.new'
 import { Route as AuthenticatedInvoicesIdRouteImport } from './routes/_authenticated/invoices.$id'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
@@ -188,6 +189,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/invoices/new': typeof AuthenticatedInvoicesNewRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/invoices/new': typeof AuthenticatedInvoicesNewRoute
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   '/_authenticated/routes': typeof AuthenticatedRoutesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/_authenticated/invoices/new': typeof AuthenticatedInvoicesNewRoute
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/routes'
     | '/settings'
     | '/suppliers'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/invoices/$id'
     | '/invoices/new'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/routes'
     | '/settings'
     | '/suppliers'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/invoices/$id'
     | '/invoices/new'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/_authenticated/routes'
     | '/_authenticated/settings'
     | '/_authenticated/suppliers'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/invoices/$id'
     | '/_authenticated/invoices/new'
@@ -376,6 +388,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
@@ -577,6 +590,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -651,6 +671,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport
