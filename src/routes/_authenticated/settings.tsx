@@ -661,6 +661,8 @@ function Settings() {
           </div>
         </Card>
       </div>
+      </BlurValidateContext.Provider>
+
 
       <AlertDialog open={!!confirm} onOpenChange={(o) => { if (!o) setConfirm(null); }}>
         <AlertDialogContent>
