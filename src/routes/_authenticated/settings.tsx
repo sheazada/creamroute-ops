@@ -228,6 +228,28 @@ function Settings() {
 
   const [savedFlash, setSavedFlash] = useState<Section | null>(null);
   const [savingSection, setSavingSection] = useState<Section | null>(null);
+  const [showErrorSummary, setShowErrorSummary] = useState(false);
+  const errorSummaryRef = useRef<HTMLDivElement | null>(null);
+
+  const sectionForField = (k: keyof BusinessProfile): Section | null => {
+    if ((SECTION_FIELDS.business as (keyof BusinessProfile)[]).includes(k)) return "business";
+    if ((SECTION_FIELDS.payment as (keyof BusinessProfile)[]).includes(k)) return "payment";
+    return null;
+  };
+
+  const focusField = (k: keyof BusinessProfile) => {
+    const section = sectionForField(k);
+    if (section && editing !== section) startEdit(section);
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-field="${k}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = el.querySelector<HTMLElement>(
+        "input, textarea, select, [tabindex]:not([tabindex='-1'])",
+      );
+      focusable?.focus({ preventScroll: true });
+    });
+  };
 
   const saveBiz = async () => {
     // Guard against double-submit (Enter key, banner + card, rapid clicks).
