@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -10,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { inr, num, isoDate, shortDate } from "@/lib/format";
-import { Download, FileText, Printer } from "lucide-react";
+import { Download, ExternalLink, FileText, Printer } from "lucide-react";
+
+type Cell = string | number | { text: string; to?: string; params?: Record<string, string> };
 
 export const Route = createFileRoute("/_authenticated/reports")({
   component: Reports,
@@ -28,7 +31,7 @@ function Reports() {
         supabase.from("invoices").select("id, invoice_no, invoice_date, customer_id, subtotal, cgst, sgst, igst, total, paid, balance, status, customer:customers(name, shop_name, gstin)").gte("invoice_date", from).lte("invoice_date", toEnd).order("invoice_date"),
         supabase.from("invoice_items").select("product_name, hsn, quantity, taxable, tax_amount, gst_rate, amount, invoice:invoices!inner(invoice_date, customer_id, cgst, igst)").gte("invoice.invoice_date", from).lte("invoice.invoice_date", toEnd),
         supabase.from("payments").select("payment_no, payment_date, amount, mode, reference, customer_id, invoice_id, customer:customers(name, shop_name)").gte("payment_date", from).lte("payment_date", toEnd).order("payment_date"),
-        supabase.from("purchases").select("id, bill_no, purchase_date, subtotal, gst, total, paid, status, supplier:suppliers(name, company)").gte("purchase_date", from).lte("purchase_date", toEnd).order("purchase_date"),
+        supabase.from("purchases").select("id, bill_no, purchase_date, subtotal, gst, total, paid, status, supplier_id, supplier:suppliers(name, company)").gte("purchase_date", from).lte("purchase_date", toEnd).order("purchase_date"),
         supabase.from("purchase_items").select("product_name, quantity, rate, gst_rate, amount, purchase:purchases!inner(purchase_date)").gte("purchase.purchase_date", from).lte("purchase.purchase_date", toEnd),
         supabase.from("customers").select("id, name, shop_name, outstanding").order("outstanding", { ascending: false }),
         supabase.from("suppliers").select("id, name, company, outstanding").order("outstanding", { ascending: false }),
@@ -132,7 +135,9 @@ function Reports() {
             rows={(data?.purchases ?? []).map((r: any) => [
               shortDate(r.purchase_date),
               r.bill_no || "—",
-              r.supplier?.company || r.supplier?.name || "—",
+              r.supplier_id
+                ? { text: r.supplier?.company || r.supplier?.name || "—", to: "/suppliers/$id", params: { id: r.supplier_id } }
+                : (r.supplier?.company || r.supplier?.name || "—"),
               inr(r.subtotal),
               inr(r.gst),
               inr(r.total),
@@ -308,7 +313,7 @@ function PayablesAging({ from: _f, to: _t }: { from: string; to: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("purchases")
-        .select("id, bill_no, purchase_date, total, paid, status, supplier:suppliers(name, company)")
+        .select("id, bill_no, purchase_date, total, paid, status, supplier_id, supplier:suppliers(name, company)")
         .neq("status", "paid")
         .neq("status", "void")
         .order("purchase_date");
@@ -316,13 +321,14 @@ function PayablesAging({ from: _f, to: _t }: { from: string; to: string }) {
     },
   });
   const today = new Date();
-  const buckets = new Map<string, { c0: number; c30: number; c60: number; c90: number; c90p: number; total: number }>();
+  const buckets = new Map<string, { name: string; supplier_id: string | null; c0: number; c30: number; c60: number; c90: number; c90p: number; total: number }>();
   for (const p of data ?? []) {
     const bal = Number(p.total) - Number(p.paid);
     if (bal <= 0) continue;
     const days = Math.floor((today.getTime() - new Date(p.purchase_date).getTime()) / 86400000);
-    const key = (p as any).supplier?.company || (p as any).supplier?.name || "—";
-    const cur = buckets.get(key) ?? { c0: 0, c30: 0, c60: 0, c90: 0, c90p: 0, total: 0 };
+    const name = (p as any).supplier?.company || (p as any).supplier?.name || "—";
+    const key = (p as any).supplier_id || `name:${name}`;
+    const cur = buckets.get(key) ?? { name, supplier_id: (p as any).supplier_id ?? null, c0: 0, c30: 0, c60: 0, c90: 0, c90p: 0, total: 0 };
     if (days <= 30) cur.c0 += bal;
     else if (days <= 60) cur.c30 += bal;
     else if (days <= 90) cur.c60 += bal;
@@ -331,13 +337,16 @@ function PayablesAging({ from: _f, to: _t }: { from: string; to: string }) {
     cur.total += bal;
     buckets.set(key, cur);
   }
-  const rows = Array.from(buckets.entries()).sort((a, b) => b[1].total - a[1].total);
-  const sum = (k: keyof (typeof rows)[0][1]) => rows.reduce((s, [, v]) => s + (v[k] as number), 0);
+  const rows = Array.from(buckets.values()).sort((a, b) => b.total - a.total);
+  const sum = (k: "c0" | "c30" | "c60" | "c90" | "c90p" | "total") => rows.reduce((s, v) => s + v[k], 0);
   return (
     <ReportTable
       title="Payables Aging"
       headers={["Supplier", "0–30", "31–60", "61–90", "91–120", "120+", "Total"]}
-      rows={rows.map(([n, v]) => [n, inr(v.c0), inr(v.c30), inr(v.c60), inr(v.c90), inr(v.c90p), inr(v.total)])}
+      rows={rows.map((v) => [
+        v.supplier_id ? { text: v.name, to: "/suppliers/$id", params: { id: v.supplier_id } } : v.name,
+        inr(v.c0), inr(v.c30), inr(v.c60), inr(v.c90), inr(v.c90p), inr(v.total),
+      ])}
       totals={{ 1: inr(sum("c0")), 2: inr(sum("c30")), 3: inr(sum("c60")), 4: inr(sum("c90")), 5: inr(sum("c90p")), 6: inr(sum("total")) }}
     />
   );
@@ -463,6 +472,13 @@ function SupplierLedger({ from, to, suppliers }: { from: string; to: string; sup
           </SelectContent>
         </Select>
         {selected && <span className="text-xs text-muted-foreground">Current payable: <b className="text-foreground">{inr(selected.outstanding)}</b></span>}
+        {selected && (
+          <Button asChild size="sm" variant="outline" className="gap-1.5 h-8">
+            <Link to="/suppliers/$id" params={{ id: selected.id }}>
+              <ExternalLink className="size-3.5" /> Open supplier page
+            </Link>
+          </Button>
+        )}
       </div>
       {!id ? (
         <Card className="p-10 text-center text-muted-foreground text-sm">Select a supplier to view their statement of account.</Card>
@@ -483,14 +499,28 @@ function ReportTable({
   headers, rows, totals, title, meta,
 }: {
   headers: string[];
-  rows: (string | number)[][];
+  rows: Cell[][];
   totals?: Record<number, string>;
   title?: string;
   meta?: string;
 }) {
+  const cellText = (c: Cell): string => (typeof c === "object" && c !== null ? c.text : String(c));
+  const cellNode = (c: Cell): ReactNode => {
+    if (typeof c === "object" && c !== null) {
+      if (c.to) {
+        return (
+          <Link to={c.to as any} params={c.params as any} className="text-primary hover:underline inline-flex items-center gap-1">
+            {c.text} <ExternalLink className="size-3 opacity-60" />
+          </Link>
+        );
+      }
+      return c.text;
+    }
+    return c;
+  };
   const filename = (title || "report").replace(/\s+/g, "-").toLowerCase();
   const exportCsv = () => {
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [headers, ...rows.map((r) => r.map(cellText))].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -517,7 +547,7 @@ ${meta ? `<div class="meta">${esc(meta)}</div>` : ""}
 <table>
   <thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead>
   <tbody>
-    ${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}
+    ${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(cellText(c))}</td>`).join("")}</tr>`).join("")}
     ${totalsRow}
   </tbody>
 </table>
@@ -551,7 +581,7 @@ ${meta ? `<div class="meta">${esc(meta)}</div>` : ""}
             {rows.length === 0 && <tr><td colSpan={headers.length} className="text-center py-12 text-muted-foreground">No data.</td></tr>}
             {rows.map((r, i) => (
               <tr key={i} className="hover:bg-muted/30">
-                {r.map((c, j) => <td key={j} className={`px-4 py-2.5 whitespace-nowrap ${j === 0 ? "font-medium" : "text-right font-mono text-xs"}`}>{c}</td>)}
+                {r.map((c, j) => <td key={j} className={`px-4 py-2.5 whitespace-nowrap ${j === 0 ? "font-medium" : "text-right font-mono text-xs"}`}>{cellNode(c)}</td>)}
               </tr>
             ))}
             {totals && rows.length > 0 && (
