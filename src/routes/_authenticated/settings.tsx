@@ -99,11 +99,43 @@ const roleStyles: Record<Role, string> = {
   helper: "bg-violet-500/10 text-violet-700 ring-violet-500/20",
 };
 
+const BlurValidateContext = React.createContext<((field: string) => void) | null>(null);
+
 function Settings() {
   const qc = useQueryClient();
   const [biz, setBiz] = useState<BusinessProfile>(() => getBusiness());
-  const setField = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) =>
+  const [errors, setErrorsInner] = useState<BusinessValidationErrors>({});
+  const setErrors = setErrorsInner;
+  const setField = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) => {
     setBiz((b) => ({ ...b, [k]: v }));
+    // Clear a previously announced error for this field as soon as the user
+    // starts fixing it, so screen readers stop reading a stale message.
+    setErrorsInner((prev) => {
+      if (!(k in prev)) return prev;
+      const next = { ...prev };
+      delete next[k];
+      return next;
+    });
+  };
+
+  const validateFieldOnBlur = React.useCallback(
+    (field: string) => {
+      const key = field as keyof BusinessProfile;
+      // Re-run the full validator (cross-field rules like GSTIN⇄PAN⇄state code).
+      setBiz((current) => {
+        const { errors: e } = validateBusiness(current);
+        setErrorsInner((prev) => {
+          const next = { ...prev };
+          if (e[key]) next[key] = e[key]!;
+          else delete next[key];
+          return next;
+        });
+        return current;
+      });
+    },
+    [],
+  );
+
 
   const { data: me } = useQuery({
     queryKey: ["me-settings"],
