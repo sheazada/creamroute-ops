@@ -121,7 +121,9 @@ function Customers() {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <StatusBadge status={c.status} />
+                <NotifyBadges customer={c} />
                 <ReminderActions customer={c} />
+                <EditCustomerButton customer={c} />
                 <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary ml-auto hover:underline">Invoice →</Link>
               </div>
             </div>
