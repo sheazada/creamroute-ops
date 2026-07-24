@@ -1883,7 +1883,7 @@ function RunTimelineDialog({
 }: { open: boolean; onClose: () => void; route: RouteRow; date: string; invoiceIds: string[] }) {
   const { data, isLoading } = useQuery({
     enabled: open,
-    queryKey: ["run-timeline", route.id, date],
+    queryKey: ["run-timeline", route.id, date, invoiceIds.join(",")],
     queryFn: async (): Promise<TimelineEvent[]> => {
       // Fetch all runs for this route+date (there may be multiple sessions)
       const { data: runs, error: rErr } = await supabase
