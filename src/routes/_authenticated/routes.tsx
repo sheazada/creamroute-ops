@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
 import { ArrowDown, ArrowUp, Camera, CheckCircle2, Crosshair, Download, GripVertical, LocateFixed, MapPin, Plus, Printer, Route as RouteIcon, Sparkles, Trash2, Truck, UserPlus, Wallet, Wand2 } from "lucide-react";
 import { optimizeStops } from "@/lib/route-optimize";
+import { getCurrentPosition, fmtLatLng, gmapsUrl } from "@/lib/geo";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -69,6 +70,13 @@ type DeliveryRun = {
   ended_at: string | null;
   status: string;
   notes: string | null;
+  pickup_confirmed_at: string | null;
+  start_latitude: number | null;
+  start_longitude: number | null;
+  start_accuracy_m: number | null;
+  end_latitude: number | null;
+  end_longitude: number | null;
+  end_accuracy_m: number | null;
 };
 
 
@@ -966,6 +974,10 @@ type DeliveryRow = {
   collected_amount: number | null;
   collected_mode: string | null;
   route_id: string | null;
+  pod_latitude: number | null;
+  pod_longitude: number | null;
+  pod_accuracy_m: number | null;
+  pod_captured_at: string | null;
 };
 
 function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: InvoiceRow[]; date: string }) {
@@ -979,7 +991,7 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
     queryFn: async () => {
       const { data } = await supabase
         .from("deliveries")
-        .select("id, invoice_id, status, delivered_at, received_by, pod_photo_url, pod_signature, collected_amount, collected_mode, route_id")
+        .select("id, invoice_id, status, delivered_at, received_by, pod_photo_url, pod_signature, collected_amount, collected_mode, route_id, pod_latitude, pod_longitude, pod_accuracy_m, pod_captured_at")
         .in("invoice_id", invoiceIds);
       return (data ?? []) as DeliveryRow[];
     },
@@ -1359,6 +1371,15 @@ function DeliverStopDialog({
         if (pErr) throw pErr;
       }
 
+      // 3b. Capture POD GPS (non-blocking on failure)
+      let podLat: number | null = null, podLng: number | null = null, podAcc: number | null = null, podAt: string | null = null;
+      try {
+        const fix = await getCurrentPosition();
+        podLat = fix.latitude; podLng = fix.longitude; podAcc = fix.accuracy; podAt = fix.capturedAt;
+      } catch (geoErr: any) {
+        toast.warning(`Saved without GPS: ${geoErr.message}`);
+      }
+
       // 4. Update delivery row
       const { error: dErr } = await supabase.from("deliveries").update({
         status: finalStatus,
@@ -1369,6 +1390,10 @@ function DeliverStopDialog({
         collected_amount: amt > 0 ? amt : delivery.collected_amount,
         collected_mode: amt > 0 ? mode : delivery.collected_mode,
         route_id: route.id === "u" ? null : route.id,
+        pod_latitude: podLat ?? (delivery as any).pod_latitude ?? null,
+        pod_longitude: podLng ?? (delivery as any).pod_longitude ?? null,
+        pod_accuracy_m: podAcc ?? (delivery as any).pod_accuracy_m ?? null,
+        pod_captured_at: podAt ?? (delivery as any).pod_captured_at ?? null,
       }).eq("id", delivery.id);
       if (dErr) throw dErr;
       toast.success(
@@ -1500,6 +1525,26 @@ function DeliverStopDialog({
               <div className="text-[11px] text-muted-foreground mt-1">Existing photo on file · uploading a new one will replace it.</div>
             )}
           </div>
+
+          {delivery?.pod_latitude != null && delivery?.pod_longitude != null && (
+            <div className="rounded-md border bg-muted/30 p-2 text-xs flex items-center gap-2">
+              <MapPin className="size-3.5 text-primary" />
+              <span>Last POD location:</span>
+              <a
+                href={gmapsUrl(delivery.pod_latitude, delivery.pod_longitude)!}
+                target="_blank" rel="noreferrer"
+                className="font-mono text-primary hover:underline"
+              >
+                {fmtLatLng(delivery.pod_latitude, delivery.pod_longitude)}
+              </a>
+              {delivery.pod_accuracy_m != null && (
+                <span className="text-muted-foreground">±{Math.round(delivery.pod_accuracy_m)}m</span>
+              )}
+            </div>
+          )}
+          <div className="text-[11px] text-muted-foreground">
+            A fresh GPS location will be captured when you save this delivery.
+          </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -1549,39 +1594,91 @@ function RunPanel({ route, date }: { route: RouteRow; date: string }) {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["delivery-run", route.id, date] });
 
-  const startRun = async () => {
+  const [busy, setBusy] = useState<"pickup" | "start" | "end" | null>(null);
+
+  const confirmPickup = async () => {
+    setBusy("pickup");
     const now = new Date().toISOString();
-    if (run) {
+    try {
+      if (run) {
+        const { error } = await supabase.from("delivery_runs").update({
+          pickup_confirmed_at: now,
+        }).eq("id", run.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("delivery_runs").insert({
+          route_id: route.id, run_date: date,
+          driver_name: route.driver_name, helper_name: route.helper_name,
+          vehicle_number: route.vehicle_number, vehicle_type: route.vehicle_type,
+          status: "scheduled", pickup_confirmed_at: now,
+        });
+        if (error) throw error;
+      }
+      toast.success("Pickup confirmed from Sudha");
+      invalidate();
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const startRun = async () => {
+    if (!run?.pickup_confirmed_at) {
+      return toast.error("Confirm pickup from Sudha first");
+    }
+    setBusy("start");
+    const now = new Date().toISOString();
+    try {
+      let fix = null as Awaited<ReturnType<typeof getCurrentPosition>> | null;
+      try { fix = await getCurrentPosition(); }
+      catch (e: any) { toast.warning(`Starting without GPS: ${e.message}`); }
       const { error } = await supabase.from("delivery_runs").update({
         started_at: run.started_at ?? now,
         status: "in_progress",
+        start_latitude: fix?.latitude ?? run.start_latitude,
+        start_longitude: fix?.longitude ?? run.start_longitude,
+        start_accuracy_m: fix?.accuracy ?? run.start_accuracy_m,
       }).eq("id", run.id);
-      if (error) return toast.error(error.message);
-    } else {
-      const { error } = await supabase.from("delivery_runs").insert({
-        route_id: route.id, run_date: date,
-        driver_name: route.driver_name, helper_name: route.helper_name,
-        vehicle_number: route.vehicle_number, vehicle_type: route.vehicle_type,
-        started_at: now, status: "in_progress",
-      });
-      if (error) return toast.error(error.message);
+      if (error) throw error;
+      toast.success(fix ? "Run started · location captured" : "Run started");
+      invalidate();
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    } finally {
+      setBusy(null);
     }
-    toast.success("Run started");
-    invalidate();
   };
 
   const endRun = async () => {
     if (!run) return;
+    setBusy("end");
     const now = new Date().toISOString();
-    const { error } = await supabase.from("delivery_runs").update({
-      ended_at: now, status: "completed",
-    }).eq("id", run.id);
-    if (error) return toast.error(error.message);
-    toast.success("Run ended");
-    invalidate();
+    try {
+      let fix = null as Awaited<ReturnType<typeof getCurrentPosition>> | null;
+      try { fix = await getCurrentPosition(); }
+      catch (e: any) { toast.warning(`Ending without GPS: ${e.message}`); }
+      const { error } = await supabase.from("delivery_runs").update({
+        ended_at: now, status: "completed",
+        end_latitude: fix?.latitude ?? run.end_latitude,
+        end_longitude: fix?.longitude ?? run.end_longitude,
+        end_accuracy_m: fix?.accuracy ?? run.end_accuracy_m,
+      }).eq("id", run.id);
+      if (error) throw error;
+      toast.success(fix ? "Run ended · location captured" : "Run ended");
+      invalidate();
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    } finally {
+      setBusy(null);
+    }
   };
 
   const dur = durationMin(run?.started_at ?? null, run?.ended_at ?? null);
+  const startLoc = fmtLatLng(run?.start_latitude, run?.start_longitude);
+  const endLoc = fmtLatLng(run?.end_latitude, run?.end_longitude);
+  const startMap = gmapsUrl(run?.start_latitude, run?.start_longitude);
+  const endMap = gmapsUrl(run?.end_latitude, run?.end_longitude);
 
   return (
     <div className="px-5 py-3 border-b bg-primary/5 flex flex-wrap items-center gap-3">
@@ -1591,6 +1688,11 @@ function RunPanel({ route, date }: { route: RouteRow; date: string }) {
         <Badge variant={run?.status === "completed" ? "outline" : run?.status === "in_progress" ? "default" : "secondary"} className="capitalize">
           {run?.status?.replace("_", " ") || "not started"}
         </Badge>
+        {run?.pickup_confirmed_at && (
+          <Badge variant="outline" className="gap-1 text-emerald-700 border-emerald-300 bg-emerald-50">
+            <CheckCircle2 className="size-3" /> Pickup {fmtTime(run.pickup_confirmed_at)}
+          </Badge>
+        )}
       </div>
       <div className="flex flex-wrap gap-4 text-xs">
         <span>Start <b className="font-mono text-foreground">{fmtTime(run?.started_at ?? null)}</b></span>
@@ -1599,13 +1701,32 @@ function RunPanel({ route, date }: { route: RouteRow; date: string }) {
         {run?.odometer_start != null && (
           <span>Odo <b className="font-mono text-foreground">{num(run.odometer_start, 0)}{run.odometer_end != null ? ` → ${num(run.odometer_end, 0)} (${num(Number(run.odometer_end) - Number(run.odometer_start), 0)} km)` : ""}</b></span>
         )}
+        {startLoc && (
+          <a href={startMap!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+            <MapPin className="size-3" /> Start {startLoc}
+          </a>
+        )}
+        {endLoc && (
+          <a href={endMap!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+            <MapPin className="size-3" /> End {endLoc}
+          </a>
+        )}
       </div>
       <div className="ml-auto flex gap-2 no-print">
-        {!run?.started_at && (
-          <Button size="sm" onClick={startRun} className="gap-1.5">▶ Start run</Button>
+        {!run?.pickup_confirmed_at && (
+          <Button size="sm" variant="secondary" onClick={confirmPickup} disabled={busy === "pickup"} className="gap-1.5">
+            <CheckCircle2 className="size-4" /> {busy === "pickup" ? "Saving…" : "Confirm pickup from Sudha"}
+          </Button>
+        )}
+        {run?.pickup_confirmed_at && !run?.started_at && (
+          <Button size="sm" onClick={startRun} disabled={busy === "start"} className="gap-1.5">
+            <LocateFixed className="size-4" /> {busy === "start" ? "Getting GPS…" : "Start run (capture GPS)"}
+          </Button>
         )}
         {run?.started_at && !run?.ended_at && (
-          <Button size="sm" variant="destructive" onClick={endRun} className="gap-1.5">■ End run</Button>
+          <Button size="sm" variant="destructive" onClick={endRun} disabled={busy === "end"} className="gap-1.5">
+            <LocateFixed className="size-4" /> {busy === "end" ? "Getting GPS…" : "End run (capture GPS)"}
+          </Button>
         )}
         <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>Details</Button>
       </div>
