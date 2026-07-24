@@ -18,7 +18,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle } from "lucide-react";
+import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getBusiness } from "@/lib/business";
 
