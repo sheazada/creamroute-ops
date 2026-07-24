@@ -312,6 +312,7 @@ function Settings() {
           onSave={saveBiz}
         >
           <div className="space-y-3">
+            {renderSectionBanner("business")}
             <div className="grid grid-cols-2 gap-3">
               <FieldRow label="Trade name" error={err("name")} colSpan={2}>
 
