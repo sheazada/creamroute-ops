@@ -991,6 +991,7 @@ function FieldRow({
 
   return (
     <div
+      id={field ? `field-${field}` : undefined}
       data-field={field}
       className={`space-y-1.5 scroll-mt-24 ${colSpan === 2 ? "col-span-2" : ""}`}
     >
