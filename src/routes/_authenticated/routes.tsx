@@ -50,6 +50,7 @@ type RouteRow = {
   notes: string | null;
   capacity_units: number | null;
   capacity_label: string | null;
+  max_stops: number | null;
   vehicle_number: string | null;
   vehicle_type: string | null;
   start_latitude: number | null;
