@@ -351,6 +351,7 @@ function CollapsibleCard({
   summary,
   defaultOpen = false,
   storageKey,
+  readOnly = false,
   children,
 }: {
   icon: any;
@@ -359,50 +360,65 @@ function CollapsibleCard({
   summary: string;
   defaultOpen?: boolean;
   storageKey?: string;
+  readOnly?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   // Hydrate from localStorage once the per-user storageKey is known.
   useEffect(() => {
+    if (readOnly) return;
     if (!storageKey || typeof window === "undefined") return;
     try {
       const stored = window.localStorage.getItem(storageKey);
       if (stored === "1" || stored === "0") setOpen(stored === "1");
     } catch {}
-  }, [storageKey]);
+  }, [storageKey, readOnly]);
   useEffect(() => {
+    if (readOnly) return;
     if (!storageKey || typeof window === "undefined") return;
     try {
       window.localStorage.setItem(storageKey, open ? "1" : "0");
     } catch {}
-  }, [open, storageKey]);
+  }, [open, storageKey, readOnly]);
+  const effectiveOpen = readOnly ? false : open;
   return (
     <Card className="p-0 overflow-hidden">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/40 transition-colors"
-        aria-expanded={open}
+        onClick={() => { if (!readOnly) setOpen((v) => !v); }}
+        disabled={readOnly}
+        className={`w-full flex items-center gap-3 p-4 text-left transition-colors ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
+        aria-expanded={effectiveOpen}
+        title={readOnly ? "Admin-only — view only for your role" : undefined}
       >
         <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
           <Icon className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-sm">{title}</div>
-          {open ? (
+          {effectiveOpen ? (
             <div className="text-xs text-muted-foreground truncate">{description}</div>
           ) : (
             <div className="text-xs text-muted-foreground truncate">{summary}</div>
           )}
         </div>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
-          {open ? "Close" : "Edit"}
-        </span>
-        <ChevronDown
-          className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        {readOnly ? (
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hidden sm:inline">
+            Admin only
+          </span>
+        ) : (
+          <>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
+              {open ? "Close" : "Edit"}
+            </span>
+            <ChevronDown
+              className={`size-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </>
+        )}
       </button>
-      {open && <div className="p-6 pt-2 border-t">{children}</div>}
+      {effectiveOpen && <div className="p-6 pt-2 border-t">{children}</div>}
     </Card>
   );
 }
+
