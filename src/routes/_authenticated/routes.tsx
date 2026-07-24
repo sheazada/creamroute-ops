@@ -196,6 +196,64 @@ function PlanTab() {
   );
 }
 
+function SortableStopRow({
+  stop,
+  index,
+  total,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+}: {
+  stop: Stop;
+  index: number;
+  total: number;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 10 : "auto" as const,
+  };
+  return (
+    <li ref={setNodeRef} style={style} className={`px-5 py-3 flex items-center gap-3 bg-background ${isDragging ? "shadow-lg" : ""}`}>
+      <button
+        type="button"
+        className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0 p-1 -ml-1"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="size-8 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold shrink-0">
+        {index + 1}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate">{stop.customer?.shop_name || stop.customer?.name}</div>
+        <div className="text-xs text-muted-foreground truncate">
+          {stop.customer?.address || "—"}
+          {stop.customer?.mobile ? ` · ${stop.customer.mobile}` : ""}
+        </div>
+      </div>
+      <div className="text-xs text-right shrink-0">
+        <div className="text-muted-foreground">Due</div>
+        <div className="font-mono font-semibold">{inr(stop.customer?.outstanding ?? 0)}</div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={index === 0} aria-label="Move up"><ArrowUp className="size-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={onMoveDown} disabled={index === total - 1} aria-label="Move down"><ArrowDown className="size-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={onRemove} className="text-destructive" aria-label="Remove"><Trash2 className="size-4" /></Button>
+      </div>
+    </li>
+  );
+}
+
+
+
 function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: RouteRow | null; onEdit: (r: RouteRow) => void }) {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
