@@ -259,11 +259,13 @@ export type Database = {
       invoice_items: {
         Row: {
           amount: number
+          delivered_quantity: number | null
           discount: number
           gst_rate: number
           hsn: string | null
           id: string
           invoice_id: string
+          ordered_quantity: number | null
           product_id: string
           product_name: string
           quantity: number
@@ -273,11 +275,13 @@ export type Database = {
         }
         Insert: {
           amount: number
+          delivered_quantity?: number | null
           discount?: number
           gst_rate?: number
           hsn?: string | null
           id?: string
           invoice_id: string
+          ordered_quantity?: number | null
           product_id: string
           product_name: string
           quantity: number
@@ -287,11 +291,13 @@ export type Database = {
         }
         Update: {
           amount?: number
+          delivered_quantity?: number | null
           discount?: number
           gst_rate?: number
           hsn?: string | null
           id?: string
           invoice_id?: string
+          ordered_quantity?: number | null
           product_id?: string
           product_name?: string
           quantity?: number
@@ -981,6 +987,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_delivery_quantities: {
+        Args: { _invoice_id: string; _items: Json }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
