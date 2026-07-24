@@ -462,7 +462,7 @@ function RouteDetail({ routeId, route, onEdit }: { routeId: string; route: Route
                     onMoveUp={() => move(s.id, -1)}
                     onMoveDown={() => move(s.id, 1)}
                     onRemove={() => remove(s.id)}
-                    onSetGps={() => stop.customer && setStopGps(s.customer_id)}
+                    onSetGps={() => setStopGps(s.customer_id)}
                   />
                 ))}
               </ol>
