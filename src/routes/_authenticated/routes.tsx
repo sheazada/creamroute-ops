@@ -893,6 +893,13 @@ function SheetTab({ date }: { date: string }) {
       return min;
     };
 
+    const routeLimit = (r: RouteRow) => {
+      const cap = Number(r.capacity_units || 0);
+      const ms = Number(r.max_stops || 0);
+      const limits = [cap, ms].filter((n) => n > 0);
+      return limits.length ? Math.min(...limits) : Infinity;
+    };
+
     const pickRoute = (cust: { address?: string | null; latitude?: number | null; longitude?: number | null } | null | undefined) => {
       const address = cust?.address ?? null;
       const cLat = cust?.latitude != null ? Number(cust.latitude) : null;
@@ -900,6 +907,11 @@ function SheetTab({ date }: { date: string }) {
       const custTokens = tokens(address);
       let best: { rid: string; score: number } | null = null;
       for (const r of active) {
+        // Hard capacity guard — never assign to a route already at its per-run limit.
+        const load = routeLoad.get(r.id) ?? 0;
+        const limit = routeLimit(r);
+        if (load >= limit) continue;
+
         const vocab = routeVocab.get(r.id)!;
         let overlap = 0;
         custTokens.forEach((t) => { if (vocab.has(t)) overlap += 1; });
@@ -907,10 +919,8 @@ function SheetTab({ date }: { date: string }) {
         const areaLc = (r.area ?? "").toLowerCase().trim();
         const addrLc = (address ?? "").toLowerCase();
         const areaBonus = areaLc && addrLc.includes(areaLc) ? 5 : 0;
-        // load penalty
-        const load = routeLoad.get(r.id) ?? 0;
-        const cap = Number(r.capacity_units || 0);
-        const overCap = cap > 0 && load >= cap ? -3 : 0;
+        // soft near-capacity penalty (kicks in in the last 20% of slots)
+        const nearCap = Number.isFinite(limit) && load >= Math.max(1, Math.floor(limit * 0.8)) ? -3 : 0;
 
         // distance score — dominant signal when both sides have coordinates
         let distScore = 0;
@@ -927,7 +937,7 @@ function SheetTab({ date }: { date: string }) {
           }
         }
 
-        const score = distScore + overlap * 2 + areaBonus - load * 0.05 + overCap;
+        const score = distScore + overlap * 2 + areaBonus - load * 0.05 + nearCap;
         if (!best || score > best.score) best = { rid: r.id, score };
       }
       return best?.rid ?? null;
@@ -949,10 +959,11 @@ function SheetTab({ date }: { date: string }) {
       const deliveryUpdates = new Map<string, string[]>(); // route_id -> delivery ids
       const perRouteCount = new Map<string, number>();
       const seen = new Set<string>(); // route+customer dedupe
+      let skipped = 0;
 
       for (const inv of unassigned) {
         const rid = pickRoute(inv.customer);
-        if (!rid) continue;
+        if (!rid) { skipped += 1; continue; }
         const key = `${rid}::${inv.customer_id}`;
         if (!seen.has(key)) {
           seen.add(key);
@@ -966,6 +977,8 @@ function SheetTab({ date }: { date: string }) {
           arr.push(delId);
           deliveryUpdates.set(rid, arr);
         }
+        // Reserve a slot on the chosen route so subsequent picks respect capacity.
+        routeLoad.set(rid, (routeLoad.get(rid) ?? 0) + 1);
         perRouteCount.set(rid, (perRouteCount.get(rid) ?? 0) + 1);
       }
 
