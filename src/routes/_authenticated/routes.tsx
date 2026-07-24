@@ -832,21 +832,33 @@ function SheetTab({ date }: { date: string }) {
     if (unassigned.length === 0) return toast.info("Nothing to assign — every shop already has a route.");
     if (active.length === 0) return toast.error("No active routes to assign to.");
 
-    // Build per-route address vocabulary from existing stops + area
+    // Build per-route address vocabulary, load, next-sequence, and geo cluster
     const routeVocab = new Map<string, Set<string>>();
     const routeLoad = new Map<string, number>();
     const routeNextSeq = new Map<string, number>();
+    const routePoints = new Map<string, { lat: number; lng: number }[]>();
     active.forEach((r) => {
       const set = new Set<string>(tokens(r.area));
       routeVocab.set(r.id, set);
       routeLoad.set(r.id, 0);
       routeNextSeq.set(r.id, 0);
+      const pts: { lat: number; lng: number }[] = [];
+      if (r.start_latitude != null && r.start_longitude != null) {
+        pts.push({ lat: Number(r.start_latitude), lng: Number(r.start_longitude) });
+      }
+      routePoints.set(r.id, pts);
     });
     (stops ?? []).forEach((s: any) => {
       const set = routeVocab.get(s.route_id);
       if (set) tokens(s.customer?.address).forEach((t) => set.add(t));
       routeLoad.set(s.route_id, (routeLoad.get(s.route_id) ?? 0) + 1);
       routeNextSeq.set(s.route_id, Math.max(routeNextSeq.get(s.route_id) ?? 0, s.sequence ?? 0));
+      const lat = s.customer?.latitude;
+      const lng = s.customer?.longitude;
+      if (lat != null && lng != null) {
+        const arr = routePoints.get(s.route_id);
+        if (arr) arr.push({ lat: Number(lat), lng: Number(lng) });
+      }
     });
     // Include today's already-planned load
     (invoices ?? []).forEach((inv) => {
@@ -854,7 +866,32 @@ function SheetTab({ date }: { date: string }) {
       if (link) routeLoad.set(link.route_id, (routeLoad.get(link.route_id) ?? 0) + 1);
     });
 
-    const pickRoute = (address: string | null | undefined) => {
+    // Precompute route centroids from cluster points
+    const routeCentroid = new Map<string, { lat: number; lng: number } | null>();
+    for (const r of active) {
+      const pts = routePoints.get(r.id) ?? [];
+      if (pts.length === 0) { routeCentroid.set(r.id, null); continue; }
+      const lat = pts.reduce((a, p) => a + p.lat, 0) / pts.length;
+      const lng = pts.reduce((a, p) => a + p.lng, 0) / pts.length;
+      routeCentroid.set(r.id, { lat, lng });
+    }
+
+    // Nearest existing stop distance (km) — better than centroid for spread-out routes
+    const nearestKm = (rid: string, lat: number, lng: number) => {
+      const pts = routePoints.get(rid) ?? [];
+      if (pts.length === 0) return null;
+      let min = Infinity;
+      for (const p of pts) {
+        const d = haversineKm(lat, lng, p.lat, p.lng);
+        if (d < min) min = d;
+      }
+      return min;
+    };
+
+    const pickRoute = (cust: { address?: string | null; latitude?: number | null; longitude?: number | null } | null | undefined) => {
+      const address = cust?.address ?? null;
+      const cLat = cust?.latitude != null ? Number(cust.latitude) : null;
+      const cLng = cust?.longitude != null ? Number(cust.longitude) : null;
       const custTokens = tokens(address);
       let best: { rid: string; score: number } | null = null;
       for (const r of active) {
@@ -865,15 +902,32 @@ function SheetTab({ date }: { date: string }) {
         const areaLc = (r.area ?? "").toLowerCase().trim();
         const addrLc = (address ?? "").toLowerCase();
         const areaBonus = areaLc && addrLc.includes(areaLc) ? 5 : 0;
-        // load penalty (lighter routes preferred as tiebreaker)
+        // load penalty
         const load = routeLoad.get(r.id) ?? 0;
         const cap = Number(r.capacity_units || 0);
         const overCap = cap > 0 && load >= cap ? -3 : 0;
-        const score = overlap * 2 + areaBonus - load * 0.05 + overCap;
+
+        // distance score — dominant signal when both sides have coordinates
+        let distScore = 0;
+        if (cLat != null && cLng != null) {
+          const near = nearestKm(r.id, cLat, cLng);
+          const centroid = routeCentroid.get(r.id) ?? null;
+          const centDist = centroid ? haversineKm(cLat, cLng, centroid.lat, centroid.lng) : null;
+          // Weighted blend: nearest stop dominates, centroid smooths
+          const d = near != null && centDist != null ? near * 0.7 + centDist * 0.3
+                  : near ?? centDist;
+          if (d != null) {
+            // Convert km → score: 0km ≈ +25, 5km ≈ +5, 10km ≈ -5, capped at -15
+            distScore = Math.max(-15, 25 - d * 4);
+          }
+        }
+
+        const score = distScore + overlap * 2 + areaBonus - load * 0.05 + overCap;
         if (!best || score > best.score) best = { rid: r.id, score };
       }
       return best?.rid ?? null;
     };
+
 
     setAssigning(true);
     try {
