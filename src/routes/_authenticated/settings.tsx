@@ -119,6 +119,45 @@ function Settings() {
   const [errors, setErrors] = useState<BusinessValidationErrors>({});
   const err = (k: keyof BusinessProfile) => errors[k];
 
+  // Edit / Save / Cancel state per section (only one section editable at a time)
+  const [editing, setEditing] = useState<Section | null>(null);
+  const [snapshot, setSnapshot] = useState<BusinessProfile | null>(null);
+  const dirty = useMemo(
+    () => editing !== null && snapshot !== null && JSON.stringify(snapshot) !== JSON.stringify(biz),
+    [editing, snapshot, biz],
+  );
+
+  // Confirm dialog for discarding unsaved changes (close section / cancel / navigate)
+  const [confirm, setConfirm] = useState<null | { onConfirm: () => void; message?: string }>(null);
+  const askDiscard = (onConfirm: () => void, message?: string) => {
+    if (!dirty) { onConfirm(); return; }
+    setConfirm({ onConfirm, message });
+  };
+
+  const startEdit = (section: Section) => {
+    if (editing && editing !== section && dirty) {
+      askDiscard(() => {
+        if (snapshot) setBiz(snapshot);
+        setErrors({});
+        setSnapshot(biz);
+        setEditing(section);
+      });
+      return;
+    }
+    setSnapshot(biz);
+    setErrors({});
+    setEditing(section);
+  };
+
+  const cancelEdit = () => {
+    askDiscard(() => {
+      if (snapshot) setBiz(snapshot);
+      setEditing(null);
+      setSnapshot(null);
+      setErrors({});
+    });
+  };
+
   const saveBiz = () => {
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
@@ -127,8 +166,31 @@ function Settings() {
       return;
     }
     saveBusiness(biz);
+    setEditing(null);
+    setSnapshot(null);
     toast.success("Business profile saved — reflects on all new invoices");
   };
+
+  // Warn on browser unload while there are unsaved changes.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  // Block in-app navigation while dirty.
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!dirty) return false;
+      return !window.confirm("You have unsaved changes. Leave without saving?");
+    },
+    enableBeforeUnload: false,
+  });
+
 
   return (
     <PageContainer>
