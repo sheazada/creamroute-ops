@@ -141,12 +141,13 @@ function Customers() {
                 <th className="text-right px-6 py-3 font-semibold">Credit Limit</th>
                 <th className="text-right px-6 py-3 font-semibold">Outstanding</th>
                 <th className="text-left px-6 py-3 font-semibold">Remind</th>
+                <th className="text-left px-6 py-3 font-semibold">Notify</th>
                 <th></th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No customers.</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No customers.</td></tr>
               )}
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-muted/30">
