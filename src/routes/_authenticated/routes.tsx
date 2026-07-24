@@ -2033,6 +2033,8 @@ function RunEditDialog({
 
 /* ---------------- Run timeline ---------------- */
 
+type FieldChange = { field: string; from: string | null; to: string | null };
+
 type TimelineEvent = {
   at: string;
   kind: "run_created" | "pickup" | "run_started" | "run_ended" | "run_edited"
@@ -2042,7 +2044,28 @@ type TimelineEvent = {
   detail?: string | null;
   location?: { lat: number | null; lng: number | null; acc?: number | null } | null;
   by?: string | null;
+  changes?: FieldChange[] | null;
 };
+
+const FIELD_LABELS: Record<string, string> = {
+  driver_name: "Driver", helper_name: "Helper", vehicle_number: "Vehicle #",
+  vehicle_type: "Vehicle type", odometer_start: "Odo start", odometer_end: "Odo end",
+  started_at: "Started at", ended_at: "Ended at", pickup_confirmed_at: "Pickup at",
+  status: "Status", delivery_status: "Delivery status", notes: "Notes",
+  delivered_at: "Delivered at", received_by: "Received by",
+  collected_amount: "Collected", collected_mode: "Mode", route_id: "Route",
+  assigned_to: "Assigned to", scheduled_date: "Scheduled",
+  pod_photo_url: "POD photo", pod_signature: "POD signature",
+};
+
+function prettyFieldValue(field: string, v: string | null): string {
+  if (v == null || v === "") return "—";
+  if (field === "collected_amount") { const n = Number(v); return Number.isFinite(n) ? inr(Number(v)) : v; }
+  if (field === "pod_photo_url" || field === "pod_signature") return "attached";
+  if (/_at$/.test(field)) { const d = new Date(v); return isNaN(d.getTime()) ? v : fmtDateTime(v); }
+  if (field === "status" || field === "delivery_status") return String(v).replace(/_/g, " ");
+  return v;
+}
 
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString([], {
