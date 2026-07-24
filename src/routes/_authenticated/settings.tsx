@@ -870,8 +870,11 @@ function FieldRow({
   const hintId = `${baseId}-hint`;
   const describedBy = error ? errorId : hint ? hintId : undefined;
 
-  // Inject aria-describedby / aria-invalid into the input child so screen
-  // readers announce the specific inline message tied to this field.
+  const onBlurValidate = React.useContext(BlurValidateContext);
+
+  // Inject aria-describedby / aria-invalid / onBlur into the input child so
+  // screen readers announce the specific inline message tied to this field —
+  // and so validation runs as soon as focus leaves the field.
   const child = React.isValidElement(children)
     ? React.cloneElement(children as React.ReactElement<any>, {
         "aria-describedby": [
@@ -882,8 +885,13 @@ function FieldRow({
           .join(" ") || undefined,
         "aria-invalid":
           (children as React.ReactElement<any>).props["aria-invalid"] ?? (error ? true : undefined),
+        onBlur: (e: React.FocusEvent<HTMLElement>) => {
+          (children as React.ReactElement<any>).props.onBlur?.(e);
+          if (field && onBlurValidate) onBlurValidate(field);
+        },
       })
     : children;
+
 
   return (
     <div
