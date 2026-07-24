@@ -103,12 +103,13 @@ function DeliveryStatusPage() {
       <PageHeader
         title="Delivery Status"
         description="Live snapshot of routes, stops, and exceptions."
-      >
-        <div className="flex items-center gap-2">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 w-40" />
-          <Button variant="outline" size="sm" onClick={() => refetch()}>Refresh</Button>
-        </div>
-      </PageHeader>
+        actions={
+          <div className="flex items-center gap-2">
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 w-40" />
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Refresh</Button>
+          </div>
+        }
+      />
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
