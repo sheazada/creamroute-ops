@@ -163,6 +163,7 @@ function Customers() {
                   <td className="px-6 py-3"><NotifyBadges customer={c} /></td>
                   <td className="px-6 py-3 text-right">
                     <div className="flex items-center gap-2 justify-end">
+                      <CustomerNotificationsButton customer={c} />
                       <EditCustomerButton customer={c} />
                       <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary hover:underline">Invoice</Link>
                     </div>
