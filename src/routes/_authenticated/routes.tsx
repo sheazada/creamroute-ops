@@ -736,7 +736,9 @@ function RouteSheet({ route, invoices, date }: { route: RouteRow; invoices: Invo
             {shortDate(date)} · {invoices.length} stop{invoices.length === 1 ? "" : "s"} · {doneCount} delivered
             {route.driver_name ? ` · Driver: ${route.driver_name}` : ""}
             {route.helper_name ? ` · Helper: ${route.helper_name}` : ""}
+            {route.vehicle_number ? ` · 🚛 ${route.vehicle_number}` : ""}
           </div>
+
         </div>
         <div className="flex items-center gap-3 text-xs">
           <div>Value <span className="font-mono font-semibold">{inr(totalValue)}</span></div>
