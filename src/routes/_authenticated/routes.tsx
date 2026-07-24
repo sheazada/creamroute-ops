@@ -19,6 +19,8 @@ import { ArrowDown, ArrowUp, Camera, CheckCircle2, Clock, Crosshair, Download, G
 import { optimizeStops } from "@/lib/route-optimize";
 import { getCurrentPosition, captureGpsWithAudit, logGpsAudit, fmtLatLng, gmapsUrl, haversineKm } from "@/lib/geo";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { enqueueDeliveryNotifications, processQueuedNotifications } from "@/lib/notifications.functions";
 import {
   DndContext,
   closestCenter,
@@ -1489,6 +1491,8 @@ function DeliverStopDialog({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [qtys, setQtys] = useState<Record<string, string>>({});
+  const enqueueNotifs = useServerFn(enqueueDeliveryNotifications);
+  const processNotifs = useServerFn(processQueuedNotifications);
 
   useEffect(() => {
     if (open && payload) {
@@ -1603,6 +1607,20 @@ function DeliverStopDialog({
         pod_captured_at: podAt ?? (delivery as any).pod_captured_at ?? null,
       }).eq("id", delivery.id);
       if (dErr) throw dErr;
+
+      // 5. Enqueue retailer notifications (idempotent) and kick off dispatch.
+      // Fire-and-forget so a provider outage never blocks the delivery save.
+      try {
+        const { enqueued } = await enqueueNotifs({ data: { deliveryId: delivery.id } });
+        if (enqueued > 0) {
+          processNotifs({ data: { limit: 10 } }).catch((err) => {
+            console.warn("notification dispatch failed:", err);
+          });
+        }
+      } catch (err) {
+        console.warn("notification enqueue failed:", err);
+      }
+
       toast.success(
         finalStatus === "delivered" ? "Delivered" :
         finalStatus === "partially_delivered" ? "Marked partially delivered" :

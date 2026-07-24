@@ -29,10 +29,12 @@ export type Database = {
           notes: string | null
           notify_email: boolean
           notify_sms: boolean
+          notify_whatsapp: boolean
           outstanding: number
           shop_name: string | null
           status: string
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           address?: string | null
@@ -48,10 +50,12 @@ export type Database = {
           notes?: string | null
           notify_email?: boolean
           notify_sms?: boolean
+          notify_whatsapp?: boolean
           outstanding?: number
           shop_name?: string | null
           status?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           address?: string | null
@@ -67,10 +71,12 @@ export type Database = {
           notes?: string | null
           notify_email?: boolean
           notify_sms?: boolean
+          notify_whatsapp?: boolean
           outstanding?: number
           shop_name?: string | null
           status?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }
@@ -1279,6 +1285,10 @@ export type Database = {
       apply_delivery_quantities: {
         Args: { _invoice_id: string; _items: Json }
         Returns: string
+      }
+      enqueue_delivery_notifications: {
+        Args: { _delivery_id: string }
+        Returns: number
       }
       has_role: {
         Args: {
