@@ -18,6 +18,7 @@ import {
   Trash2,
   Receipt,
   Download,
+  Copy,
 } from "lucide-react";
 import { InvoiceShareMenu } from "@/components/invoice-share-menu";
 import { toast } from "sonner";
