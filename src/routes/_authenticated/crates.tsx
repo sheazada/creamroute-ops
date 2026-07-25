@@ -50,6 +50,8 @@ import {
   type CrateTransaction,
   type CrateBalance,
 } from "@/lib/crates-schema";
+import { typed } from "@/lib/typed-db";
+
 
 export const Route = createFileRoute("/_authenticated/crates")({
   component: CratesManagement,
