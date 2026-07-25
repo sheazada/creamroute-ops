@@ -78,7 +78,6 @@ const nav: {
   {
     label: "Insights",
     items: [
-      { to: "/daily-demand", label: "Daily Demand", icon: ClipboardList, roles: ALL },
       { to: "/reports", label: "Reports", icon: BarChart3, roles: FIN },
       { to: "/notifications", label: "Notifications", icon: Bell, roles: FIN },
     ],
@@ -107,11 +106,9 @@ const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof L
     { to: "/products", label: "Products", icon: Package },
   ],
   driver: [
-    { to: "/daily-demand", label: "Demand", icon: ClipboardList },
     { to: "/deliveries", label: "Deliveries", icon: Truck },
   ],
   helper: [
-    { to: "/daily-demand", label: "Demand", icon: ClipboardList },
     { to: "/deliveries", label: "Deliveries", icon: Truck },
   ],
 };
