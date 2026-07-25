@@ -538,7 +538,9 @@ function Settings() {
           onCancel={cancelEdit}
           onSave={saveBiz}
           saving={savingSection === "business"}
+          reloading={reloadingSection === "business"}
         >
+
           <div className="space-y-3">
             {renderSectionBanner("business")}
             <div className="grid grid-cols-2 gap-3">
