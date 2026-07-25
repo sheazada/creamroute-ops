@@ -52,7 +52,7 @@ export const Route = createFileRoute("/_authenticated/inventory")({
 // Check if new inventory tables exist
 async function checkTablesExist() {
   try {
-    const { error } = await supabase.from("warehouses").select("id").limit(1);
+    const { error } = await (supabase as any).from("warehouses").select("id").limit(1);
     return !error;
   } catch {
     return false;
