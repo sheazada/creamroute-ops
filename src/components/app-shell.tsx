@@ -54,6 +54,7 @@ const nav: {
       { to: "/demand-consolidation", label: "Demand", icon: Layers, roles: ALL },
       { to: "/invoices", label: "Invoices", icon: ReceiptText, roles: ["admin", "manager", "salesperson"] },
       { to: "/payments", label: "Payments", icon: Wallet, roles: ["admin", "manager", "salesperson"] },
+      { to: "/cash-reconciliation", label: "Cash Reconciliation", icon: Wallet, roles: ["admin", "manager"] },
       { to: "/reconcile", label: "Reconcile", icon: Wallet, roles: FIN },
       { to: "/deliveries", label: "Deliveries", icon: Truck, roles: ALL },
       { to: "/delivery-status", label: "Delivery Status", icon: BarChart3, roles: FIN },
