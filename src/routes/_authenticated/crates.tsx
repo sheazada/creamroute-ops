@@ -138,10 +138,10 @@ function CrateBalanceTab() {
   const { data: balances, isLoading } = useQuery({
     queryKey: ["crate-balance", asOfDate, selectedCrateType],
     queryFn: async () => {
-      const crateTypeId = selectedCrateType === "all" ? null : selectedCrateType;
+      const crateTypeId = selectedCrateType === "all" ? undefined : selectedCrateType;
       const { data, error } = await supabase.rpc("get_crate_balance_as_of", {
         p_as_of_date: asOfDate,
-        p_crate_type_id: crateTypeId,
+        ...(crateTypeId ? { p_crate_type_id: crateTypeId } : {}),
       });
       if (error) throw error;
       return (data ?? []) as CrateBalance[];
