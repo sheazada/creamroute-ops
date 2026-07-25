@@ -228,6 +228,7 @@ function Settings() {
 
   const [savedFlash, setSavedFlash] = useState<Section | null>(null);
   const [savingSection, setSavingSection] = useState<Section | null>(null);
+  const [reloadingSection, setReloadingSection] = useState<Section | null>(null);
   const [showErrorSummary, setShowErrorSummary] = useState(false);
   const errorSummaryRef = useRef<HTMLDivElement | null>(null);
 
@@ -254,22 +255,15 @@ function Settings() {
     if (showErrorSummary && Object.keys(errors).length === 0) setShowErrorSummary(false);
   }, [errors, showErrorSummary]);
 
-  // Screen-reader status line for save progress/completion. We keep a single
-  // polite live region and rewrite its text so AT users hear "Saving…" when
-  // a save starts and "…saved" when it finishes.
+  // Screen-reader status line for save progress, reload and completion. We keep a single
+  // polite live region and rewrite its text so AT users hear "Saving…", "Reloading…",
+  // and "…saved" in sequence.
   const [saveStatus, setSaveStatus] = useState("");
-  useEffect(() => {
-    if (!savingSection) return;
-    const label = savingSection === "payment" ? "Payment & bank" : "Business identity";
-    setSaveStatus(`Saving ${label} changes…`);
-  }, [savingSection]);
-  useEffect(() => {
-    if (!savedFlash) return;
-    const label = savedFlash === "payment" ? "Payment & bank" : "Business identity";
-    setSaveStatus(`${label} saved successfully.`);
-    const t = window.setTimeout(() => setSaveStatus(""), 4000);
+  const clearSaveStatus = (delay = 4000) => {
+    const t = window.setTimeout(() => setSaveStatus(""), delay);
     return () => window.clearTimeout(t);
-  }, [savedFlash]);
+  };
+
 
 
   const saveBiz = async () => {
@@ -307,6 +301,8 @@ function Settings() {
     }
 
     if (section) setSavingSection(section);
+    const label = section === "payment" ? "Payment & bank" : "Business identity";
+    setSaveStatus(`Saving ${label}…`);
     try {
       // Small awaited tick so the loading state renders even for synchronous
       // local persistence — and gives room for a real network call later.
@@ -317,22 +313,33 @@ function Settings() {
       setErrors({});
       setShowErrorSummary(false);
       if (section) {
+        // After persistence, briefly "reload" the section so screen readers and users
+        // know the UI is refreshing the data before declaring success.
         setSavedFlash(section);
+        setReloadingSection(section);
+        setSaveStatus(`Reloading ${label} data to confirm changes…`);
+        await new Promise((r) => setTimeout(r, 400));
+        setReloadingSection(null);
+        setSaveStatus(`${label} saved and data refreshed.`);
         window.setTimeout(() => {
           setSavedFlash((cur) => (cur === section ? null : cur));
         }, 4000);
+        toast.success(
+          section === "payment"
+            ? "Payment & bank details saved — new invoices will use them"
+            : "Business identity saved — new invoices will use it",
+        );
       }
-      toast.success(
-        section === "payment"
-          ? "Payment & bank details saved — new invoices will use them"
-          : "Business identity saved — new invoices will use it",
-      );
     } catch (err) {
+      setSaveStatus(`Save failed. ${err instanceof Error ? err.message : "Please try again."}`);
       toast.error(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSavingSection(null);
+      setReloadingSection(null);
+      clearSaveStatus(4000);
     }
   };
+
 
 
 
@@ -363,6 +370,22 @@ function Settings() {
 
   const renderSectionBanner = (section: Section) => {
     const items = sectionErrorItems(section);
+    if (reloadingSection === section) {
+      return (
+        <div
+          className="mb-3 flex items-start gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <Loader2 className="size-4 shrink-0 mt-0.5 animate-spin" aria-label="Reloading section data" />
+          <div className="flex-1">
+            <div className="font-semibold">Reloading {section === "payment" ? "Payment & bank" : "Business identity"} data…</div>
+            <div className="text-primary/80">Confirming your saved changes.</div>
+          </div>
+        </div>
+      );
+    }
     if (savedFlash === section) {
       return (
         <div
@@ -406,6 +429,7 @@ function Settings() {
         </div>
       </div>
     );
+
   };
 
 
@@ -489,9 +513,10 @@ function Settings() {
           <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" className="h-7" onClick={cancelEdit} disabled={!!savingSection}>Discard</Button>
-            <Button size="sm" className="h-7" onClick={saveBiz} disabled={!!savingSection}>
-              {savingSection ? (<><Loader2 className="size-3.5 mr-1 animate-spin" /> Saving…</>) : "Save"}
+            <Button size="sm" className="h-7" onClick={saveBiz} disabled={!!savingSection || !!reloadingSection} aria-busy={!!savingSection || !!reloadingSection}>
+              {savingSection ? (<><Loader2 className="size-3.5 mr-1 animate-spin" aria-label="Saving in progress" /> Saving…</>) : "Save"}
             </Button>
+
           </div>
         </div>
 
@@ -513,7 +538,9 @@ function Settings() {
           onCancel={cancelEdit}
           onSave={saveBiz}
           saving={savingSection === "business"}
+          reloading={reloadingSection === "business"}
         >
+
           <div className="space-y-3">
             {renderSectionBanner("business")}
             <div className="grid grid-cols-2 gap-3">
@@ -639,7 +666,9 @@ function Settings() {
           onCancel={cancelEdit}
           onSave={saveBiz}
           saving={savingSection === "payment"}
+          reloading={reloadingSection === "payment"}
         >
+
           {renderSectionBanner("payment")}
           <div className="grid grid-cols-2 gap-3">
             <FieldRow field="upi_vpa" label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
@@ -828,6 +857,7 @@ function CollapsibleCard({
   onCancel,
   onSave,
   saving = false,
+  reloading = false,
   children,
 }: {
   icon: any;
@@ -843,8 +873,10 @@ function CollapsibleCard({
   onCancel?: () => void;
   onSave?: () => void;
   saving?: boolean;
+  reloading?: boolean;
   children: React.ReactNode;
 }) {
+
   const [open, setOpen] = useState(defaultOpen);
   // Hydrate from localStorage once the per-user storageKey is known.
   useEffect(() => {
@@ -862,9 +894,10 @@ function CollapsibleCard({
       window.localStorage.setItem(storageKey, open ? "1" : "0");
     } catch {}
   }, [open, storageKey, readOnly]);
-  // Auto-open the section while it's being edited so the form is visible.
-  useEffect(() => { if (editing) setOpen(true); }, [editing]);
+  // Auto-open the section while it's being edited or refreshed so the status banner is visible.
+  useEffect(() => { if (editing || reloading) setOpen(true); }, [editing, reloading]);
   const effectiveOpen = readOnly ? false : open;
+
 
   const requestToggle = () => {
     if (readOnly) return;
@@ -927,7 +960,7 @@ function CollapsibleCard({
                 size="sm"
                 variant="ghost"
                 onClick={() => onCancel?.()}
-                disabled={saving}
+                disabled={saving || reloading}
               >
                 <X className="size-3.5 mr-1" /> Cancel
               </Button>
@@ -935,16 +968,19 @@ function CollapsibleCard({
                 type="button"
                 size="sm"
                 onClick={() => onSave?.()}
-                disabled={!dirty || saving}
-                aria-busy={saving}
+                disabled={!dirty || saving || reloading}
+                aria-busy={saving || reloading}
               >
                 {saving ? (
-                  <><Loader2 className="size-3.5 mr-1 animate-spin" /> Saving…</>
+                  <><Loader2 className="size-3.5 mr-1 animate-spin" aria-label="Saving in progress" /> Saving…</>
+                ) : reloading ? (
+                  <><Loader2 className="size-3.5 mr-1 animate-spin" aria-label="Reloading section data" /> Reloading…</>
                 ) : (
                   <><Check className="size-3.5 mr-1" /> Save</>
                 )}
               </Button>
             </>
+
           ) : (
             <Button
               type="button"

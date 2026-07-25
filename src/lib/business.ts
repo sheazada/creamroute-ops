@@ -180,8 +180,9 @@ export const DEFAULT_BUSINESS: BusinessProfile = {
   address: "Shop 12, Wholesale Dairy Market, New Delhi 110001",
   upi_vpa: "",
   bank_name: "HDFC Bank",
-  bank_account: "50100XXXXXXXX",
+  bank_account: "501000000000",
   bank_ifsc: "HDFC0000000",
+
   bank_branch: "New Delhi",
   bank_holder: "DairyFlow Distributors",
   terms:
