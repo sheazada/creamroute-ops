@@ -70,6 +70,7 @@ const nav: {
       { to: "/customers", label: "Customers", icon: Users, roles: ["admin", "manager", "salesperson"] },
       { to: "/suppliers", label: "Suppliers", icon: Building2, roles: FIN },
       { to: "/purchases", label: "Purchases", icon: ClipboardList, roles: FIN },
+      { to: "/crates", label: "Crates", icon: Package, roles: ["admin", "manager", "driver", "helper"] },
     ],
   },
   {

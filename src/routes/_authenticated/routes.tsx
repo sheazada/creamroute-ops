@@ -15,7 +15,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
-import { ArrowDown, ArrowUp, Camera, CheckCircle2, Clock, Crosshair, Download, GripVertical, History, LocateFixed, MapPin, Pencil, Play, Plus, Printer, Route as RouteIcon, Sparkles, Square, Trash2, Truck, UserPlus, Wallet, Wand2, XCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, CheckCircle2, Clock, Crosshair, Download, GripVertical, History, LocateFixed, MapPin, Package, Pencil, Play, Plus, Printer, Route as RouteIcon, Sparkles, Square, Trash2, Truck, UserPlus, Wallet, Wand2, XCircle } from "lucide-react";
 import { optimizeStops } from "@/lib/route-optimize";
 import { getCurrentPosition, captureGpsWithAudit, logGpsAudit, fmtLatLng, gmapsUrl, haversineKm } from "@/lib/geo";
 import { toast } from "sonner";
@@ -1491,6 +1491,8 @@ function DeliverStopDialog({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [qtys, setQtys] = useState<Record<string, string>>({});
+  const [cratesIssued, setCratesIssued] = useState("");
+  const [cratesReturned, setCratesReturned] = useState("");
   const enqueueNotifs = useServerFn(enqueueDeliveryNotifications);
   const processNotifs = useServerFn(processQueuedNotifications);
 
@@ -1502,6 +1504,8 @@ function DeliverStopDialog({
       setReference("");
       setSignature(payload.delivery?.pod_signature ?? "");
       setFile(null);
+      setCratesIssued("");
+      setCratesReturned("");
       const init: Record<string, string> = {};
       (payload.inv.items ?? []).forEach((it) => {
         const ordered = Number(it.ordered_quantity ?? it.quantity ?? 0);
@@ -1608,6 +1612,60 @@ function DeliverStopDialog({
       }).eq("id", delivery.id);
       if (dErr) throw dErr;
 
+      // 4b. Save crate transactions (if any)
+      const cratesIssuedQty = Number(cratesIssued || 0);
+      const cratesReturnedQty = Number(cratesReturned || 0);
+      if ((cratesIssuedQty > 0 || cratesReturnedQty > 0) && inv.customer && finalStatus !== "failed") {
+        // Get the default crate type (first one)
+        const { data: defaultCrateType } = await supabase
+          .from("crate_types")
+          .select("id")
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+
+        if (defaultCrateType) {
+          const { data: user } = await supabase.auth.getUser();
+          const crateTransactions: any[] = [];
+
+          if (cratesIssuedQty > 0) {
+            crateTransactions.push({
+              crate_type_id: defaultCrateType.id,
+              retailer_id: inv.customer.id,
+              delivery_id: delivery.id,
+              route_id: route.id === "u" ? null : route.id,
+              transaction_type: "issue",
+              quantity: cratesIssuedQty,
+              transaction_date: new Date().toISOString().split("T")[0],
+              notes: `Issued with delivery ${inv.invoice_no}`,
+              created_by: user?.user?.id ?? null,
+            });
+          }
+
+          if (cratesReturnedQty > 0) {
+            crateTransactions.push({
+              crate_type_id: defaultCrateType.id,
+              retailer_id: inv.customer.id,
+              delivery_id: delivery.id,
+              route_id: route.id === "u" ? null : route.id,
+              transaction_type: "return",
+              quantity: cratesReturnedQty,
+              transaction_date: new Date().toISOString().split("T")[0],
+              notes: `Returned with delivery ${inv.invoice_no}`,
+              created_by: user?.user?.id ?? null,
+            });
+          }
+
+          if (crateTransactions.length > 0) {
+            const { error: crateErr } = await supabase.from("crate_transactions").insert(crateTransactions);
+            if (crateErr) {
+              console.warn("Failed to save crate transactions:", crateErr);
+              // Don't throw - delivery was successful, crate tracking is secondary
+            }
+          }
+        }
+      }
+
       // 5. Enqueue retailer notifications (idempotent) and kick off dispatch.
       // Fire-and-forget so a provider outage never blocks the delivery save.
       try {
@@ -1708,6 +1766,53 @@ function DeliverStopDialog({
               <StatusBadge status={derivedStatus} />
             </div>
           </div>
+
+          {/* Crate tracking */}
+          {derivedStatus !== "failed" && (
+            <div className="rounded-lg border bg-muted/20">
+              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Package className="size-3.5" />
+                  Crate Tracking
+                </div>
+                <span className="text-[10px] text-muted-foreground">Optional</span>
+              </div>
+              <div className="p-3 grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Crates Issued</Label>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Button type="button" size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setCratesIssued(String(Math.max(0, Number(cratesIssued || 0) - 1)))}>−</Button>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      className="h-8 w-20 text-center"
+                      value={cratesIssued}
+                      onChange={(e) => setCratesIssued(e.target.value)}
+                      placeholder="0"
+                    />
+                    <Button type="button" size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setCratesIssued(String(Number(cratesIssued || 0) + 1))}>+</Button>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">New crates given</div>
+                </div>
+                <div>
+                  <Label className="text-xs">Crates Returned</Label>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Button type="button" size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setCratesReturned(String(Math.max(0, Number(cratesReturned || 0) - 1)))}>−</Button>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      className="h-8 w-20 text-center"
+                      value={cratesReturned}
+                      onChange={(e) => setCratesReturned(e.target.value)}
+                      placeholder="0"
+                    />
+                    <Button type="button" size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setCratesReturned(String(Number(cratesReturned || 0) + 1))}>+</Button>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">Empty crates taken back</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <Label>Received by {derivedStatus !== "failed" && "*"}</Label>
