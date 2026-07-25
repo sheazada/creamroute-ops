@@ -987,6 +987,7 @@ function CollapsibleCard({
                 size="sm"
                 onClick={() => onSave?.()}
                 disabled={!dirty || saving || reloading}
+                aria-disabled={!dirty || saving || reloading}
                 aria-busy={saving || reloading}
               >
                 {saving ? (
