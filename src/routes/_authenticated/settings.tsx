@@ -885,6 +885,7 @@ function CollapsibleCard({
   onSave,
   saving = false,
   reloading = false,
+  headerRef,
   children,
 }: {
   icon: any;
@@ -901,6 +902,7 @@ function CollapsibleCard({
   onSave?: () => void;
   saving?: boolean;
   reloading?: boolean;
+  headerRef?: React.Ref<HTMLButtonElement>;
   children: React.ReactNode;
 }) {
 
