@@ -231,6 +231,10 @@ function Settings() {
   const [reloadingSection, setReloadingSection] = useState<Section | null>(null);
   const [showErrorSummary, setShowErrorSummary] = useState(false);
   const errorSummaryRef = useRef<HTMLDivElement | null>(null);
+  const businessHeaderRef = useRef<HTMLButtonElement | null>(null);
+  const paymentHeaderRef = useRef<HTMLButtonElement | null>(null);
+  const sectionHeaderRef = (section: Section): React.RefObject<HTMLButtonElement | null> =>
+    section === "business" ? businessHeaderRef : paymentHeaderRef;
 
   const sectionForField = (k: keyof BusinessProfile): Section | null => {
     if ((SECTION_FIELDS.business as (keyof BusinessProfile)[]).includes(k)) return "business";
