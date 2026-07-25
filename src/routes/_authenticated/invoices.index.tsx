@@ -58,11 +58,12 @@ function Invoices() {
               <th className="text-right px-6 py-3 font-semibold">Total</th>
               <th className="text-right px-6 py-3 font-semibold">Balance</th>
               <th className="text-left px-6 py-3 font-semibold">Status</th>
+              <th className="text-right px-6 py-3 font-semibold">PDF</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No invoices. <Link to="/invoices/new" className="text-primary hover:underline">Generate one</Link>.</td></tr>
+              <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No invoices. <Link to="/invoices/new" className="text-primary hover:underline">Generate one</Link>.</td></tr>
             )}
             {filtered.map((i: any) => (
               <tr key={i.id} className="hover:bg-muted/30">
@@ -79,6 +80,22 @@ function Invoices() {
                 <td className="px-6 py-3 text-right font-mono font-semibold">{inr(i.total)}</td>
                 <td className={`px-6 py-3 text-right font-mono ${Number(i.balance) > 0 ? "text-destructive" : "text-muted-foreground"}`}>{inr(i.balance)}</td>
                 <td className="px-6 py-3"><StatusBadge status={i.status} /></td>
+                <td className="px-6 py-3 text-right">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-1.5 h-8"
+                    onClick={async () => {
+                      try {
+                        await downloadInvoicePdf(i.id);
+                      } catch (e: any) {
+                        toast.error(e.message ?? "Failed to download PDF");
+                      }
+                    }}
+                  >
+                    <Download className="size-4" /> PDF
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
