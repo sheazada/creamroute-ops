@@ -18,7 +18,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff, Bell, Send, CheckCircle2, XCircle, Clock, Ban, MessageSquare } from "lucide-react";
+import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff, Bell, Send, CheckCircle2, XCircle, Clock, Ban, MessageSquare, BookOpen } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getBusiness } from "@/lib/business";
@@ -125,6 +125,11 @@ function Customers() {
                 <NotifyBadges customer={c} />
                 <ReminderActions customer={c} />
                 <CustomerNotificationsButton customer={c} />
+                <Link to="/customer-ledger/$id" params={{ id: c.id }}>
+                  <Button size="icon" variant="ghost" className="size-8" title="View ledger / passbook">
+                    <BookOpen className="size-4" />
+                  </Button>
+                </Link>
                 <EditCustomerButton customer={c} />
                 <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary ml-auto hover:underline">Invoice →</Link>
               </div>
@@ -165,6 +170,11 @@ function Customers() {
                   <td className="px-6 py-3"><NotifyBadges customer={c} /></td>
                   <td className="px-6 py-3 text-right">
                     <div className="flex items-center gap-2 justify-end">
+                      <Link to="/customer-ledger/$id" params={{ id: c.id }}>
+                        <Button size="icon" variant="ghost" className="size-8" title="View ledger / passbook">
+                          <BookOpen className="size-4" />
+                        </Button>
+                      </Link>
                       <CustomerNotificationsButton customer={c} />
                       <EditCustomerButton customer={c} />
                       <Link to="/invoices/new" search={{ customerId: c.id }} className="text-xs text-primary hover:underline">Invoice</Link>
