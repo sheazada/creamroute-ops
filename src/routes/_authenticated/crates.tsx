@@ -50,6 +50,8 @@ import {
   type CrateTransaction,
   type CrateBalance,
 } from "@/lib/crates-schema";
+import { typed } from "@/lib/typed-db";
+
 
 export const Route = createFileRoute("/_authenticated/crates")({
   component: CratesManagement,
@@ -105,15 +107,15 @@ function CrateBalanceTab() {
   const { data: crateTypes } = useQuery({
     queryKey: ["crate-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crate_types")
-        .select("*")
+      const { data, error } = await typed("crate_types")
+        .selectAll()
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
       return safeParseList(crateTypeSchema, data, "crate_types");
     },
   });
+
 
   const { data: balances, isLoading } = useQuery({
     queryKey: ["crate-balance", asOfDate, selectedCrateType],
@@ -257,10 +259,7 @@ function CrateTransactionsTab() {
   const { data: crateTypes } = useQuery({
     queryKey: ["crate-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crate_types")
-        .select("*")
-        .order("name");
+      const { data, error } = await typed("crate_types").selectAll().order("name");
       if (error) throw error;
       return safeParseList(crateTypeSchema, data, "crate_types");
     },
@@ -269,9 +268,10 @@ function CrateTransactionsTab() {
   const { data: retailers } = useQuery({
     queryKey: ["retailers-for-crates"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customers")
-        .select("id, name, shop_name")
+      const { data, error } = await typed("customers")
+        .raw<{ id: string; name: string; shop_name: string | null }>(
+          "id, name, shop_name",
+        )
         .eq("status", "active")
         .order("name");
       if (error) throw error;
@@ -279,19 +279,24 @@ function CrateTransactionsTab() {
     },
   });
 
+
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["crate-transactions", dateFilter, typeFilter, crateTypeFilter, retailerFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("crate_transactions")
-        .select("*, crate_type:crate_types(id, name), retailer:customers(id, name, shop_name)")
+      let query = typed("crate_transactions")
+        .raw<CrateTransaction>(
+          "*, crate_type:crate_types(id, name), retailer:customers(id, name, shop_name)",
+        )
         .order("transaction_date", { ascending: false });
 
       if (dateFilter !== "all") {
         query = query.eq("transaction_date", dateFilter);
       }
       if (typeFilter !== "all") {
-        query = query.eq("transaction_type", typeFilter);
+        query = query.eq(
+          "transaction_type",
+          typeFilter as CrateTransaction["transaction_type"],
+        );
       }
       if (crateTypeFilter !== "all") {
         query = query.eq("crate_type_id", crateTypeFilter);
@@ -313,6 +318,7 @@ function CrateTransactionsTab() {
     },
   });
 
+
   const summary = {
     totalIssue: transactions?.filter((t) => t.transaction_type === "issue").reduce((s, t) => s + t.quantity, 0) ?? 0,
     totalReturn: transactions?.filter((t) => t.transaction_type === "return").reduce((s, t) => s + t.quantity, 0) ?? 0,
@@ -323,7 +329,7 @@ function CrateTransactionsTab() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this transaction?")) return;
 
-    const { error } = await supabase.from("crate_transactions").delete().eq("id", id);
+    const { error } = await typed("crate_transactions").delete().eq("id", id);
     if (error) {
       toast.error("Failed to delete transaction");
       return;
@@ -587,7 +593,7 @@ function AddCrateTransactionDialog({
     setSaving(true);
     const { data: user } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from("crate_transactions").insert({
+    const { error } = await typed("crate_transactions").insert({
       crate_type_id: crateTypeId,
       retailer_id: retailerId,
       transaction_type: transactionType,
@@ -596,6 +602,7 @@ function AddCrateTransactionDialog({
       notes: notes || null,
       created_by: user?.user?.id ?? null,
     });
+
 
     setSaving(false);
 
@@ -730,18 +737,14 @@ function CrateTypesTab() {
   const { data: crateTypes, isLoading } = useQuery({
     queryKey: ["crate-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crate_types")
-        .select("*")
-        .order("name");
+      const { data, error } = await typed("crate_types").selectAll().order("name");
       if (error) throw error;
       return safeParseList(crateTypeSchema, data, "crate_types");
     },
   });
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
-    const { error } = await supabase
-      .from("crate_types")
+    const { error } = await typed("crate_types")
       .update({ is_active: !isActive })
       .eq("id", id);
 
@@ -757,7 +760,8 @@ function CrateTypesTab() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure? This will delete all related transactions.")) return;
 
-    const { error } = await supabase.from("crate_types").delete().eq("id", id);
+    const { error } = await typed("crate_types").delete().eq("id", id);
+
     if (error) {
       toast.error("Failed to delete crate type");
       return;
@@ -861,11 +865,12 @@ function AddCrateTypeDialog({
     }
 
     setSaving(true);
-    const { error } = await supabase.from("crate_types").insert({
+    const { error } = await typed("crate_types").insert({
       name: name.trim(),
       description: description.trim() || null,
       is_active: true,
     });
+
 
     setSaving(false);
 
