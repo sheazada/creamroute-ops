@@ -228,6 +228,7 @@ function Settings() {
 
   const [savedFlash, setSavedFlash] = useState<Section | null>(null);
   const [savingSection, setSavingSection] = useState<Section | null>(null);
+  const [reloadingSection, setReloadingSection] = useState<Section | null>(null);
   const [showErrorSummary, setShowErrorSummary] = useState(false);
   const errorSummaryRef = useRef<HTMLDivElement | null>(null);
 
@@ -254,22 +255,15 @@ function Settings() {
     if (showErrorSummary && Object.keys(errors).length === 0) setShowErrorSummary(false);
   }, [errors, showErrorSummary]);
 
-  // Screen-reader status line for save progress/completion. We keep a single
-  // polite live region and rewrite its text so AT users hear "Saving…" when
-  // a save starts and "…saved" when it finishes.
+  // Screen-reader status line for save progress, reload and completion. We keep a single
+  // polite live region and rewrite its text so AT users hear "Saving…", "Reloading…",
+  // and "…saved" in sequence.
   const [saveStatus, setSaveStatus] = useState("");
-  useEffect(() => {
-    if (!savingSection) return;
-    const label = savingSection === "payment" ? "Payment & bank" : "Business identity";
-    setSaveStatus(`Saving ${label} changes…`);
-  }, [savingSection]);
-  useEffect(() => {
-    if (!savedFlash) return;
-    const label = savedFlash === "payment" ? "Payment & bank" : "Business identity";
-    setSaveStatus(`${label} saved successfully.`);
-    const t = window.setTimeout(() => setSaveStatus(""), 4000);
+  const clearSaveStatus = (delay = 4000) => {
+    const t = window.setTimeout(() => setSaveStatus(""), delay);
     return () => window.clearTimeout(t);
-  }, [savedFlash]);
+  };
+
 
 
   const saveBiz = async () => {
