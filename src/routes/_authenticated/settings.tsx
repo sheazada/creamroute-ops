@@ -259,8 +259,15 @@ function Settings() {
   // polite live region and rewrite its text so AT users hear "Saving…", "Reloading…",
   // and "…saved" in sequence.
   const [saveStatus, setSaveStatus] = useState("");
+  // Assertive live region text used only for save failures — screen readers interrupt
+  // and immediately announce the reason so users can react without waiting.
+  const [saveError, setSaveError] = useState("");
   const clearSaveStatus = (delay = 4000) => {
     const t = window.setTimeout(() => setSaveStatus(""), delay);
+    return () => window.clearTimeout(t);
+  };
+  const clearSaveError = (delay = 6000) => {
+    const t = window.setTimeout(() => setSaveError(""), delay);
     return () => window.clearTimeout(t);
   };
 
