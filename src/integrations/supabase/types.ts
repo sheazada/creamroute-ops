@@ -935,31 +935,52 @@ export type Database = {
       }
       product_batches: {
         Row: {
+          available_qty: number | null
           batch_no: string | null
+          cost_price: number | null
           created_at: string
+          damaged_qty: number | null
           expiry_date: string | null
           id: string
           mfg_date: string | null
           product_id: string
           quantity: number
+          reserved_qty: number | null
+          status: string | null
+          supplier_id: string | null
+          warehouse_id: string | null
         }
         Insert: {
+          available_qty?: number | null
           batch_no?: string | null
+          cost_price?: number | null
           created_at?: string
+          damaged_qty?: number | null
           expiry_date?: string | null
           id?: string
           mfg_date?: string | null
           product_id: string
           quantity?: number
+          reserved_qty?: number | null
+          status?: string | null
+          supplier_id?: string | null
+          warehouse_id?: string | null
         }
         Update: {
+          available_qty?: number | null
           batch_no?: string | null
+          cost_price?: number | null
           created_at?: string
+          damaged_qty?: number | null
           expiry_date?: string | null
           id?: string
           mfg_date?: string | null
           product_id?: string
           quantity?: number
+          reserved_qty?: number | null
+          status?: string | null
+          supplier_id?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -967,6 +988,20 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_batches_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -1315,6 +1350,222 @@ export type Database = {
           },
         ]
       }
+      stock_adjustment_items: {
+        Row: {
+          adjustment_id: string
+          batch_id: string | null
+          created_at: string | null
+          diff_qty: number
+          id: string
+          physical_qty: number
+          product_id: string
+          reason_detail: string | null
+          system_qty: number
+          unit_cost: number | null
+        }
+        Insert: {
+          adjustment_id: string
+          batch_id?: string | null
+          created_at?: string | null
+          diff_qty?: number
+          id?: string
+          physical_qty?: number
+          product_id: string
+          reason_detail?: string | null
+          system_qty?: number
+          unit_cost?: number | null
+        }
+        Update: {
+          adjustment_id?: string
+          batch_id?: string | null
+          created_at?: string | null
+          diff_qty?: number
+          id?: string
+          physical_qty?: number
+          product_id?: string
+          reason_detail?: string | null
+          system_qty?: number
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_adjustment_items_adjustment_id_fkey"
+            columns: ["adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "stock_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustment_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "product_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustment_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_adjustments: {
+        Row: {
+          adjustment_date: string
+          adjustment_no: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          reason: string | null
+          requested_by: string | null
+          status: string
+          updated_at: string | null
+          warehouse_id: string | null
+        }
+        Insert: {
+          adjustment_date?: string
+          adjustment_no: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string | null
+          warehouse_id?: string | null
+        }
+        Update: {
+          adjustment_date?: string
+          adjustment_no?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string | null
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_adjustments_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_reconciliation_items: {
+        Row: {
+          batch_id: string | null
+          created_at: string | null
+          diff_qty: number
+          id: string
+          physical_qty: number
+          product_id: string
+          recon_id: string
+          system_qty: number
+          variance_reason: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string | null
+          diff_qty?: number
+          id?: string
+          physical_qty?: number
+          product_id: string
+          recon_id: string
+          system_qty?: number
+          variance_reason?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string | null
+          diff_qty?: number
+          id?: string
+          physical_qty?: number
+          product_id?: string
+          recon_id?: string
+          system_qty?: number
+          variance_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reconciliation_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "product_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_items_recon_id_fkey"
+            columns: ["recon_id"]
+            isOneToOne: false
+            referencedRelation: "stock_reconciliations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_reconciliations: {
+        Row: {
+          completed_at: string | null
+          conducted_by: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          recon_date: string
+          recon_no: string
+          status: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          conducted_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          recon_date?: string
+          recon_no: string
+          status?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          conducted_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          recon_date?: string
+          recon_no?: string
+          status?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reconciliations_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_payments: {
         Row: {
           amount: number
@@ -1408,82 +1659,6 @@ export type Database = {
         }
         Relationships: []
       }
-      reminder_logs: {
-        Row: {
-          id: string
-          customer_id: string
-          invoice_id: string | null
-          template_id: string | null
-          sent_at: string
-          channel: string
-          status: string
-          error_message: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          customer_id: string
-          invoice_id?: string | null
-          template_id?: string | null
-          sent_at?: string
-          channel: string
-          status?: string
-          error_message?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          customer_id?: string
-          invoice_id?: string | null
-          template_id?: string | null
-          sent_at?: string
-          channel?: string
-          status?: string
-          error_message?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "reminder_logs_customer_id_fkey"; columns: ["customer_id"]; isOneToOne: false; referencedRelation: "customers"; referencedColumns: ["id"] },
-          { foreignKeyName: "reminder_logs_invoice_id_fkey"; columns: ["invoice_id"]; isOneToOne: false; referencedRelation: "invoices"; referencedColumns: ["id"] },
-          { foreignKeyName: "reminder_logs_template_id_fkey"; columns: ["template_id"]; isOneToOne: false; referencedRelation: "reminder_templates"; referencedColumns: ["id"] }
-        ]
-      }
-      reminder_templates: {
-        Row: {
-          id: string
-          name: string
-          days_overdue: number
-          channel: string
-          subject: string | null
-          body: string
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          days_overdue: number
-          channel: string
-          subject?: string | null
-          body: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          days_overdue?: number
-          channel?: string
-          subject?: string | null
-          body?: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           id: string
@@ -1499,6 +1674,30 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      warehouses: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name?: string
         }
         Relationships: []
       }
@@ -1521,6 +1720,8 @@ export type Database = {
         Args: { _run_id: string }
         Returns: number
       }
+      generate_adjustment_no: { Args: never; Returns: string }
+      generate_recon_no: { Args: never; Returns: string }
       get_crate_balance_as_of: {
         Args: { p_as_of_date?: string; p_crate_type_id?: string }
         Returns: {
@@ -1532,6 +1733,28 @@ export type Database = {
           shop_name: string
         }[]
       }
+      get_near_expiry_stock: {
+        Args: { _days?: number }
+        Returns: {
+          available_qty: number
+          batch_no: string
+          days_remaining: number
+          expiry_date: string
+          product_name: string
+        }[]
+      }
+      get_stock_valuation: {
+        Args: never
+        Returns: {
+          available_qty: number
+          avg_cost: number
+          damaged_qty: number
+          product_id: string
+          product_name: string
+          total_qty: number
+          total_value: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1540,6 +1763,10 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _uid: string }; Returns: boolean }
+      post_stock_adjustment: {
+        Args: { _adjustment_id: string }
+        Returns: undefined
+      }
       recalc_customer_outstanding: {
         Args: { _customer_id: string }
         Returns: undefined
