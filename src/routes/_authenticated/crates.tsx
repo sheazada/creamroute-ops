@@ -283,16 +283,20 @@ function CrateTransactionsTab() {
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["crate-transactions", dateFilter, typeFilter, crateTypeFilter, retailerFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("crate_transactions")
-        .select("*, crate_type:crate_types(id, name), retailer:customers(id, name, shop_name)")
+      let query = typed("crate_transactions")
+        .raw<CrateTransaction>(
+          "*, crate_type:crate_types(id, name), retailer:customers(id, name, shop_name)",
+        )
         .order("transaction_date", { ascending: false });
 
       if (dateFilter !== "all") {
         query = query.eq("transaction_date", dateFilter);
       }
       if (typeFilter !== "all") {
-        query = query.eq("transaction_type", typeFilter);
+        query = query.eq(
+          "transaction_type",
+          typeFilter as CrateTransaction["transaction_type"],
+        );
       }
       if (crateTypeFilter !== "all") {
         query = query.eq("crate_type_id", crateTypeFilter);
@@ -313,6 +317,7 @@ function CrateTransactionsTab() {
       );
     },
   });
+
 
   const summary = {
     totalIssue: transactions?.filter((t) => t.transaction_type === "issue").reduce((s, t) => s + t.quantity, 0) ?? 0,
