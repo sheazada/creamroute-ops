@@ -240,25 +240,6 @@ function InvoiceView() {
     }
   };
 
-  const whatsappShare = () => {
-    const phone = (c?.mobile ?? "").replace(/[^\d]/g, "");
-    const lines = [
-      `*${biz.name}* — Tax Invoice`,
-      `Invoice #: ${inv.invoice_no}`,
-      `Date: ${shortDate(inv.invoice_date)}`,
-      `Bill to: ${c?.name ?? ""}${c?.shop_name ? " · " + c.shop_name : ""}`,
-      `Amount: ${inr(inv.total)}`,
-      Number(inv.balance) > 0 ? `Balance due: ${inr(inv.balance)}` : `Paid in full ✓`,
-      biz.upi_vpa ? `\nPay via UPI: ${biz.upi_vpa}` : "",
-      `\nView / download: ${typeof window !== "undefined" ? window.location.href : ""}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-    const url = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(lines)}`
-      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
 
   // QR: UPI intent if VPA configured, else invoice URL
   const qrPayload = biz.upi_vpa
