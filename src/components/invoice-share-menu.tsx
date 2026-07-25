@@ -1,6 +1,7 @@
 // Universal share menu for invoices. Uses Web Share API (with PDF file when
 // supported), and always offers WhatsApp / Email / SMS / Telegram / Copy link
 // fallbacks so the user can send an invoice anywhere.
+// Every action is recorded to `share_activity_logs` for compliance.
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,17 @@ import { toast } from "sonner";
 import { buildInvoicePdf } from "@/lib/invoice-pdf";
 import { getBusiness } from "@/lib/business";
 import { inr, shortDate } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/client";
+
+type Channel =
+  | "whatsapp"
+  | "email"
+  | "sms"
+  | "telegram"
+  | "native"
+  | "copy_link"
+  | "copy_summary"
+  | "download_pdf";
 
 type Props = {
   invoice: any;
@@ -63,6 +75,25 @@ export function InvoiceShareMenu({
     (biz.upi_vpa ? `\nPay via UPI: ${biz.upi_vpa}\n` : "") +
     `\nView: ${url}`;
 
+  const logShare = async (channel: Channel, recipient?: string | null) => {
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const u = userRes?.user;
+      await supabase.from("share_activity_logs").insert({
+        invoice_id: invoice.id ?? null,
+        invoice_no: invoice.invoice_no ?? null,
+        customer_id: c?.id ?? invoice.customer_id ?? null,
+        channel,
+        recipient: recipient || null,
+        user_id: u?.id ?? null,
+        user_email: u?.email ?? null,
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
+      });
+    } catch {
+      // Non-blocking: never break sharing because logging failed
+    }
+  };
+
   const buildPdfFile = async (): Promise<File> => {
     const rows = items ?? (itemsLoader ? await itemsLoader() : []);
     const blob = buildInvoicePdf(invoice, rows);
@@ -72,7 +103,7 @@ export function InvoiceShareMenu({
   const nativeShare = async () => {
     setBusy(true);
     try {
-      const file = buildPdfFile();
+      const file = await buildPdfFile();
       const nav = navigator as any;
       const data: any = {
         title: `Invoice ${invoice.invoice_no}`,
@@ -84,9 +115,11 @@ export function InvoiceShareMenu({
       }
       if (nav.share) {
         await nav.share(data);
+        await logShare("native");
       } else {
         await navigator.clipboard.writeText(summary);
         toast.success("Invoice details copied to clipboard");
+        await logShare("copy_summary");
       }
     } catch (e: any) {
       if (e?.name !== "AbortError") toast.error(e?.message ?? "Share failed");
@@ -101,6 +134,7 @@ export function InvoiceShareMenu({
       ? `https://wa.me/${phone}?text=${encodeURIComponent(summary)}`
       : `https://wa.me/?text=${encodeURIComponent(summary)}`;
     window.open(link, "_blank", "noopener,noreferrer");
+    void logShare("whatsapp", phone || null);
   };
 
   const email = () => {
@@ -108,23 +142,27 @@ export function InvoiceShareMenu({
     const subject = `Invoice ${invoice.invoice_no} from ${biz.name}`;
     const href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(summary)}`;
     window.location.href = href;
+    void logShare("email", to || null);
   };
 
   const sms = () => {
     const phone = (c?.mobile ?? "").replace(/[^\d+]/g, "");
     const href = `sms:${phone}?&body=${encodeURIComponent(summary)}`;
     window.location.href = href;
+    void logShare("sms", phone || null);
   };
 
   const telegram = () => {
     const link = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(summary)}`;
     window.open(link, "_blank", "noopener,noreferrer");
+    void logShare("telegram");
   };
 
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Invoice link copied");
+      await logShare("copy_link");
     } catch {
       toast.error("Copy failed");
     }
@@ -134,6 +172,7 @@ export function InvoiceShareMenu({
     try {
       await navigator.clipboard.writeText(summary);
       toast.success("Invoice summary copied");
+      await logShare("copy_summary");
     } catch {
       toast.error("Copy failed");
     }
@@ -151,6 +190,7 @@ export function InvoiceShareMenu({
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(u), 1000);
+      await logShare("download_pdf");
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to generate PDF");
     }
