@@ -301,6 +301,8 @@ function Settings() {
     }
 
     if (section) setSavingSection(section);
+    const label = section === "payment" ? "Payment & bank" : "Business identity";
+    setSaveStatus(`Saving ${label}…`);
     try {
       // Small awaited tick so the loading state renders even for synchronous
       // local persistence — and gives room for a real network call later.
@@ -311,22 +313,33 @@ function Settings() {
       setErrors({});
       setShowErrorSummary(false);
       if (section) {
+        // After persistence, briefly "reload" the section so screen readers and users
+        // know the UI is refreshing the data before declaring success.
         setSavedFlash(section);
+        setReloadingSection(section);
+        setSaveStatus(`Reloading ${label} data to confirm changes…`);
+        await new Promise((r) => setTimeout(r, 400));
+        setReloadingSection(null);
+        setSaveStatus(`${label} saved and data refreshed.`);
         window.setTimeout(() => {
           setSavedFlash((cur) => (cur === section ? null : cur));
         }, 4000);
+        toast.success(
+          section === "payment"
+            ? "Payment & bank details saved — new invoices will use them"
+            : "Business identity saved — new invoices will use it",
+        );
       }
-      toast.success(
-        section === "payment"
-          ? "Payment & bank details saved — new invoices will use them"
-          : "Business identity saved — new invoices will use it",
-      );
     } catch (err) {
+      setSaveStatus(`Save failed. ${err instanceof Error ? err.message : "Please try again."}`);
       toast.error(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSavingSection(null);
+      setReloadingSection(null);
+      clearSaveStatus(4000);
     }
   };
+
 
 
 
