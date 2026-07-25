@@ -325,9 +325,7 @@ function InvoiceView() {
           )}
           {!editing && (
             <>
-              <Button size="sm" variant="outline" onClick={whatsappShare} className="gap-1.5">
-                <Share2 className="size-4" /> WhatsApp
-              </Button>
+              <InvoiceShareMenu invoice={inv} items={data.items} customer={c} />
               <Button size="sm" variant="outline" onClick={printThermal} className="gap-1.5">
                 <Receipt className="size-4" /> Thermal
               </Button>
