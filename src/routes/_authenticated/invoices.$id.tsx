@@ -317,8 +317,8 @@ function InvoiceView() {
               <Button size="sm" variant="outline" onClick={printA4} className="gap-1.5">
                 <Printer className="size-4" /> Print
               </Button>
-              <Button size="sm" onClick={printA4} className="gap-1.5">
-                <Download className="size-4" /> Save PDF
+              <Button size="sm" onClick={downloadPdf} className="gap-1.5">
+                <Download className="size-4" /> Download PDF
               </Button>
             </>
           )}
