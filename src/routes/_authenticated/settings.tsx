@@ -949,9 +949,10 @@ function CollapsibleCard({
       <div className="w-full flex items-center gap-3 p-4">
         <button
           type="button"
+          ref={headerRef}
           onClick={requestToggle}
           disabled={readOnly}
-          className={`flex items-center gap-3 flex-1 min-w-0 text-left transition-colors -m-2 p-2 rounded ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
+          className={`flex items-center gap-3 flex-1 min-w-0 text-left transition-colors -m-2 p-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
           aria-expanded={effectiveOpen}
           title={readOnly ? "Admin-only — view only for your role" : undefined}
         >
