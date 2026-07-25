@@ -19,8 +19,11 @@ import {
   Receipt,
   Download,
   Copy,
+  History,
 } from "lucide-react";
 import { InvoiceShareMenu } from "@/components/invoice-share-menu";
+import { ReviseInvoiceDialog } from "@/components/revise-invoice-dialog";
+import { InvoiceRevisionHistory } from "@/components/invoice-revision-history";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -59,6 +62,7 @@ function InvoiceView() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<EditableItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [reviseOpen, setReviseOpen] = useState(false);
   const biz = useMemo(() => getBusiness(), []);
 
   const { data } = useQuery({
@@ -272,6 +276,14 @@ function InvoiceView() {
             <>
               <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="gap-1.5">
                 <Pencil className="size-4" /> Edit items
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReviseOpen(true)}
+                className="gap-1.5"
+              >
+                <History className="size-4" /> Revise Invoice
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -865,6 +877,18 @@ function InvoiceView() {
         <div className="t-hr" />
         <div className="t-center t-sm">Thank you! Visit again.</div>
       </div>
+
+      {/* Revision Dialog */}
+      <ReviseInvoiceDialog
+        invoiceId={id}
+        invoiceNo={inv.invoice_no}
+        items={data.items}
+        open={reviseOpen}
+        onOpenChange={setReviseOpen}
+      />
+
+      {/* Revision History */}
+      <InvoiceRevisionHistory invoiceId={id} />
     </PageContainer>
   );
 }
