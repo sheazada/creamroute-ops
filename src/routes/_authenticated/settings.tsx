@@ -1000,7 +1000,12 @@ function CollapsibleCard({
               <Button
                 type="button"
                 size="sm"
-                onClick={() => onSave?.()}
+                onClick={() => {
+                  // Extra defense in depth: ignore clicks while the section is
+                  // already busy, even if a non-disabled ancestor somehow re-fired.
+                  if (saving || reloading) return;
+                  onSave?.();
+                }}
                 disabled={!dirty || saving || reloading}
                 aria-disabled={!dirty || saving || reloading}
                 aria-busy={saving || reloading}
