@@ -335,6 +335,11 @@ function Settings() {
         await new Promise((r) => setTimeout(r, 400));
         setReloadingSection(null);
         setSaveStatus(`${label} saved and data refreshed.`);
+        // Return keyboard focus to the saved section header so screen reader
+        // and keyboard users land on a predictable, labelled control.
+        requestAnimationFrame(() => {
+          sectionHeaderRef(section).current?.focus({ preventScroll: true });
+        });
         window.setTimeout(() => {
           setSavedFlash((cur) => (cur === section ? null : cur));
         }, 4000);
