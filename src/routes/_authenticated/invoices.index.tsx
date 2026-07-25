@@ -81,20 +81,23 @@ function Invoices() {
                 <td className={`px-6 py-3 text-right font-mono ${Number(i.balance) > 0 ? "text-destructive" : "text-muted-foreground"}`}>{inr(i.balance)}</td>
                 <td className="px-6 py-3"><StatusBadge status={i.status} /></td>
                 <td className="px-6 py-3 text-right">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="gap-1.5 h-8"
-                    onClick={async () => {
-                      try {
-                        await downloadInvoicePdf(i.id);
-                      } catch (e: any) {
-                        toast.error(e.message ?? "Failed to download PDF");
+                  <InvoiceShareMenu
+                    invoice={i}
+                    customer={i.customer}
+                    label="Share"
+                    itemsLoader={async () => {
+                      const { data, error } = await supabase
+                        .from("invoice_items")
+                        .select("*")
+                        .eq("invoice_id", i.id)
+                        .order("created_at");
+                      if (error) {
+                        toast.error(error.message);
+                        return [];
                       }
+                      return data ?? [];
                     }}
-                  >
-                    <Download className="size-4" /> PDF
-                  </Button>
+                  />
                 </td>
               </tr>
             ))}
