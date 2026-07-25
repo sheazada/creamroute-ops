@@ -41,40 +41,20 @@ import {
   Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  crateTypeSchema,
+  crateTransactionSchema,
+  crateBalanceSchema,
+  safeParseList,
+  type CrateType,
+  type CrateTransaction,
+  type CrateBalance,
+} from "@/lib/crates-schema";
 
 export const Route = createFileRoute("/_authenticated/crates")({
   component: CratesManagement,
 });
 
-type CrateType = {
-  id: string;
-  name: string;
-  description: string | null;
-  is_active: boolean;
-};
-
-type CrateTransaction = {
-  id: string;
-  crate_type_id: string;
-  retailer_id: string | null;
-  delivery_id: string | null;
-  route_id: string | null;
-  transaction_type: "issue" | "return" | "damaged" | "lost";
-  quantity: number;
-  transaction_date: string;
-  notes: string | null;
-  created_at: string;
-  crate_type?: { id: string; name: string };
-  retailer?: { id: string; name: string; shop_name: string | null };
-};
-
-type CrateBalance = {
-  retailer_id: string;
-  retailer_name: string;
-  shop_name: string | null;
-  crate_type_name: string;
-  balance: number;
-};
 
 function CratesManagement() {
   const [tab, setTab] = useState<"balance" | "transactions" | "setup">("balance");
@@ -131,7 +111,7 @@ function CrateBalanceTab() {
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
-      return (data ?? []) as CrateType[];
+      return safeParseList(crateTypeSchema, data, "crate_types");
     },
   });
 
@@ -144,7 +124,7 @@ function CrateBalanceTab() {
         ...(crateTypeId ? { p_crate_type_id: crateTypeId } : {}),
       });
       if (error) throw error;
-      return (data ?? []) as CrateBalance[];
+      return safeParseList(crateBalanceSchema, data, "crate_balance");
     },
   });
 
@@ -282,7 +262,7 @@ function CrateTransactionsTab() {
         .select("*")
         .order("name");
       if (error) throw error;
-      return (data ?? []) as CrateType[];
+      return safeParseList(crateTypeSchema, data, "crate_types");
     },
   });
 
@@ -322,10 +302,14 @@ function CrateTransactionsTab() {
 
       const { data, error } = await query.limit(500);
       if (error) throw error;
-      return (data ?? []) as (CrateTransaction & {
-        crate_type: { id: string; name: string };
-        retailer: { id: string; name: string; shop_name: string | null };
-      })[];
+      const parsed = safeParseList(crateTransactionSchema, data, "crate_transactions");
+      // Filter out rows that lack the joined retailer/crate_type shape the UI relies on.
+      return parsed.filter(
+        (t): t is CrateTransaction & {
+          crate_type: { id: string; name: string };
+          retailer: { id: string; name: string; shop_name: string | null };
+        } => Boolean(t.crate_type && t.retailer),
+      );
     },
   });
 
@@ -751,7 +735,7 @@ function CrateTypesTab() {
         .select("*")
         .order("name");
       if (error) throw error;
-      return (data ?? []) as CrateType[];
+      return safeParseList(crateTypeSchema, data, "crate_types");
     },
   });
 
