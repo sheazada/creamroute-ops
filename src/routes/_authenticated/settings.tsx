@@ -341,8 +341,12 @@ function Settings() {
         );
       }
     } catch (err) {
-      setSaveStatus(`Save failed. ${err instanceof Error ? err.message : "Please try again."}`);
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      const reason = err instanceof Error && err.message ? err.message : "Please try again.";
+      const label2 = section === "payment" ? "Payment & bank" : "Business identity";
+      setSaveStatus("");
+      setSaveError(`${label2} save failed: ${reason}`);
+      clearSaveError(6000);
+      toast.error(reason);
     } finally {
       setSavingSection(null);
       setReloadingSection(null);
