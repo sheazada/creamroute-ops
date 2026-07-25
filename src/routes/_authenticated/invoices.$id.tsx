@@ -16,10 +16,10 @@ import {
   Save,
   X,
   Trash2,
-  Share2,
   Receipt,
   Download,
 } from "lucide-react";
+import { InvoiceShareMenu } from "@/components/invoice-share-menu";
 import { toast } from "sonner";
 import {
   AlertDialog,
