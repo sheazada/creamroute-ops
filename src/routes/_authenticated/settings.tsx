@@ -853,6 +853,7 @@ function CollapsibleCard({
   onCancel,
   onSave,
   saving = false,
+  reloading = false,
   children,
 }: {
   icon: any;
@@ -868,8 +869,10 @@ function CollapsibleCard({
   onCancel?: () => void;
   onSave?: () => void;
   saving?: boolean;
+  reloading?: boolean;
   children: React.ReactNode;
 }) {
+
   const [open, setOpen] = useState(defaultOpen);
   // Hydrate from localStorage once the per-user storageKey is known.
   useEffect(() => {
