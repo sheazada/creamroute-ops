@@ -107,15 +107,15 @@ function CrateBalanceTab() {
   const { data: crateTypes } = useQuery({
     queryKey: ["crate-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crate_types")
-        .select("*")
+      const { data, error } = await typed("crate_types")
+        .selectAll()
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
       return safeParseList(crateTypeSchema, data, "crate_types");
     },
   });
+
 
   const { data: balances, isLoading } = useQuery({
     queryKey: ["crate-balance", asOfDate, selectedCrateType],
