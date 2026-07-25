@@ -62,8 +62,9 @@ export function InvoiceShareMenu({
     (biz.upi_vpa ? `\nPay via UPI: ${biz.upi_vpa}\n` : "") +
     `\nView: ${url}`;
 
-  const buildPdfFile = (): File => {
-    const blob = buildInvoicePdf(invoice, items);
+  const buildPdfFile = async (): Promise<File> => {
+    const rows = items ?? (itemsLoader ? await itemsLoader() : []);
+    const blob = buildInvoicePdf(invoice, rows);
     return new File([blob], `Invoice-${invoice.invoice_no}.pdf`, { type: "application/pdf" });
   };
 
