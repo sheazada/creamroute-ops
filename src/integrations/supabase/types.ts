@@ -1435,6 +1435,8 @@ export type Database = {
         Args: { _invoice_id: string; _items: Json }
         Returns: string
       }
+      can_manage_finance: { Args: { _uid: string }; Returns: boolean }
+      can_manage_sales: { Args: { _uid: string }; Returns: boolean }
       enqueue_delivery_notifications: {
         Args: { _delivery_id: string }
         Returns: number
@@ -1461,6 +1463,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_staff: { Args: { _uid: string }; Returns: boolean }
       recalc_customer_outstanding: {
         Args: { _customer_id: string }
         Returns: undefined
