@@ -50,7 +50,7 @@ const nav: {
     label: "Sales",
     items: [
       { to: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "manager", "salesperson"] },
-      { to: "/demand-consolidation", label: "Demand Consolidation", icon: Layers, roles: ["admin", "manager"] },
+      { to: "/demand-consolidation", label: "Demand", icon: Layers, roles: ALL },
       { to: "/invoices", label: "Invoices", icon: ReceiptText, roles: ["admin", "manager", "salesperson"] },
       { to: "/payments", label: "Payments", icon: Wallet, roles: ["admin", "manager", "salesperson"] },
       { to: "/reconcile", label: "Reconcile", icon: Wallet, roles: FIN },
@@ -106,9 +106,11 @@ const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof L
     { to: "/products", label: "Products", icon: Package },
   ],
   driver: [
+    { to: "/demand-consolidation", label: "Demand", icon: Layers },
     { to: "/deliveries", label: "Deliveries", icon: Truck },
   ],
   helper: [
+    { to: "/demand-consolidation", label: "Demand", icon: Layers },
     { to: "/deliveries", label: "Deliveries", icon: Truck },
   ],
 };
