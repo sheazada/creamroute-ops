@@ -1354,6 +1354,188 @@ export type Database = {
           }
         ]
       }
+      delivery_cycles: {
+        Row: {
+          id: string
+          cycle_code: string
+          order_date: string
+          delivery_date: string
+          delivery_shift: string
+          cutoff_at: string
+          status: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          cycle_code: string
+          order_date: string
+          delivery_date: string
+          delivery_shift?: string
+          cutoff_at: string
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          cycle_code?: string
+          order_date?: string
+          delivery_date?: string
+          delivery_shift?: string
+          cutoff_at?: string
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      demand_consolidations: {
+        Row: {
+          id: string
+          consolidation_no: string
+          delivery_cycle_id: string
+          consolidation_date: string
+          status: string
+          notes: string | null
+          created_by: string | null
+          approved_by: string | null
+          approved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          consolidation_no: string
+          delivery_cycle_id: string
+          consolidation_date: string
+          status?: string
+          notes?: string | null
+          created_by?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          consolidation_no?: string
+          delivery_cycle_id?: string
+          consolidation_date?: string
+          status?: string
+          notes?: string | null
+          created_by?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_consolidations_delivery_cycle_id_fkey"
+            columns: ["delivery_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_consolidation_items: {
+        Row: {
+          id: string
+          demand_consolidation_id: string
+          product_id: string | null
+          product_name: string
+          total_ordered_qty: number
+          buffer_qty: number
+          final_procurement_qty: number
+          unit_price: number
+          total_value: number
+          remarks: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          demand_consolidation_id: string
+          product_id?: string | null
+          product_name: string
+          total_ordered_qty?: number
+          buffer_qty?: number
+          final_procurement_qty?: number
+          unit_price?: number
+          total_value?: number
+          remarks?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          demand_consolidation_id?: string
+          product_id?: string | null
+          product_name?: string
+          total_ordered_qty?: number
+          buffer_qty?: number
+          final_procurement_qty?: number
+          unit_price?: number
+          total_value?: number
+          remarks?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_consolidation_items_demand_consolidation_id_fkey"
+            columns: ["demand_consolidation_id"]
+            isOneToOne: false
+            referencedRelation: "demand_consolidations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_consolidation_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_source_orders: {
+        Row: {
+          demand_consolidation_id: string
+          order_id: string
+          created_at: string
+        }
+        Insert: {
+          demand_consolidation_id: string
+          order_id: string
+          created_at?: string
+        }
+        Update: {
+          demand_consolidation_id?: string
+          order_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_source_orders_demand_consolidation_id_fkey"
+            columns: ["demand_consolidation_id"]
+            isOneToOne: false
+            referencedRelation: "demand_consolidations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_source_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -1409,6 +1591,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      ensure_delivery_cycle: {
+        Args: { p_delivery_date: string; p_shift?: string }
+        Returns: string
+      }
+      create_demand_consolidation: {
+        Args: { p_delivery_cycle_id: string }
+        Returns: string
       }
       recalc_customer_outstanding: {
         Args: { _customer_id: string }

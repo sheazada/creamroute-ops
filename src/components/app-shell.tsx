@@ -20,6 +20,7 @@ import {
   Milk,
   ChevronDown,
   Menu,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,6 +50,7 @@ const nav: {
     label: "Sales",
     items: [
       { to: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "manager", "salesperson"] },
+      { to: "/demand-consolidation", label: "Demand Consolidation", icon: Layers, roles: ["admin", "manager"] },
       { to: "/invoices", label: "Invoices", icon: ReceiptText, roles: ["admin", "manager", "salesperson"] },
       { to: "/payments", label: "Payments", icon: Wallet, roles: ["admin", "manager", "salesperson"] },
       { to: "/reconcile", label: "Reconcile", icon: Wallet, roles: FIN },
