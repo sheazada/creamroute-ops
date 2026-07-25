@@ -541,7 +541,10 @@ function Settings() {
           <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" className="h-7" onClick={cancelEdit} disabled={!!savingSection}>Discard</Button>
-            <Button size="sm" className="h-7" onClick={saveBiz} disabled={!!savingSection || !!reloadingSection} aria-busy={!!savingSection || !!reloadingSection}>
+            <Button size="sm" className="h-7" onClick={() => {
+                if (savingSection || reloadingSection) return;
+                saveBiz();
+              }} disabled={!!savingSection || !!reloadingSection} aria-busy={!!savingSection || !!reloadingSection}>
               {savingSection ? (<><Loader2 className="size-3.5 mr-1 animate-spin" aria-label="Saving in progress" /> Saving…</>) : "Save"}
             </Button>
 
