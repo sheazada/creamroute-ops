@@ -231,6 +231,10 @@ function Settings() {
   const [reloadingSection, setReloadingSection] = useState<Section | null>(null);
   const [showErrorSummary, setShowErrorSummary] = useState(false);
   const errorSummaryRef = useRef<HTMLDivElement | null>(null);
+  const businessHeaderRef = useRef<HTMLButtonElement | null>(null);
+  const paymentHeaderRef = useRef<HTMLButtonElement | null>(null);
+  const sectionHeaderRef = (section: Section): React.RefObject<HTMLButtonElement | null> =>
+    section === "business" ? businessHeaderRef : paymentHeaderRef;
 
   const sectionForField = (k: keyof BusinessProfile): Section | null => {
     if ((SECTION_FIELDS.business as (keyof BusinessProfile)[]).includes(k)) return "business";
@@ -331,6 +335,11 @@ function Settings() {
         await new Promise((r) => setTimeout(r, 400));
         setReloadingSection(null);
         setSaveStatus(`${label} saved and data refreshed.`);
+        // Return keyboard focus to the saved section header so screen reader
+        // and keyboard users land on a predictable, labelled control.
+        requestAnimationFrame(() => {
+          sectionHeaderRef(section).current?.focus({ preventScroll: true });
+        });
         window.setTimeout(() => {
           setSavedFlash((cur) => (cur === section ? null : cur));
         }, 4000);
@@ -557,6 +566,7 @@ function Settings() {
           onSave={saveBiz}
           saving={savingSection === "business"}
           reloading={reloadingSection === "business"}
+          headerRef={businessHeaderRef}
         >
 
           <div className="space-y-3">
@@ -685,6 +695,7 @@ function Settings() {
           onSave={saveBiz}
           saving={savingSection === "payment"}
           reloading={reloadingSection === "payment"}
+          headerRef={paymentHeaderRef}
         >
 
           {renderSectionBanner("payment")}
@@ -876,6 +887,7 @@ function CollapsibleCard({
   onSave,
   saving = false,
   reloading = false,
+  headerRef,
   children,
 }: {
   icon: any;
@@ -892,6 +904,7 @@ function CollapsibleCard({
   onSave?: () => void;
   saving?: boolean;
   reloading?: boolean;
+  headerRef?: React.Ref<HTMLButtonElement>;
   children: React.ReactNode;
 }) {
 
@@ -938,9 +951,10 @@ function CollapsibleCard({
       <div className="w-full flex items-center gap-3 p-4">
         <button
           type="button"
+          ref={headerRef}
           onClick={requestToggle}
           disabled={readOnly}
-          className={`flex items-center gap-3 flex-1 min-w-0 text-left transition-colors -m-2 p-2 rounded ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
+          className={`flex items-center gap-3 flex-1 min-w-0 text-left transition-colors -m-2 p-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${readOnly ? "cursor-default" : "hover:bg-muted/40"}`}
           aria-expanded={effectiveOpen}
           title={readOnly ? "Admin-only — view only for your role" : undefined}
         >
