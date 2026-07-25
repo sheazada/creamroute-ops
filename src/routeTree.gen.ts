@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
+import { Route as AuthenticatedShareLogRouteImport } from './routes/_authenticated/share-log'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedRoutesRouteImport } from './routes/_authenticated/routes'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -65,6 +66,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedSuppliersRoute = AuthenticatedSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedShareLogRoute = AuthenticatedShareLogRouteImport.update({
+  id: '/share-log',
+  path: '/share-log',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRoute
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/share-log': typeof AuthenticatedShareLogRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRoute
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/share-log': typeof AuthenticatedShareLogRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -312,6 +320,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/routes': typeof AuthenticatedRoutesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/share-log': typeof AuthenticatedShareLogRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -348,6 +357,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/routes'
     | '/settings'
+    | '/share-log'
     | '/suppliers'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/routes'
     | '/settings'
+    | '/share-log'
     | '/suppliers'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -417,6 +428,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/routes'
     | '/_authenticated/settings'
+    | '/_authenticated/share-log'
     | '/_authenticated/suppliers'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -478,6 +490,13 @@ declare module '@tanstack/react-router' {
       path: '/suppliers'
       fullPath: '/suppliers'
       preLoaderRoute: typeof AuthenticatedSuppliersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/share-log': {
+      id: '/_authenticated/share-log'
+      path: '/share-log'
+      fullPath: '/share-log'
+      preLoaderRoute: typeof AuthenticatedShareLogRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -708,6 +727,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRoutesRoute: typeof AuthenticatedRoutesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedShareLogRoute: typeof AuthenticatedShareLogRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRouteWithChildren
   AuthenticatedCustomerLedgerIdRoute: typeof AuthenticatedCustomerLedgerIdRoute
   AuthenticatedInvoicesIdRoute: typeof AuthenticatedInvoicesIdRoute
@@ -735,6 +755,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRoutesRoute: AuthenticatedRoutesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedShareLogRoute: AuthenticatedShareLogRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRouteWithChildren,
   AuthenticatedCustomerLedgerIdRoute: AuthenticatedCustomerLedgerIdRoute,
   AuthenticatedInvoicesIdRoute: AuthenticatedInvoicesIdRoute,
