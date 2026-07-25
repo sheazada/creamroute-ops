@@ -666,7 +666,9 @@ function Settings() {
           onCancel={cancelEdit}
           onSave={saveBiz}
           saving={savingSection === "payment"}
+          reloading={reloadingSection === "payment"}
         >
+
           {renderSectionBanner("payment")}
           <div className="grid grid-cols-2 gap-3">
             <FieldRow field="upi_vpa" label="UPI VPA" error={err("upi_vpa")} colSpan={2} hint="Powers the QR retailers scan to pay">
