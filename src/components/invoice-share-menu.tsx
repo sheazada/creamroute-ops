@@ -41,6 +41,7 @@ type Props = {
 export function InvoiceShareMenu({
   invoice,
   items,
+  itemsLoader,
   customer,
   size = "sm",
   variant = "outline",
