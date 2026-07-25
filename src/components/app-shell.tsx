@@ -75,6 +75,7 @@ const nav: {
       { to: "/suppliers", label: "Suppliers", icon: Building2, roles: FIN },
       { to: "/purchases", label: "Purchases", icon: ClipboardList, roles: FIN },
       { to: "/crates", label: "Crates", icon: Package, roles: ["admin", "manager", "driver", "helper"] },
+      { to: "/sudha-challan", label: "Sudha Challan", icon: Truck, roles: ["admin", "manager"] },
     ],
   },
   {

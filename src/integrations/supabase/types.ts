@@ -1659,6 +1659,224 @@ export type Database = {
         }
         Relationships: []
       }
+      sudha_challans: {
+        Row: {
+          id: string
+          challan_no: string
+          challan_date: string
+          supplier_id: string | null
+          delivery_cycle_id: string | null
+          delivery_date: string | null
+          vehicle_no: string | null
+          driver_name: string | null
+          subtotal: number
+          cgst: number
+          sgst: number
+          igst: number
+          total: number
+          status: string
+          notes: string | null
+          verified_by: string | null
+          verified_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          challan_no: string
+          challan_date?: string
+          supplier_id?: string | null
+          delivery_cycle_id?: string | null
+          delivery_date?: string | null
+          vehicle_no?: string | null
+          driver_name?: string | null
+          subtotal?: number
+          cgst?: number
+          sgst?: number
+          igst?: number
+          total?: number
+          status?: string
+          notes?: string | null
+          verified_by?: string | null
+          verified_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          challan_no?: string
+          challan_date?: string
+          supplier_id?: string | null
+          delivery_cycle_id?: string | null
+          delivery_date?: string | null
+          vehicle_no?: string | null
+          driver_name?: string | null
+          subtotal?: number
+          cgst?: number
+          sgst?: number
+          igst?: number
+          total?: number
+          status?: string
+          notes?: string | null
+          verified_by?: string | null
+          verified_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "sudha_challans_supplier_id_fkey"; columns: ["supplier_id"]; isOneToOne: false; referencedRelation: "suppliers"; referencedColumns: ["id"] }
+        ]
+      }
+      sudha_challan_items: {
+        Row: {
+          id: string
+          challan_id: string
+          product_id: string | null
+          product_name: string
+          ordered_qty: number
+          received_qty: number
+          rate: number
+          gst_rate: number
+          amount: number
+          variance_type: string
+          variance_qty: number
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          challan_id: string
+          product_id?: string | null
+          product_name: string
+          ordered_qty?: number
+          received_qty?: number
+          rate?: number
+          gst_rate?: number
+          amount?: number
+          variance_type?: string
+          variance_qty?: number
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          challan_id?: string
+          product_id?: string | null
+          product_name?: string
+          ordered_qty?: number
+          received_qty?: number
+          rate?: number
+          gst_rate?: number
+          amount?: number
+          variance_type?: string
+          variance_qty?: number
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "sudha_challan_items_challan_id_fkey"; columns: ["challan_id"]; isOneToOne: false; referencedRelation: "sudha_challans"; referencedColumns: ["id"] }
+          { foreignKeyName: "sudha_challan_items_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }
+        ]
+      }
+      sudha_claims: {
+        Row: {
+          id: string
+          claim_no: string
+          challan_id: string | null
+          claim_date: string
+          claim_type: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          claim_amount: number
+          reason: string
+          evidence_url: string | null
+          status: string
+          submitted_to_sudha_at: string | null
+          sudha_response: string | null
+          credited_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          claim_no: string
+          challan_id?: string | null
+          claim_date?: string
+          claim_type: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          claim_amount?: number
+          reason: string
+          evidence_url?: string | null
+          status?: string
+          submitted_to_sudha_at?: string | null
+          sudha_response?: string | null
+          credited_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          claim_no?: string
+          challan_id?: string | null
+          claim_date?: string
+          claim_type?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          claim_amount?: number
+          reason?: string
+          evidence_url?: string | null
+          status?: string
+          submitted_to_sudha_at?: string | null
+          sudha_response?: string | null
+          credited_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "sudha_claims_challan_id_fkey"; columns: ["challan_id"]; isOneToOne: false; referencedRelation: "sudha_challans"; referencedColumns: ["id"] }
+          { foreignKeyName: "sudha_claims_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }
+        ]
+      }
+      suppliers: {
+        Row: {
+          id: string
+          name: string
+          gstin: string | null
+          mobile: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          gstin?: string | null
+          mobile?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          gstin?: string | null
+          mobile?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
