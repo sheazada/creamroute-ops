@@ -894,9 +894,10 @@ function CollapsibleCard({
       window.localStorage.setItem(storageKey, open ? "1" : "0");
     } catch {}
   }, [open, storageKey, readOnly]);
-  // Auto-open the section while it's being edited so the form is visible.
-  useEffect(() => { if (editing) setOpen(true); }, [editing]);
+  // Auto-open the section while it's being edited or refreshed so the status banner is visible.
+  useEffect(() => { if (editing || reloading) setOpen(true); }, [editing, reloading]);
   const effectiveOpen = readOnly ? false : open;
+
 
   const requestToggle = () => {
     if (readOnly) return;
