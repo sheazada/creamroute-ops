@@ -259,10 +259,7 @@ function CrateTransactionsTab() {
   const { data: crateTypes } = useQuery({
     queryKey: ["crate-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crate_types")
-        .select("*")
-        .order("name");
+      const { data, error } = await typed("crate_types").selectAll().order("name");
       if (error) throw error;
       return safeParseList(crateTypeSchema, data, "crate_types");
     },
@@ -271,15 +268,17 @@ function CrateTransactionsTab() {
   const { data: retailers } = useQuery({
     queryKey: ["retailers-for-crates"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customers")
-        .select("id, name, shop_name")
+      const { data, error } = await typed("customers")
+        .raw<{ id: string; name: string; shop_name: string | null }>(
+          "id, name, shop_name",
+        )
         .eq("status", "active")
         .order("name");
       if (error) throw error;
       return data ?? [];
     },
   });
+
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["crate-transactions", dateFilter, typeFilter, crateTypeFilter, retailerFilter],
