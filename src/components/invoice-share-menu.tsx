@@ -29,7 +29,8 @@ import { inr, shortDate } from "@/lib/format";
 
 type Props = {
   invoice: any;
-  items: any[];
+  items?: any[];
+  itemsLoader?: () => Promise<any[]>;
   customer?: any;
   size?: "sm" | "default";
   variant?: "outline" | "ghost" | "default";
