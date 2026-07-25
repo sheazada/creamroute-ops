@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, shortDate } from "@/lib/format";
-import { Download, Plus, Search, ShoppingCart } from "lucide-react";
-import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { Plus, Search, ShoppingCart } from "lucide-react";
+import { InvoiceShareMenu } from "@/components/invoice-share-menu";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/invoices/")({
