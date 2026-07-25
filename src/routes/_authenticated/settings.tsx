@@ -281,7 +281,10 @@ function Settings() {
     setErrors(e);
     if (!ok) {
       const count = Object.keys(e).length;
-      toast.error(count === 1 ? "1 field needs attention" : `${count} fields need attention`);
+      const reason = count === 1 ? "1 field needs attention" : `${count} fields need attention`;
+      toast.error(reason);
+      setSaveError(`Save failed: ${reason}. Review highlighted fields below.`);
+      clearSaveError(6000);
       setShowErrorSummary(true);
       // Scroll the page-level summary into view for sighted + AT users, then jump to first field.
       requestAnimationFrame(() => {
