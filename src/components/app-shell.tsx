@@ -21,6 +21,7 @@ import {
   ChevronDown,
   Menu,
   Layers,
+  Share2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -80,6 +81,7 @@ const nav: {
     items: [
       { to: "/reports", label: "Reports", icon: BarChart3, roles: FIN },
       { to: "/notifications", label: "Notifications", icon: Bell, roles: FIN },
+      { to: "/share-log", label: "Share Log", icon: Share2, roles: ["admin", "manager"] },
     ],
   },
   { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings, roles: ["admin"] }] },
