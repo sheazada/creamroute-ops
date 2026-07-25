@@ -1390,7 +1390,7 @@ export type Database = {
         Returns: number
       }
       get_crate_balance_as_of: {
-        Args: { as_of_date?: string }
+        Args: { p_as_of_date?: string; p_crate_type_id?: string }
         Returns: {
           balance: number
           crate_type_id: string
