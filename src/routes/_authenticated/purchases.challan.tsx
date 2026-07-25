@@ -9,21 +9,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { inr, isoDate } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { inr, num, isoDate, shortDate } from "@/lib/format";
 import { extractChallan, type ChallanExtraction } from "@/lib/challan-ocr.functions";
-import { Upload, ScanLine, Trash2, Plus, Sparkles, CheckCircle2 } from "lucide-react";
+import { Upload, ScanLine, Trash2, Plus, Sparkles, CheckCircle2, AlertTriangle, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/purchases/challan")({
   component: ChallanOcr,
 });
 
 type ReviewLine = {
+  id: string;
   product_id: string;
   product_name: string;
   quantity: number;
+  ordered_qty?: number; // From demand consolidation
   rate: number;
   gst_rate: number;
+  variance_type?: "ok" | "short" | "extra" | "damaged" | "rejected";
+  variance_notes?: string;
+};
+
+type ConsolidationItem = {
+  id: string;
+  product_name: string;
+  product_id: string | null;
+  total_ordered_qty: number;
 };
 
 function ChallanOcr() {
@@ -41,9 +54,39 @@ function ChallanOcr() {
   const [billNo, setBillNo] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(isoDate());
   const [lines, setLines] = useState<ReviewLine[]>([]);
+  const [selectedConsolidation, setSelectedConsolidation] = useState<string>("");
 
   const { data: suppliers } = useQuery({ queryKey: ["suppliers"], queryFn: async () => (await supabase.from("suppliers").select("*").order("name")).data ?? [] });
   const { data: products } = useQuery({ queryKey: ["products"], queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [] });
+
+  // Fetch consolidations for the selected date
+  const { data: consolidations = [] } = useQuery({
+    queryKey: ["demand-consolidations", purchaseDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("demand_consolidations")
+        .select("id, consolidation_no, consolidation_date, status")
+        .eq("consolidation_date", purchaseDate)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Fetch consolidation items when selected
+  const { data: consolidationItems = [] } = useQuery({
+    queryKey: ["consolidation-items", selectedConsolidation],
+    queryFn: async () => {
+      if (!selectedConsolidation) return [];
+      const { data, error } = await supabase
+        .from("demand_consolidation_items")
+        .select("id, product_name, product_id, total_ordered_qty")
+        .eq("demand_consolidation_id", selectedConsolidation);
+      if (error) throw error;
+      return (data ?? []) as ConsolidationItem[];
+    },
+    enabled: !!selectedConsolidation,
+  });
 
   const totals = useMemo(() => {
     let subtotal = 0, gst = 0;
@@ -54,6 +97,25 @@ function ChallanOcr() {
     }
     return { subtotal, gst, total: subtotal + gst };
   }, [lines]);
+
+  // Load items from consolidation (before OCR)
+  const loadFromConsolidation = () => {
+    if (consolidationItems.length === 0) {
+      return toast.error("No items in this consolidation");
+    }
+    const consolidationLines: ReviewLine[] = consolidationItems.map((ci) => ({
+      id: crypto.randomUUID(),
+      product_id: ci.product_id ?? "",
+      product_name: ci.product_name,
+      quantity: Number(ci.total_ordered_qty), // Will be updated by OCR
+      ordered_qty: Number(ci.total_ordered_qty),
+      rate: 0,
+      gst_rate: 5,
+      variance_type: undefined,
+    }));
+    setLines(consolidationLines);
+    toast.success(`Loaded ${consolidationItems.length} items from consolidation. Now upload challan to extract received quantities.`);
+  };
 
   const onFile = (f: File | null) => {
     setFile(f);
@@ -89,15 +151,30 @@ function ChallanOcr() {
       // Match supplier
       const sup = (suppliers ?? []).find((s) => result.supplier_name && s.name.toLowerCase().includes(result.supplier_name.toLowerCase().split(" ")[0]));
       if (sup) setSupplierId(sup.id);
-      // Map items to products
+      // Map items to products and compare with consolidation if selected
       const mapped: ReviewLine[] = result.items.map((it) => {
         const p = matchProduct(it.product_name);
+        const consolidationItem = consolidationItems.find((ci) => 
+          ci.product_name.toLowerCase() === (p?.name ?? it.product_name).toLowerCase()
+        );
+        const orderedQty = consolidationItem ? Number(consolidationItem.total_ordered_qty) : undefined;
+        const receivedQty = it.quantity;
+        const diff = receivedQty - (orderedQty ?? receivedQty);
+        let varianceType: "ok" | "short" | "extra" | "damaged" | "rejected" | undefined;
+        if (orderedQty !== undefined) {
+          if (diff === 0) varianceType = "ok";
+          else if (diff > 0) varianceType = "extra";
+          else varianceType = "short";
+        }
         return {
+          id: crypto.randomUUID(),
           product_id: p?.id ?? "",
           product_name: p?.name ?? it.product_name,
-          quantity: it.quantity,
+          quantity: receivedQty,
+          ordered_qty: orderedQty,
           rate: it.rate,
           gst_rate: it.gst_rate,
+          variance_type: varianceType,
         };
       });
       setLines(mapped);
@@ -109,7 +186,15 @@ function ChallanOcr() {
     }
   };
 
-  const setLine = (i: number, l: ReviewLine) => setLines(lines.map((x, idx) => (idx === i ? l : x)));
+  const setLine = (i: number, l: ReviewLine) => {
+    const updated = lines.map((x, idx) => (idx === i ? l : x));
+    // Auto-calculate variance when quantity changes
+    if (l.ordered_qty !== undefined) {
+      const diff = l.quantity - l.ordered_qty;
+      updated[i].variance_type = diff === 0 ? "ok" : diff > 0 ? "extra" : "short";
+    }
+    setLines(updated);
+  };
   const rmLine = (i: number) => setLines(lines.filter((_, idx) => idx !== i));
   const addLine = () => setLines([...lines, { product_id: "", product_name: "", quantity: 1, rate: 0, gst_rate: 5 }]);
 
@@ -139,6 +224,7 @@ function ChallanOcr() {
       bill_no: billNo,
       supplier_id: supplierId,
       purchase_date: purchaseDate,
+      delivery_cycle_id: selectedConsolidation ? (consolidations.find((c) => c.id === selectedConsolidation) as any)?.delivery_cycle_id : null,
       subtotal: totals.subtotal,
       gst: totals.gst,
       total: totals.total,
@@ -159,6 +245,10 @@ function ChallanOcr() {
       rate: l.rate,
       gst_rate: l.gst_rate,
       amount: l.quantity * l.rate,
+      ordered_qty: l.ordered_qty,
+      variance_type: l.variance_type,
+      variance_qty: l.ordered_qty ? Math.abs(l.quantity - l.ordered_qty) : null,
+      variance_notes: l.variance_notes,
     })));
 
     for (const l of lines) {
@@ -249,6 +339,43 @@ function ChallanOcr() {
           )}
         </Card>
 
+        {/* Demand Consolidation Link */}
+        <Card className="p-5 lg:col-span-2">
+          <div className="flex items-center gap-2 text-sm font-semibold mb-3">
+            <ShoppingCart className="size-4 text-primary" /> Link to Demand Consolidation
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Select today's consolidation to auto-compare ordered vs received quantities.
+          </p>
+          <Select value={selectedConsolidation} onValueChange={setSelectedConsolidation}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select consolidation (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              {consolidations.length === 0 && (
+                <SelectItem value="__none__" disabled>
+                  No consolidations for {shortDate(purchaseDate)}
+                </SelectItem>
+              )}
+              {(consolidations ?? []).map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.consolidation_no} · {shortDate(c.consolidation_date)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedConsolidation && consolidationItems.length > 0 && (
+            <div className="mt-3 rounded-md bg-primary/5 border border-primary/20 p-3 text-xs">
+              <div className="font-semibold text-primary mb-1">
+                {consolidationItems.length} item{consolidationItems.length === 1 ? "" : "s"} loaded
+              </div>
+              <div className="text-muted-foreground">
+                OCR extraction will auto-compare received vs ordered quantities
+              </div>
+            </div>
+          )}
+        </Card>
+
         {/* Right: review form */}
         <Card className="p-5 lg:col-span-3 space-y-5">
           <div className="flex items-center gap-2 text-sm font-semibold">
@@ -285,7 +412,9 @@ function ChallanOcr() {
                 <thead>
                   <tr className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                     <th className="text-left px-3 py-2 font-semibold">Product</th>
-                    <th className="text-right px-3 py-2 font-semibold w-20">Qty</th>
+                    <th className="text-right px-3 py-2 font-semibold w-16">Ordered</th>
+                    <th className="text-right px-3 py-2 font-semibold w-20">Received</th>
+                    <th className="text-center px-3 py-2 font-semibold w-20">Variance</th>
                     <th className="text-right px-3 py-2 font-semibold w-24">Rate</th>
                     <th className="text-right px-3 py-2 font-semibold w-20">GST%</th>
                     <th className="text-right px-3 py-2 font-semibold w-28">Amount</th>
@@ -311,6 +440,8 @@ function ChallanOcr() {
                         )}
                       </td>
                       <td className="px-3 py-2"><Input type="number" className="h-8 text-right" value={l.quantity} onChange={(e) => setLine(i, { ...l, quantity: Number(e.target.value) })} /></td>
+                      <td className="px-3 py-2 text-right font-mono text-muted-foreground">{l.ordered_qty !== undefined ? num(l.ordered_qty, 1) : "—"}</td>
+                      <td className="px-3 py-2 text-center">{l.variance_type && <Badge variant={l.variance_type === "ok" ? "outline" : l.variance_type === "short" ? "destructive" : l.variance_type === "extra" ? "default" : "secondary"}>{l.variance_type.toUpperCase()}</Badge>}</td>
                       <td className="px-3 py-2"><Input type="number" className="h-8 text-right" value={l.rate} onChange={(e) => setLine(i, { ...l, rate: Number(e.target.value) })} /></td>
                       <td className="px-3 py-2"><Input type="number" className="h-8 text-right" value={l.gst_rate} onChange={(e) => setLine(i, { ...l, gst_rate: Number(e.target.value) })} /></td>
                       <td className="px-3 py-2 text-right font-mono">{inr(l.quantity * l.rate * (1 + l.gst_rate / 100))}</td>
