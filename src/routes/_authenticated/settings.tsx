@@ -955,7 +955,7 @@ function CollapsibleCard({
                 size="sm"
                 variant="ghost"
                 onClick={() => onCancel?.()}
-                disabled={saving}
+                disabled={saving || reloading}
               >
                 <X className="size-3.5 mr-1" /> Cancel
               </Button>
@@ -963,16 +963,19 @@ function CollapsibleCard({
                 type="button"
                 size="sm"
                 onClick={() => onSave?.()}
-                disabled={!dirty || saving}
-                aria-busy={saving}
+                disabled={!dirty || saving || reloading}
+                aria-busy={saving || reloading}
               >
                 {saving ? (
-                  <><Loader2 className="size-3.5 mr-1 animate-spin" /> Saving…</>
+                  <><Loader2 className="size-3.5 mr-1 animate-spin" aria-label="Saving in progress" /> Saving…</>
+                ) : reloading ? (
+                  <><Loader2 className="size-3.5 mr-1 animate-spin" aria-label="Reloading section data" /> Reloading…</>
                 ) : (
                   <><Check className="size-3.5 mr-1" /> Save</>
                 )}
               </Button>
             </>
+
           ) : (
             <Button
               type="button"
