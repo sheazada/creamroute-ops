@@ -593,7 +593,7 @@ function AddCrateTransactionDialog({
     setSaving(true);
     const { data: user } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from("crate_transactions").insert({
+    const { error } = await typed("crate_transactions").insert({
       crate_type_id: crateTypeId,
       retailer_id: retailerId,
       transaction_type: transactionType,
@@ -602,6 +602,7 @@ function AddCrateTransactionDialog({
       notes: notes || null,
       created_by: user?.user?.id ?? null,
     });
+
 
     setSaving(false);
 
