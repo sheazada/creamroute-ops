@@ -356,6 +356,7 @@ function NewInvoice() {
       // Collect payment now (creates payment; triggers recalc balance + outstanding)
       if (collectNow && payAmount > 0 && payMode) {
         const { error: payErr } = await supabase.from("payments").insert({
+          payment_no: genDocNo("PMT"),
           invoice_id: inv.id,
           customer_id: customerId,
           amount: payAmount,
