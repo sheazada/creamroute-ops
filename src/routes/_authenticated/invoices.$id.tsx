@@ -16,10 +16,10 @@ import {
   Save,
   X,
   Trash2,
-  Share2,
   Receipt,
   Download,
 } from "lucide-react";
+import { InvoiceShareMenu } from "@/components/invoice-share-menu";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -240,25 +240,6 @@ function InvoiceView() {
     }
   };
 
-  const whatsappShare = () => {
-    const phone = (c?.mobile ?? "").replace(/[^\d]/g, "");
-    const lines = [
-      `*${biz.name}* — Tax Invoice`,
-      `Invoice #: ${inv.invoice_no}`,
-      `Date: ${shortDate(inv.invoice_date)}`,
-      `Bill to: ${c?.name ?? ""}${c?.shop_name ? " · " + c.shop_name : ""}`,
-      `Amount: ${inr(inv.total)}`,
-      Number(inv.balance) > 0 ? `Balance due: ${inr(inv.balance)}` : `Paid in full ✓`,
-      biz.upi_vpa ? `\nPay via UPI: ${biz.upi_vpa}` : "",
-      `\nView / download: ${typeof window !== "undefined" ? window.location.href : ""}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-    const url = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(lines)}`
-      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
 
   // QR: UPI intent if VPA configured, else invoice URL
   const qrPayload = biz.upi_vpa
@@ -325,9 +306,7 @@ function InvoiceView() {
           )}
           {!editing && (
             <>
-              <Button size="sm" variant="outline" onClick={whatsappShare} className="gap-1.5">
-                <Share2 className="size-4" /> WhatsApp
-              </Button>
+              <InvoiceShareMenu invoice={inv} items={data.items} customer={c} />
               <Button size="sm" variant="outline" onClick={printThermal} className="gap-1.5">
                 <Receipt className="size-4" /> Thermal
               </Button>
