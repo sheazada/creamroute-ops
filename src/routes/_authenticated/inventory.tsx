@@ -44,6 +44,7 @@ import {
   Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StockAdjustButtons } from "@/components/stock-adjust-dialog";
 
 export const Route = createFileRoute("/_authenticated/inventory")({
   component: Inventory,
@@ -421,7 +422,7 @@ function StockByProductTab({ products, valuation }: { products: any[]; valuation
               <tr className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                 <th className="text-left px-4 py-3 font-semibold">Product</th>
                 <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Category</th>
-                <th className="text-right px-4 py-3 font-semibold">Current</th>
+                <th className="text-center px-4 py-3 font-semibold">Stock</th>
                 <th className="text-right px-4 py-3 font-semibold hidden sm:table-cell">Min</th>
                 <th className="text-right px-4 py-3 font-semibold hidden md:table-cell">Avg Cost</th>
                 <th className="text-right px-4 py-3 font-semibold">Value</th>
@@ -447,7 +448,15 @@ function StockByProductTab({ products, valuation }: { products: any[]; valuation
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{p.category ?? "—"}</td>
                     <td className={cn("px-4 py-3 text-right font-mono font-semibold", out ? "text-destructive" : low ? "text-warning" : "")}>
-                      {num(p.current_stock, 2)}
+                      <div className="flex items-center justify-end gap-2">
+                        <span>{num(p.current_stock, 2)}</span>
+                        <StockAdjustButtons
+                          productId={p.id}
+                          productName={p.name}
+                          currentStock={Number(p.current_stock)}
+                          unit={p.unit}
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-muted-foreground hidden sm:table-cell">{num(p.min_stock, 2)}</td>
                     <td className="px-4 py-3 text-right font-mono text-muted-foreground hidden md:table-cell">{inr(val?.avg_cost ?? p.purchase_price)}</td>

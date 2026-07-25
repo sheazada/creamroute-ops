@@ -12,7 +12,8 @@ import { inr } from "@/lib/format";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Search, AlertTriangle } from "lucide-react";
+import { Plus, Search, AlertTriangle, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { StockAdjustButtons } from "@/components/stock-adjust-dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/products")({
@@ -67,7 +68,7 @@ function Products() {
               <th className="text-right px-6 py-3 font-semibold">MRP</th>
               <th className="text-right px-6 py-3 font-semibold">Selling</th>
               <th className="text-right px-6 py-3 font-semibold">GST %</th>
-              <th className="text-right px-6 py-3 font-semibold">Stock</th>
+              <th className="text-center px-6 py-3 font-semibold">Stock</th>
               <th className="text-left px-6 py-3 font-semibold">Status</th>
             </tr>
           </thead>
@@ -88,12 +89,22 @@ function Products() {
                   <td className="px-6 py-3 text-right font-mono">{inr(p.mrp)}</td>
                   <td className="px-6 py-3 text-right font-mono font-semibold">{inr(p.selling_price)}</td>
                   <td className="px-6 py-3 text-right font-mono">{Number(p.gst_rate)}%</td>
-                  <td className="px-6 py-3 text-right font-mono">
-                    <span className={low ? "text-destructive font-semibold" : ""}>
-                      {low && <AlertTriangle className="size-3 inline mr-1" />}
-                      {Number(p.current_stock)}
-                    </span>
-                    <span className="text-xs text-muted-foreground"> / {Number(p.min_stock)}</span>
+                  <td className="px-6 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <div className="text-right">
+                        <span className={low ? "text-destructive font-semibold" : ""}>
+                          {low && <AlertTriangle className="size-3 inline mr-1" />}
+                          {Number(p.current_stock)}
+                        </span>
+                        <span className="text-xs text-muted-foreground"> / {Number(p.min_stock)}</span>
+                      </div>
+                      <StockAdjustButtons
+                        productId={p.id}
+                        productName={p.name}
+                        currentStock={Number(p.current_stock)}
+                        unit={p.unit}
+                      />
+                    </div>
                   </td>
                   <td className="px-6 py-3"><StatusBadge status={p.status} /></td>
                 </tr>
