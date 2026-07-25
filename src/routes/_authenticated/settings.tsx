@@ -695,6 +695,7 @@ function Settings() {
           onSave={saveBiz}
           saving={savingSection === "payment"}
           reloading={reloadingSection === "payment"}
+          headerRef={paymentHeaderRef}
         >
 
           {renderSectionBanner("payment")}
