@@ -41,40 +41,20 @@ import {
   Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  crateTypeSchema,
+  crateTransactionSchema,
+  crateBalanceSchema,
+  safeParseList,
+  type CrateType,
+  type CrateTransaction,
+  type CrateBalance,
+} from "@/lib/crates-schema";
 
 export const Route = createFileRoute("/_authenticated/crates")({
   component: CratesManagement,
 });
 
-type CrateType = {
-  id: string;
-  name: string;
-  description: string | null;
-  is_active: boolean;
-};
-
-type CrateTransaction = {
-  id: string;
-  crate_type_id: string;
-  retailer_id: string | null;
-  delivery_id: string | null;
-  route_id: string | null;
-  transaction_type: "issue" | "return" | "damaged" | "lost";
-  quantity: number;
-  transaction_date: string;
-  notes: string | null;
-  created_at: string;
-  crate_type?: { id: string; name: string };
-  retailer?: { id: string; name: string; shop_name: string | null };
-};
-
-type CrateBalance = {
-  retailer_id: string;
-  retailer_name: string;
-  shop_name: string | null;
-  crate_type_name: string;
-  balance: number;
-};
 
 function CratesManagement() {
   const [tab, setTab] = useState<"balance" | "transactions" | "setup">("balance");
