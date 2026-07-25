@@ -139,9 +139,10 @@ export function InvoiceShareMenu({
     }
   };
 
-  const downloadPdf = () => {
+  const downloadPdf = async () => {
     try {
-      const blob = buildInvoicePdf(invoice, items);
+      const rows = items ?? (itemsLoader ? await itemsLoader() : []);
+      const blob = buildInvoicePdf(invoice, rows);
       const u = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = u;
