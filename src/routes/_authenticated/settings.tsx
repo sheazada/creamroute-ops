@@ -259,8 +259,15 @@ function Settings() {
   // polite live region and rewrite its text so AT users hear "Saving…", "Reloading…",
   // and "…saved" in sequence.
   const [saveStatus, setSaveStatus] = useState("");
+  // Assertive live region text used only for save failures — screen readers interrupt
+  // and immediately announce the reason so users can react without waiting.
+  const [saveError, setSaveError] = useState("");
   const clearSaveStatus = (delay = 4000) => {
     const t = window.setTimeout(() => setSaveStatus(""), delay);
+    return () => window.clearTimeout(t);
+  };
+  const clearSaveError = (delay = 6000) => {
+    const t = window.setTimeout(() => setSaveError(""), delay);
     return () => window.clearTimeout(t);
   };
 
@@ -274,7 +281,10 @@ function Settings() {
     setErrors(e);
     if (!ok) {
       const count = Object.keys(e).length;
-      toast.error(count === 1 ? "1 field needs attention" : `${count} fields need attention`);
+      const reason = count === 1 ? "1 field needs attention" : `${count} fields need attention`;
+      toast.error(reason);
+      setSaveError(`Save failed: ${reason}. Review highlighted fields below.`);
+      clearSaveError(6000);
       setShowErrorSummary(true);
       // Scroll the page-level summary into view for sighted + AT users, then jump to first field.
       requestAnimationFrame(() => {
@@ -331,8 +341,12 @@ function Settings() {
         );
       }
     } catch (err) {
-      setSaveStatus(`Save failed. ${err instanceof Error ? err.message : "Please try again."}`);
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      const reason = err instanceof Error && err.message ? err.message : "Please try again.";
+      const label2 = section === "payment" ? "Payment & bank" : "Business identity";
+      setSaveStatus("");
+      setSaveError(`${label2} save failed: ${reason}`);
+      clearSaveError(6000);
+      toast.error(reason);
     } finally {
       setSavingSection(null);
       setReloadingSection(null);
@@ -439,6 +453,10 @@ function Settings() {
       {/* Polite SR-only live region: announces save start and completion. */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {saveStatus}
+      </div>
+      {/* Assertive SR-only live region: announces save failures with a short reason. */}
+      <div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
+        {saveError}
       </div>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
       {showErrorSummary && Object.keys(errors).length > 0 && (() => {
