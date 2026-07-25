@@ -370,6 +370,22 @@ function Settings() {
 
   const renderSectionBanner = (section: Section) => {
     const items = sectionErrorItems(section);
+    if (reloadingSection === section) {
+      return (
+        <div
+          className="mb-3 flex items-start gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <Loader2 className="size-4 shrink-0 mt-0.5 animate-spin" aria-label="Reloading section data" />
+          <div className="flex-1">
+            <div className="font-semibold">Reloading {section === "payment" ? "Payment & bank" : "Business identity"} data…</div>
+            <div className="text-primary/80">Confirming your saved changes.</div>
+          </div>
+        </div>
+      );
+    }
     if (savedFlash === section) {
       return (
         <div
@@ -413,6 +429,7 @@ function Settings() {
         </div>
       </div>
     );
+
   };
 
 
