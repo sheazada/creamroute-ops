@@ -865,11 +865,12 @@ function AddCrateTypeDialog({
     }
 
     setSaving(true);
-    const { error } = await supabase.from("crate_types").insert({
+    const { error } = await typed("crate_types").insert({
       name: name.trim(),
       description: description.trim() || null,
       is_active: true,
     });
+
 
     setSaving(false);
 
