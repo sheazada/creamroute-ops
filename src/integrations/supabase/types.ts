@@ -85,198 +85,6 @@ export type Database = {
           },
         ]
       }
-      warehouses: {
-        Row: {
-          id: string
-          name: string
-          location: string | null
-          is_active: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          location?: string | null
-          is_active?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          location?: string | null
-          is_active?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
-      stock_adjustments: {
-        Row: {
-          id: string
-          adjustment_no: string
-          adjustment_date: string
-          reason: string | null
-          status: string
-          warehouse_id: string | null
-          notes: string | null
-          requested_by: string | null
-          approved_by: string | null
-          approved_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          adjustment_no: string
-          adjustment_date?: string
-          reason?: string | null
-          status?: string
-          warehouse_id?: string | null
-          notes?: string | null
-          requested_by?: string | null
-          approved_by?: string | null
-          approved_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          adjustment_no?: string
-          adjustment_date?: string
-          reason?: string | null
-          status?: string
-          warehouse_id?: string | null
-          notes?: string | null
-          requested_by?: string | null
-          approved_by?: string | null
-          approved_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "stock_adjustments_warehouse_id_fkey"; columns: ["warehouse_id"]; isOneToOne: false; referencedRelation: "warehouses"; referencedColumns: ["id"] }
-        ]
-      }
-      stock_adjustment_items: {
-        Row: {
-          id: string
-          adjustment_id: string
-          product_id: string
-          batch_id: string | null
-          system_qty: number
-          physical_qty: number
-          diff_qty: number
-          unit_cost: number
-          reason_detail: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          adjustment_id: string
-          product_id: string
-          batch_id?: string | null
-          system_qty?: number
-          physical_qty?: number
-          diff_qty?: number
-          unit_cost?: number
-          reason_detail?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          adjustment_id?: string
-          product_id?: string
-          batch_id?: string | null
-          system_qty?: number
-          physical_qty?: number
-          diff_qty?: number
-          unit_cost?: number
-          reason_detail?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "stock_adjustment_items_adjustment_id_fkey"; columns: ["adjustment_id"]; isOneToOne: false; referencedRelation: "stock_adjustments"; referencedColumns: ["id"] }
-          { foreignKeyName: "stock_adjustment_items_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }
-          { foreignKeyName: "stock_adjustment_items_batch_id_fkey"; columns: ["batch_id"]; isOneToOne: false; referencedRelation: "product_batches"; referencedColumns: ["id"] }
-        ]
-      }
-      stock_reconciliations: {
-        Row: {
-          id: string
-          recon_no: string
-          recon_date: string
-          warehouse_id: string | null
-          conducted_by: string | null
-          notes: string | null
-          status: string
-          created_at: string
-          completed_at: string | null
-        }
-        Insert: {
-          id?: string
-          recon_no: string
-          recon_date?: string
-          warehouse_id?: string | null
-          conducted_by?: string | null
-          notes?: string | null
-          status?: string
-          created_at?: string
-          completed_at?: string | null
-        }
-        Update: {
-          id?: string
-          recon_no?: string
-          recon_date?: string
-          warehouse_id?: string | null
-          conducted_by?: string | null
-          notes?: string | null
-          status?: string
-          created_at?: string
-          completed_at?: string | null
-        }
-        Relationships: [
-          { foreignKeyName: "stock_reconciliations_warehouse_id_fkey"; columns: ["warehouse_id"]; isOneToOne: false; referencedRelation: "warehouses"; referencedColumns: ["id"] }
-        ]
-      }
-      stock_reconciliation_items: {
-        Row: {
-          id: string
-          recon_id: string
-          product_id: string
-          batch_id: string | null
-          system_qty: number
-          physical_qty: number
-          diff_qty: number
-          variance_reason: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          recon_id: string
-          product_id: string
-          batch_id?: string | null
-          system_qty?: number
-          physical_qty?: number
-          diff_qty?: number
-          variance_reason?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          recon_id?: string
-          product_id?: string
-          batch_id?: string | null
-          system_qty?: number
-          physical_qty?: number
-          diff_qty?: number
-          variance_reason?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "stock_reconciliation_items_recon_id_fkey"; columns: ["recon_id"]; isOneToOne: false; referencedRelation: "stock_reconciliations"; referencedColumns: ["id"] }
-          { foreignKeyName: "stock_reconciliation_items_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }
-          { foreignKeyName: "stock_reconciliation_items_batch_id_fkey"; columns: ["batch_id"]; isOneToOne: false; referencedRelation: "product_batches"; referencedColumns: ["id"] }
-        ]
-      }
       crate_types: {
         Row: {
           created_at: string
@@ -1127,57 +935,40 @@ export type Database = {
       }
       product_batches: {
         Row: {
-          available_qty: number
           batch_no: string | null
-          cost_price: number
           created_at: string
-          damaged_qty: number
           expiry_date: string | null
           id: string
           mfg_date: string | null
           product_id: string
           quantity: number
-          reserved_qty: number
-          status: string
-          supplier_id: string | null
-          warehouse_id: string | null
         }
         Insert: {
-          available_qty?: number
           batch_no?: string | null
-          cost_price?: number
           created_at?: string
-          damaged_qty?: number
           expiry_date?: string | null
           id?: string
           mfg_date?: string | null
           product_id: string
           quantity?: number
-          reserved_qty?: number
-          status?: string
-          supplier_id?: string | null
-          warehouse_id?: string | null
         }
         Update: {
-          available_qty?: number
           batch_no?: string | null
-          cost_price?: number
           created_at?: string
-          damaged_qty?: number
           expiry_date?: string | null
           id?: string
           mfg_date?: string | null
           product_id?: string
           quantity?: number
-          reserved_qty?: number
-          status?: string
-          supplier_id?: string | null
-          warehouse_id?: string | null
         }
         Relationships: [
-          { foreignKeyName: "product_batches_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] },
-          { foreignKeyName: "product_batches_warehouse_id_fkey"; columns: ["warehouse_id"]; isOneToOne: false; referencedRelation: "warehouses"; referencedColumns: ["id"] },
-          { foreignKeyName: "product_batches_supplier_id_fkey"; columns: ["supplier_id"]; isOneToOne: false; referencedRelation: "suppliers"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "product_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
         ]
       }
       products: {
@@ -1664,17 +1455,6 @@ export type Database = {
           retailer_name: string
           shop_name: string
         }[]
-      }
-      generate_adjustment_no: { Args: Record<string, never>; Returns: string }
-      generate_recon_no: { Args: Record<string, never>; Returns: string }
-      post_stock_adjustment: { Args: { _adjustment_id: string }; Returns: void }
-      get_stock_valuation: {
-        Args: Record<string, never>
-        Returns: { product_id: string; product_name: string; total_qty: number; available_qty: number; damaged_qty: number; avg_cost: number; total_value: number }[]
-      }
-      get_near_expiry_stock: {
-        Args: { _days?: number }
-        Returns: { product_name: string; batch_no: string | null; expiry_date: string; available_qty: number; days_remaining: number }[]
       }
       has_role: {
         Args: {
