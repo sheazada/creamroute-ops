@@ -737,18 +737,14 @@ function CrateTypesTab() {
   const { data: crateTypes, isLoading } = useQuery({
     queryKey: ["crate-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crate_types")
-        .select("*")
-        .order("name");
+      const { data, error } = await typed("crate_types").selectAll().order("name");
       if (error) throw error;
       return safeParseList(crateTypeSchema, data, "crate_types");
     },
   });
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
-    const { error } = await supabase
-      .from("crate_types")
+    const { error } = await typed("crate_types")
       .update({ is_active: !isActive })
       .eq("id", id);
 
@@ -764,7 +760,8 @@ function CrateTypesTab() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure? This will delete all related transactions.")) return;
 
-    const { error } = await supabase.from("crate_types").delete().eq("id", id);
+    const { error } = await typed("crate_types").delete().eq("id", id);
+
     if (error) {
       toast.error("Failed to delete crate type");
       return;
