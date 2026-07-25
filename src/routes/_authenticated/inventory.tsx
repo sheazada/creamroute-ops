@@ -52,7 +52,7 @@ export const Route = createFileRoute("/_authenticated/inventory")({
 // Check if new inventory tables exist
 async function checkTablesExist() {
   try {
-    const { error } = await supabase.from("warehouses").select("id").limit(1);
+    const { error } = await (supabase as any).from("warehouses").select("id").limit(1);
     return !error;
   } catch {
     return false;
@@ -113,47 +113,47 @@ function Inventory() {
   });
 
   // Adjustments (only if tables exist)
-  const { data: adjustments = [] } = useQuery({
+  const { data: adjustments = [] as any[] } = useQuery<any[]>({
     queryKey: ["adjustments"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("stock_adjustments").select("*").order("created_at", { ascending: false });
+      const { data, error } = await (supabase as any).from("stock_adjustments").select("*").order("created_at", { ascending: false });
       if (error) throw error;
-      return data as any[];
+      return (data ?? []) as any[];
     },
     enabled: hasNewTables === true,
     retry: false,
   });
 
   // Warehouses (only if tables exist)
-  const { data: warehouses = [] } = useQuery({
+  const { data: warehouses = [] as any[] } = useQuery<any[]>({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const { data } = await supabase.from("warehouses").select("*").eq("is_active", true).order("name");
-      return data ?? [];
+      const { data } = await (supabase as any).from("warehouses").select("*").eq("is_active", true).order("name");
+      return (data ?? []) as any[];
     },
     enabled: hasNewTables === true,
     retry: false,
   });
 
   // Near-expiry (only if function exists)
-  const { data: nearExpiry = [] } = useQuery({
+  const { data: nearExpiry = [] as any[] } = useQuery<any[]>({
     queryKey: ["near-expiry"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_near_expiry_stock", { _days: 30 });
+      const { data, error } = await (supabase as any).rpc("get_near_expiry_stock", { _days: 30 });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as any[];
     },
     enabled: hasNewTables === true,
     retry: false,
   });
 
   // Stock valuation (only if function exists)
-  const { data: valuation = [] } = useQuery({
+  const { data: valuation = [] as any[] } = useQuery<any[]>({
     queryKey: ["stock-valuation"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_stock_valuation");
+      const { data, error } = await (supabase as any).rpc("get_stock_valuation");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as any[];
     },
     enabled: hasNewTables === true,
     retry: false,
