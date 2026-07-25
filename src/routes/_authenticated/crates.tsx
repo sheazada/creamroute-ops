@@ -329,7 +329,7 @@ function CrateTransactionsTab() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this transaction?")) return;
 
-    const { error } = await supabase.from("crate_transactions").delete().eq("id", id);
+    const { error } = await typed("crate_transactions").delete().eq("id", id);
     if (error) {
       toast.error("Failed to delete transaction");
       return;
