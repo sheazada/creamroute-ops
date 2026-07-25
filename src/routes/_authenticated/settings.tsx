@@ -566,6 +566,7 @@ function Settings() {
           onSave={saveBiz}
           saving={savingSection === "business"}
           reloading={reloadingSection === "business"}
+          headerRef={businessHeaderRef}
         >
 
           <div className="space-y-3">
