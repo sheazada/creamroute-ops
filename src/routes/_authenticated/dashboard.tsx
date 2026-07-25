@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     if (list.includes("admin") || list.includes("manager")) return;
     if (list.includes("salesperson")) throw redirect({ to: "/invoices" });
     if (list.includes("driver") || list.includes("helper"))
-      throw redirect({ to: "/daily-demand" });
+      throw redirect({ to: "/demand-consolidation" });
   },
   component: Dashboard,
 });

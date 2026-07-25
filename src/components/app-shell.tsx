@@ -233,7 +233,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true, search: {} });
+    navigate({ to: "/auth", replace: true });
   };
 
   const initials =
