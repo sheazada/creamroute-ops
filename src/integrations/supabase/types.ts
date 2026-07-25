@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      crate_transactions: {
+        Row: {
+          crate_type_id: string
+          created_at: string
+          created_by: string | null
+          delivery_id: string | null
+          id: string
+          notes: string | null
+          quantity: number
+          retailer_id: string
+          route_id: string | null
+          transaction_date: string
+          transaction_type: string
+        }
+        Insert: {
+          crate_type_id: string
+          created_at?: string
+          created_by?: string | null
+          delivery_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity: number
+          retailer_id: string
+          route_id?: string | null
+          transaction_date?: string
+          transaction_type: string
+        }
+        Update: {
+          crate_type_id?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          retailer_id?: string
+          route_id?: string | null
+          transaction_date?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crate_transactions_crate_type_id_fkey"
+            columns: ["crate_type_id"]
+            isOneToOne: false
+            referencedRelation: "crate_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crate_transactions_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crate_transactions_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crate_transactions_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crate_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -1293,6 +1388,17 @@ export type Database = {
       enqueue_run_en_route_notifications: {
         Args: { _run_id: string }
         Returns: number
+      }
+      get_crate_balance_as_of: {
+        Args: { as_of_date?: string }
+        Returns: {
+          balance: number
+          crate_type_id: string
+          crate_type_name: string
+          retailer_id: string
+          retailer_name: string
+          shop_name: string
+        }[]
       }
       has_role: {
         Args: {
