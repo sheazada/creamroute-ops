@@ -279,7 +279,8 @@ function Settings() {
 
   const saveBiz = async () => {
     // Guard against double-submit (Enter key, banner + card, rapid clicks).
-    if (savingSection) return;
+    // Reloading is also a busy state; ignore submissions until the UI finishes.
+    if (savingSection || reloadingSection) return;
     const section = editing;
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
