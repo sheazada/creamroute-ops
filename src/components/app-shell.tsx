@@ -80,7 +80,8 @@ const nav: {
     label: "Insights",
     items: [
       { to: "/reports", label: "Reports", icon: BarChart3, roles: FIN },
-      { to: "/notifications", label: "Notifications", icon: Bell, roles: FIN },
+      { to: "/payment-reminders", label: "Payment Reminders", icon: Bell, roles: FIN },
+      { to: "/notifications", label: "Notification Logs", icon: Share2, roles: FIN },
       { to: "/share-log", label: "Share Log", icon: Share2, roles: ["admin"] },
     ],
   },

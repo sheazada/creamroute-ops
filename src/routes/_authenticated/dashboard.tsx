@@ -19,6 +19,7 @@ import {
   Plus,
   UserPlus,
   FileText,
+  Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -171,6 +172,7 @@ function Dashboard() {
           <QuickAction to="/products" icon={Package} label="Add Product" />
           <QuickAction to="/payments" icon={Wallet} label="Record Payment" />
           <QuickAction to="/reports" icon={FileText} label="View Reports" />
+          <QuickAction to="/payment-reminders" icon={Bell} label="Send Reminders" />
         </div>
       </div>
 
