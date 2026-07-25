@@ -279,7 +279,8 @@ function Settings() {
 
   const saveBiz = async () => {
     // Guard against double-submit (Enter key, banner + card, rapid clicks).
-    if (savingSection) return;
+    // Reloading is also a busy state; ignore submissions until the UI finishes.
+    if (savingSection || reloadingSection) return;
     const section = editing;
     const { ok, errors: e } = validateBusiness(biz);
     setErrors(e);
@@ -540,7 +541,10 @@ function Settings() {
           <span>You have unsaved changes in <b>{editing === "business" ? "Business identity" : "Payment & bank"}</b>.</span>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" className="h-7" onClick={cancelEdit} disabled={!!savingSection}>Discard</Button>
-            <Button size="sm" className="h-7" onClick={saveBiz} disabled={!!savingSection || !!reloadingSection} aria-busy={!!savingSection || !!reloadingSection}>
+            <Button size="sm" className="h-7" onClick={() => {
+                if (savingSection || reloadingSection) return;
+                saveBiz();
+              }} disabled={!!savingSection || !!reloadingSection} aria-busy={!!savingSection || !!reloadingSection}>
               {savingSection ? (<><Loader2 className="size-3.5 mr-1 animate-spin" aria-label="Saving in progress" /> Saving…</>) : "Save"}
             </Button>
 
@@ -999,7 +1003,12 @@ function CollapsibleCard({
               <Button
                 type="button"
                 size="sm"
-                onClick={() => onSave?.()}
+                onClick={() => {
+                  // Extra defense in depth: ignore clicks while the section is
+                  // already busy, even if a non-disabled ancestor somehow re-fired.
+                  if (saving || reloading) return;
+                  onSave?.();
+                }}
                 disabled={!dirty || saving || reloading}
                 aria-disabled={!dirty || saving || reloading}
                 aria-busy={saving || reloading}
