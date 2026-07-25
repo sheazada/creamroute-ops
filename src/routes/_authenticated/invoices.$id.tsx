@@ -223,6 +223,23 @@ function InvoiceView() {
     setTimeout(() => document.body.classList.remove("print-thermal"), 500);
   };
 
+  const downloadPdf = () => {
+    try {
+      const blob = buildInvoicePdf(inv, data.items);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice-${inv.invoice_no}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success("Invoice PDF downloaded");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to generate PDF");
+    }
+  };
+
   const whatsappShare = () => {
     const phone = (c?.mobile ?? "").replace(/[^\d]/g, "");
     const lines = [
