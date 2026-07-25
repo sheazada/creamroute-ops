@@ -454,6 +454,10 @@ function Settings() {
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {saveStatus}
       </div>
+      {/* Assertive SR-only live region: announces save failures with a short reason. */}
+      <div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
+        {saveError}
+      </div>
       <PageHeader title="Settings" description="Business details, invoice branding and team roles." />
       {showErrorSummary && Object.keys(errors).length > 0 && (() => {
         const items = [...SECTION_FIELDS.business, ...SECTION_FIELDS.payment]
