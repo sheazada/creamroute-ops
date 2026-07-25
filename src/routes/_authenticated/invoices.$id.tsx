@@ -18,6 +18,7 @@ import {
   Trash2,
   Receipt,
   Download,
+  Copy,
 } from "lucide-react";
 import { InvoiceShareMenu } from "@/components/invoice-share-menu";
 import { toast } from "sonner";
@@ -307,6 +308,11 @@ function InvoiceView() {
           {!editing && (
             <>
               <InvoiceShareMenu invoice={inv} items={data.items} customer={c} />
+              <Button asChild size="sm" variant="outline" className="gap-1.5">
+                <Link to="/invoices/new" search={{ fromInvoice: inv.id }}>
+                  <Copy className="size-4" /> Duplicate
+                </Link>
+              </Button>
               <Button size="sm" variant="outline" onClick={printThermal} className="gap-1.5">
                 <Receipt className="size-4" /> Thermal
               </Button>
