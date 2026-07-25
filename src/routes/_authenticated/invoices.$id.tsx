@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { amountInWords } from "@/lib/amount-in-words";
 import { getBusiness, qrImage, upiIntent } from "@/lib/business";
+import { buildInvoicePdf } from "@/lib/invoice-pdf";
 
 export const Route = createFileRoute("/_authenticated/invoices/$id")({
   component: InvoiceView,
