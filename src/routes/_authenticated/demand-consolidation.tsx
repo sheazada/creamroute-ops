@@ -188,7 +188,7 @@ function DemandConsolidation() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Card className="p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <ShoppingCart className="size-3" /> Orders
@@ -212,10 +212,6 @@ function DemandConsolidation() {
             <Store className="size-3" /> Shops
           </div>
           <div className="text-2xl font-semibold font-mono mt-1">{shops.length}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Revenue</div>
-          <div className="text-2xl font-semibold font-mono mt-1">{inr(totalAmount)}</div>
         </Card>
       </div>
 
