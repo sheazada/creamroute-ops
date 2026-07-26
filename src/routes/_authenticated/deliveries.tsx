@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, shortDate, genDocNo } from "@/lib/format";
-import { Wallet } from "lucide-react";
+import { CheckCircle2, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/deliveries")({
   component: Deliveries,
@@ -39,11 +40,13 @@ function Deliveries() {
 
   const { data } = useQuery({
     queryKey: ["deliveries"],
-    queryFn: async () =>
-      (await supabase
+    queryFn: async () => {
+      const { data } = await supabase
         .from("deliveries")
-        .select("*, invoice:invoices(id, invoice_no, total, balance, customer:customers(id, name, shop_name, address, mobile))")
-        .order("created_at", { ascending: false })).data as unknown as Delivery[] ?? [],
+        .select("*, invoice:invoices(id, invoice_no, total, paid, balance, customer:customers(id, name, shop_name, address, mobile))")
+        .order("created_at", { ascending: false });
+      return (data ?? []) as unknown as Delivery[];
+    },
   });
 
   const update = async (id: string, patch: any) => {
@@ -61,19 +64,25 @@ function Deliveries() {
         {(data ?? []).length === 0 && (
           <Card className="p-8 text-center text-sm text-muted-foreground">No deliveries yet.</Card>
         )}
-        {(data ?? []).map((d) => (
-          <Card key={d.id} className="p-4 space-y-3">
+        {(data ?? []).map((d) => {
+          const isPaid = Number(d.invoice?.balance ?? 0) <= 0;
+          return (
+          <Card key={d.id} className={cn("p-4 space-y-3", isPaid && "bg-success/5")}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-semibold truncate">{d.invoice?.customer?.name}</div>
                 <div className="text-xs text-muted-foreground truncate">{d.invoice?.customer?.shop_name}</div>
                 <div className="text-[11px] text-muted-foreground mt-0.5">{d.invoice?.customer?.address}</div>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <div className="font-mono text-xs text-muted-foreground">{d.invoice?.invoice_no}</div>
-                <div className="font-mono font-semibold">{inr(d.invoice?.total ?? 0)}</div>
-                {Number(d.invoice?.balance ?? 0) > 0 && (
-                  <div className="text-[11px] text-destructive font-mono">Due {inr(d.invoice?.balance ?? 0)}</div>
+                <div className="font-mono font-semibold text-sm">{inr(d.invoice?.total ?? 0)}</div>
+                {Number(d.invoice?.balance ?? 0) > 0 ? (
+                  <div className="text-[11px] text-destructive font-mono font-semibold">Due {inr(d.invoice?.balance ?? 0)}</div>
+                ) : (
+                  <div className="text-[11px] text-success font-semibold flex items-center gap-1 justify-end">
+                    <CheckCircle2 className="size-3" /> Paid
+                  </div>
                 )}
               </div>
             </div>
@@ -93,12 +102,12 @@ function Deliveries() {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant="outline"
+                variant={isPaid ? "secondary" : "default"}
                 className="flex-1 gap-1.5"
                 disabled={!d.invoice || Number(d.invoice.balance) <= 0}
                 onClick={() => setPayFor(d)}
               >
-                <Wallet className="size-4" /> Collect Cash
+                {isPaid ? <><CheckCircle2 className="size-4" /> Paid — View History</> : <><Wallet className="size-4" /> Collect Cash</>}
               </Button>
               {d.invoice?.customer?.mobile && (
                 <Button asChild size="sm" variant="ghost">
@@ -107,7 +116,8 @@ function Deliveries() {
               )}
             </div>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Desktop table */}
@@ -199,12 +209,30 @@ function CollectPaymentDialog({ delivery, onClose, onSaved }: { delivery: Delive
 
   const open = !!delivery;
   const bal = Number(delivery?.invoice?.balance ?? 0);
+  const total = Number(delivery?.invoice?.total ?? 0);
+  const paid = Number(delivery?.invoice?.paid ?? 0);
+
+  // Fetch payment history for this invoice
+  const { data: paymentHistory = [] } = useQuery({
+    queryKey: ["payments-for-invoice", delivery?.invoice?.id],
+    queryFn: async () => {
+      if (!delivery?.invoice?.id) return [];
+      const { data } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("invoice_id", delivery.invoice.id)
+        .order("payment_date", { ascending: false });
+      return data ?? [];
+    },
+    enabled: open && !!delivery?.invoice?.id,
+  });
 
   const save = async () => {
     if (!delivery?.invoice || !delivery.invoice.customer) return;
     const amt = Number(amount || bal);
     if (!amt || amt <= 0) return toast.error("Enter amount");
     setSaving(true);
+
     const { error } = await supabase.from("payments").insert({
       payment_no: genDocNo("RCP"),
       customer_id: delivery.invoice.customer.id,
@@ -214,43 +242,87 @@ function CollectPaymentDialog({ delivery, onClose, onSaved }: { delivery: Delive
       reference: reference || null,
       notes: `Collected on delivery${delivery.route ? ` · route ${delivery.route}` : ""}`,
     });
+
     if (error) { setSaving(false); return toast.error(error.message); }
+
+    // Recalculate invoice balance
+    await supabase.rpc("recalc_invoice", { _invoice_id: delivery.invoice.id });
+    // Recalculate customer outstanding
+    await supabase.rpc("recalc_customer_outstanding", { _customer_id: delivery.invoice.customer.id });
+
     if (markDelivered && delivery.status !== "delivered") {
       await supabase.from("deliveries").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("id", delivery.id);
     }
+
     setSaving(false);
     setAmount(""); setReference(""); setMode("cash");
-    toast.success("Payment recorded");
+    toast.success(`Payment of ${inr(amt)} recorded! Balance updated.`);
     onSaved();
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Collect Payment</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><Wallet className="size-5 text-success" /> Collect Payment</DialogTitle></DialogHeader>
         {delivery && (
-          <div className="space-y-3">
-            <div className="rounded-lg bg-muted/40 p-3 text-sm">
-              <div className="font-medium">{delivery.invoice?.customer?.name}</div>
-              <div className="text-xs text-muted-foreground">{delivery.invoice?.customer?.shop_name} · {delivery.invoice?.invoice_no}</div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Balance due</span>
-                <span className="font-mono font-semibold text-destructive">{inr(bal)}</span>
+          <div className="space-y-4">
+            {/* Customer & Invoice Info */}
+            <div className="rounded-lg bg-muted/40 p-3 space-y-1.5">
+              <div className="font-medium text-sm">{delivery.invoice?.customer?.name}</div>
+              <div className="text-xs text-muted-foreground">{delivery.invoice?.customer?.shop_name} · {delivery.invoice?.customer?.mobile}</div>
+              <div className="text-xs font-mono text-muted-foreground">{delivery.invoice?.invoice_no}</div>
+              <div className="mt-2 pt-2 border-t space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Invoice Total</span>
+                  <span className="font-mono">{inr(total)}</span>
+                </div>
+                {paid > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Already Paid</span>
+                    <span className="font-mono text-success">{inr(paid)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-semibold pt-1">
+                  <span>Balance Due</span>
+                  <span className="font-mono text-destructive">{inr(bal)}</span>
+                </div>
               </div>
             </div>
+
+            {/* Previous Payments */}
+            {paymentHistory.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <Wallet className="size-3" /> Payment History ({paymentHistory.length})
+                </div>
+                <div className="max-h-32 overflow-y-auto rounded-md border divide-y text-xs">
+                  {paymentHistory.map((p: any) => (
+                    <div key={p.id} className="px-3 py-2 flex items-center justify-between">
+                      <div>
+                        <div className="font-mono font-semibold">{p.payment_no}</div>
+                        <div className="text-muted-foreground">{new Date(p.payment_date).toLocaleDateString("en-IN")} · {p.mode?.toUpperCase()}</div>
+                      </div>
+                      <div className="font-mono font-semibold text-success">{inr(p.amount)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Payment Form */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Amount received</Label>
-                <Input type="number" placeholder={String(bal)} value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <Label>Amount received *</Label>
+                <Input type="number" placeholder={String(bal)} value={amount} onChange={(e) => setAmount(e.target.value)} className="text-lg font-mono" />
               </div>
               <div className="space-y-1.5">
-                <Label>Mode</Label>
+                <Label>Mode *</Label>
                 <Select value={mode} onValueChange={(v) => setMode(v as any)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                    <SelectItem value="bank">Bank</SelectItem>
+                    <SelectItem value="cash">💵 Cash</SelectItem>
+                    <SelectItem value="upi">📱 UPI</SelectItem>
+                    <SelectItem value="bank">🏦 Bank</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -258,18 +330,20 @@ function CollectPaymentDialog({ delivery, onClose, onSaved }: { delivery: Delive
             {mode !== "cash" && (
               <div className="space-y-1.5">
                 <Label>Reference / txn id</Label>
-                <Input value={reference} onChange={(e) => setReference(e.target.value)} />
+                <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="UPI txn / UTR" />
               </div>
             )}
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={markDelivered} onChange={(e) => setMarkDelivered(e.target.checked)} />
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={markDelivered} onChange={(e) => setMarkDelivered(e.target.checked)} className="size-4" />
               Also mark delivery as Delivered
             </label>
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Record Payment"}</Button>
+          <Button onClick={save} disabled={saving} className="gap-1.5">
+            {saving ? <><div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving…</> : <><Wallet className="size-4" /> Record {amount ? inr(Number(amount)) : "Payment"}</>}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
