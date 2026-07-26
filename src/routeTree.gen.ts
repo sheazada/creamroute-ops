@@ -30,6 +30,7 @@ import { Route as AuthenticatedDeliveriesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedCratesRouteImport } from './routes/_authenticated/crates'
+import { Route as AuthenticatedCashReconciliationRouteImport } from './routes/_authenticated/cash-reconciliation'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedPurchasesIndexRouteImport } from './routes/_authenticated/purchases.index'
@@ -153,6 +154,12 @@ const AuthenticatedCratesRoute = AuthenticatedCratesRouteImport.update({
   path: '/crates',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCashReconciliationRoute =
+  AuthenticatedCashReconciliationRouteImport.update({
+    id: '/cash-reconciliation',
+    path: '/cash-reconciliation',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -241,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
   '/crates': typeof AuthenticatedCratesRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -277,6 +285,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
   '/crates': typeof AuthenticatedCratesRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -315,6 +324,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
   '/_authenticated/crates': typeof AuthenticatedCratesRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -353,6 +363,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/cash-reconciliation'
     | '/crates'
     | '/customers'
     | '/dashboard'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/cash-reconciliation'
     | '/crates'
     | '/customers'
     | '/dashboard'
@@ -426,6 +438,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/cash-reconciliation'
     | '/_authenticated/crates'
     | '/_authenticated/customers'
     | '/_authenticated/dashboard'
@@ -617,6 +630,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCratesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cash-reconciliation': {
+      id: '/_authenticated/cash-reconciliation'
+      path: '/cash-reconciliation'
+      fullPath: '/cash-reconciliation'
+      preLoaderRoute: typeof AuthenticatedCashReconciliationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -733,6 +753,7 @@ const AuthenticatedSuppliersRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCashReconciliationRoute: typeof AuthenticatedCashReconciliationRoute
   AuthenticatedCratesRoute: typeof AuthenticatedCratesRoute
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -762,6 +783,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCashReconciliationRoute: AuthenticatedCashReconciliationRoute,
   AuthenticatedCratesRoute: AuthenticatedCratesRoute,
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
