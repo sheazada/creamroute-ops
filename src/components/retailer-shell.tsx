@@ -43,19 +43,30 @@ export function RetailerShell({ children }: { children: ReactNode }) {
   });
 
   // Get retailer info (customer record linked to user)
-  const { data: retailer } = useQuery({
+  const { data: retailer, error: retailerError } = useQuery({
     queryKey: ["retailer-info", me?.user?.id],
     enabled: !!me?.user,
     queryFn: async () => {
       if (!me?.user) return null;
-      // Find retailer linked to this user
-      const { data: customer } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("user_id", me.user.id)
-        .maybeSingle();
-      return customer;
+      try {
+        // Try to find retailer linked by user_id
+        const { data: customer, error } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("user_id", me.user.id)
+          .maybeSingle();
+        
+        if (error) {
+          console.warn("Customer query failed:", error.message);
+          return null;
+        }
+        return customer;
+      } catch (err) {
+        console.warn("Failed to fetch retailer info:", err);
+        return null;
+      }
     },
+    retry: false,
   });
 
   const signOut = async () => {

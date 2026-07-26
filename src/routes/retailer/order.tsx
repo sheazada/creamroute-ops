@@ -52,13 +52,24 @@ function PlaceOrder() {
     queryFn: async () => {
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes.user) return null;
-      const { data } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("user_id", userRes.user.id)
-        .maybeSingle();
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("user_id", userRes.user.id)
+          .maybeSingle();
+        
+        if (error) {
+          console.warn("Customer lookup failed:", error.message);
+          return null;
+        }
+        return data;
+      } catch (err) {
+        console.warn("Failed to fetch retailer:", err);
+        return null;
+      }
     },
+    retry: false,
   });
 
   // Fetch products
