@@ -788,6 +788,63 @@ export type Database = {
           },
         ]
       }
+      invoice_revisions: {
+        Row: {
+          changes_json: Json
+          created_at: string
+          id: string
+          invoice_id: string
+          original_invoice_id: string | null
+          original_total: number
+          revised_by: string | null
+          revised_invoice_no: string | null
+          revised_total: number
+          revision_number: number
+          revision_reason: string
+        }
+        Insert: {
+          changes_json: Json
+          created_at?: string
+          id?: string
+          invoice_id: string
+          original_invoice_id?: string | null
+          original_total: number
+          revised_by?: string | null
+          revised_invoice_no?: string | null
+          revised_total: number
+          revision_number?: number
+          revision_reason: string
+        }
+        Update: {
+          changes_json?: Json
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          original_invoice_id?: string | null
+          original_total?: number
+          revised_by?: string | null
+          revised_invoice_no?: string | null
+          revised_total?: number
+          revision_number?: number
+          revision_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_revisions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_revisions_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           balance: number
@@ -800,12 +857,15 @@ export type Database = {
           igst: number
           invoice_date: string
           invoice_no: string
+          is_revised: boolean
           notes: string | null
           order_id: string | null
           paid: number
+          revision_count: number
           sgst: number
           status: string
           subtotal: number
+          superseded_by: string | null
           total: number
           updated_at: string
         }
@@ -820,12 +880,15 @@ export type Database = {
           igst?: number
           invoice_date?: string
           invoice_no: string
+          is_revised?: boolean
           notes?: string | null
           order_id?: string | null
           paid?: number
+          revision_count?: number
           sgst?: number
           status?: string
           subtotal?: number
+          superseded_by?: string | null
           total?: number
           updated_at?: string
         }
@@ -840,12 +903,15 @@ export type Database = {
           igst?: number
           invoice_date?: string
           invoice_no?: string
+          is_revised?: boolean
           notes?: string | null
           order_id?: string | null
           paid?: number
+          revision_count?: number
           sgst?: number
           status?: string
           subtotal?: number
+          superseded_by?: string | null
           total?: number
           updated_at?: string
         }
@@ -862,6 +928,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -1400,6 +1473,100 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reminder_logs: {
+        Row: {
+          channel: string
+          created_at: string
+          customer_id: string
+          error_message: string | null
+          id: string
+          invoice_id: string | null
+          sent_at: string
+          status: string
+          template_id: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          customer_id: string
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          sent_at?: string
+          status?: string
+          template_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          customer_id?: string
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          sent_at?: string
+          status?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "reminder_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminder_templates: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          days_overdue: number
+          id: string
+          is_active: boolean
+          name: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          channel: string
+          created_at?: string
+          days_overdue: number
+          id?: string
+          is_active?: boolean
+          name: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          days_overdue?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       route_stops: {
         Row: {
@@ -2062,6 +2229,7 @@ export type Database = {
           product_name: string
         }[]
       }
+      get_next_revision_no: { Args: { _invoice_id: string }; Returns: number }
       get_stock_valuation: {
         Args: never
         Returns: {
@@ -2073,6 +2241,10 @@ export type Database = {
           total_qty: number
           total_value: number
         }[]
+      }
+      has_reminder_been_sent: {
+        Args: { _invoice_id: string; _template_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -2141,6 +2313,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revise_invoice: {
+        Args: {
+          _invoice_id: string
+          _revised_by: string
+          _revised_items: Json
+          _revision_reason: string
+        }
+        Returns: Json
       }
     }
     Enums: {
