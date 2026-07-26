@@ -48,7 +48,7 @@ export const processPaymentReminders = createServerFn({ method: "POST" })
       const { data: invoices, error: iErr } = await supabaseAdmin
         .from("invoices")
         .select(
-          "id, invoice_no, balance, due_date, customer_id, customer:customers(name, shop_name, mobile, email, notify_whatsapp, notify_email, whatsapp)"
+          "id, invoice_no, balance, due_date, customer_id, customer:customers(name, shop_name, mobile, email, notify_whatsapp, notify_email, notify_sms, whatsapp)"
         )
         .gt("balance", 0)
         .lte("due_date", cutoffStr)
