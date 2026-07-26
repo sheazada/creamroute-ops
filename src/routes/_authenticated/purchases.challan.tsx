@@ -54,18 +54,17 @@ function ChallanOcr() {
   const [billNo, setBillNo] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(isoDate());
   const [lines, setLines] = useState<ReviewLine[]>([]);
-  const [selectedConsolidation, setSelectedConsolidation] = useState<string>("");
 
   const { data: suppliers } = useQuery({ queryKey: ["suppliers"], queryFn: async () => (await supabase.from("suppliers").select("*").order("name")).data ?? [] });
   const { data: products } = useQuery({ queryKey: ["products"], queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [] });
 
-  // Fetch consolidations for the selected date
+  // Auto-fetch consolidation for the current date
   const { data: consolidations = [] } = useQuery({
     queryKey: ["demand-consolidations", purchaseDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("demand_consolidations")
-        .select("id, consolidation_no, consolidation_date, status")
+        .select("id, consolidation_no, consolidation_date, delivery_cycle_id, status")
         .eq("consolidation_date", purchaseDate)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -73,19 +72,22 @@ function ChallanOcr() {
     },
   });
 
-  // Fetch consolidation items when selected
+  // Use first consolidation for this date (auto-link)
+  const autoConsolidation = (consolidations ?? []).length > 0 ? (consolidations as any[])[0] : null;
+
+  // Fetch consolidation items for auto-compare
   const { data: consolidationItems = [] } = useQuery({
-    queryKey: ["consolidation-items", selectedConsolidation],
+    queryKey: ["consolidation-items", autoConsolidation?.id],
     queryFn: async () => {
-      if (!selectedConsolidation) return [];
+      if (!autoConsolidation) return [];
       const { data, error } = await supabase
         .from("demand_consolidation_items")
         .select("id, product_name, product_id, total_ordered_qty")
-        .eq("demand_consolidation_id", selectedConsolidation);
+        .eq("demand_consolidation_id", autoConsolidation.id);
       if (error) throw error;
       return (data ?? []) as ConsolidationItem[];
     },
-    enabled: !!selectedConsolidation,
+    enabled: !!autoConsolidation,
   });
 
   const totals = useMemo(() => {
@@ -99,24 +101,6 @@ function ChallanOcr() {
   }, [lines]);
 
   // Load items from consolidation (before OCR)
-  const loadFromConsolidation = () => {
-    if (consolidationItems.length === 0) {
-      return toast.error("No items in this consolidation");
-    }
-    const consolidationLines: ReviewLine[] = consolidationItems.map((ci) => ({
-      id: crypto.randomUUID(),
-      product_id: ci.product_id ?? "",
-      product_name: ci.product_name,
-      quantity: Number(ci.total_ordered_qty), // Will be updated by OCR
-      ordered_qty: Number(ci.total_ordered_qty),
-      rate: 0,
-      gst_rate: 5,
-      variance_type: undefined,
-    }));
-    setLines(consolidationLines);
-    toast.success(`Loaded ${consolidationItems.length} items from consolidation. Now upload challan to extract received quantities.`);
-  };
-
   const onFile = (f: File | null) => {
     setFile(f);
     setPreview(null);
@@ -224,7 +208,7 @@ function ChallanOcr() {
       bill_no: billNo,
       supplier_id: supplierId,
       purchase_date: purchaseDate,
-      delivery_cycle_id: selectedConsolidation ? (consolidations.find((c) => c.id === selectedConsolidation) as any)?.delivery_cycle_id : null,
+      delivery_cycle_id: autoConsolidation?.delivery_cycle_id ?? null,
       subtotal: totals.subtotal,
       gst: totals.gst,
       total: totals.total,
@@ -278,9 +262,9 @@ function ChallanOcr() {
         description="Upload a supplier challan, let AI extract the details, then review and approve to create the purchase."
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left: upload + preview */}
-        <Card className="p-5 lg:col-span-2 space-y-4">
+      <div className="space-y-6">
+        {/* Upload section */}
+        <Card className="p-5 space-y-4">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Upload className="size-4 text-primary" /> Upload challan
           </div>
@@ -339,45 +323,18 @@ function ChallanOcr() {
           )}
         </Card>
 
-        {/* Demand Consolidation Link */}
-        <Card className="p-5 lg:col-span-2">
-          <div className="flex items-center gap-2 text-sm font-semibold mb-3">
-            <ShoppingCart className="size-4 text-primary" /> Link to Demand Consolidation
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Select today's consolidation to auto-compare ordered vs received quantities.
-          </p>
-          <Select value={selectedConsolidation} onValueChange={setSelectedConsolidation}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select consolidation (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              {consolidations.length === 0 && (
-                <SelectItem value="__none__" disabled>
-                  No consolidations for {shortDate(purchaseDate)}
-                </SelectItem>
-              )}
-              {(consolidations ?? []).map((c: any) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.consolidation_no} · {shortDate(c.consolidation_date)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedConsolidation && consolidationItems.length > 0 && (
-            <div className="mt-3 rounded-md bg-primary/5 border border-primary/20 p-3 text-xs">
-              <div className="font-semibold text-primary mb-1">
-                {consolidationItems.length} item{consolidationItems.length === 1 ? "" : "s"} loaded
-              </div>
-              <div className="text-muted-foreground">
-                OCR extraction will auto-compare received vs ordered quantities
-              </div>
+        {/* Auto-linked consolidation info */}
+        {autoConsolidation && consolidationItems.length > 0 && (
+          <Card className="p-3 bg-primary/5 border-primary/20 flex items-center gap-3">
+            <ShoppingCart className="size-4 text-primary shrink-0" />
+            <div className="text-sm flex-1">
+              <b>{autoConsolidation.consolidation_no}</b> linked automatically · {consolidationItems.length} item{consolidationItems.length === 1 ? "" : "s"} · ordered vs received will auto-compare
             </div>
-          )}
-        </Card>
+          </Card>
+        )}
 
-        {/* Right: review form */}
-        <Card className="p-5 lg:col-span-3 space-y-5">
+        {/* Review form */}
+        <Card className="p-5 space-y-5">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <CheckCircle2 className="size-4 text-success" /> Review & approve
           </div>
