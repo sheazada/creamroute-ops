@@ -51,7 +51,8 @@ const nav: {
     label: "Sales",
     items: [
       { to: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "manager", "salesperson"] },
-      { to: "/demand-consolidation", label: "Demand", icon: Layers, roles: ALL },
+      { to: "/demand-consolidation", label: "Pickup from Sudha", icon: Layers, roles: ALL },
+      { to: "/delivery-demand", label: "Delivery Demand", icon: Truck, roles: ALL },
       { to: "/invoices", label: "Invoices", icon: ReceiptText, roles: ["admin", "manager", "salesperson"] },
       { to: "/payments", label: "Payments", icon: Wallet, roles: ["admin", "manager", "salesperson"] },
       { to: "/cash-reconciliation", label: "Cash Reconciliation", icon: Wallet, roles: ["admin", "manager"] },
@@ -110,12 +111,12 @@ const mobileTabsByRole: Record<Role, { to: string; label: string; icon: typeof L
     { to: "/products", label: "Products", icon: Package },
   ],
   driver: [
-    { to: "/demand-consolidation", label: "Demand", icon: Layers },
-    { to: "/deliveries", label: "Deliveries", icon: Truck },
+    { to: "/demand-consolidation", label: "Pickup", icon: Layers },
+    { to: "/delivery-demand", label: "Delivery", icon: Truck },
   ],
   helper: [
-    { to: "/demand-consolidation", label: "Demand", icon: Layers },
-    { to: "/deliveries", label: "Deliveries", icon: Truck },
+    { to: "/demand-consolidation", label: "Pickup", icon: Layers },
+    { to: "/delivery-demand", label: "Delivery", icon: Truck },
   ],
 };
 
