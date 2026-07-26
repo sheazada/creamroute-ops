@@ -80,7 +80,7 @@ export const processPaymentReminders = createServerFn({ method: "POST" })
           .replace(/{customer_name}/g, customerName)
           .replace(/{outstanding}/g, `₹${Number(invoice.balance).toLocaleString("en-IN")}`)
           .replace(/{invoice_no}/g, invoice.invoice_no)
-          .replace(/{due_date}/g, new Date(invoice.due_date).toLocaleDateString("en-IN"));
+          .replace(/{due_date}/g, invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("en-IN") : "—");
 
         const subject = template.subject?.replace(/{invoice_no}/g, invoice.invoice_no) || `Payment Reminder: Invoice ${invoice.invoice_no}`;
 
