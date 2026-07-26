@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
+import { sendWhatsApp, formatOrderConfirmation } from "@/lib/whatsapp";
 import {
   CheckCircle2,
   Check,
@@ -24,6 +25,7 @@ import {
   X,
   Minus,
   Plus,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -307,6 +309,20 @@ function ShopCard({
   onMarkDelivered: () => void;
   onStatusChange: (deliveryId: string, status: string) => void;
 }) {
+  const sendWhatsAppOrder = () => {
+    const biz = { name: "DairyFlow Distributors", mobile: "" };
+    const customer = { name: shop.customer_name, shop_name: shop.shop_name };
+    const msg = formatOrderConfirmation(
+      shop.order_no,
+      shop.order_no,
+      shop.order_total,
+      shop.items.map((i) => ({ product_name: i.product_name, quantity: i.quantity, rate: i.rate })),
+      customer,
+      biz,
+    );
+    sendWhatsApp(shop.mobile, msg);
+    toast.success("Opening WhatsApp…");
+  };
   const isDelivered = shop.delivery_status === "delivered";
   const isPaid = shop.invoice_balance <= 0;
 
@@ -359,6 +375,11 @@ function ShopCard({
             <a href={`tel:${shop.mobile}`}>
               <Phone className="size-4" /> Call
             </a>
+          </Button>
+        )}
+        {shop.mobile && (
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={sendWhatsAppOrder}>
+            <MessageCircle className="size-4 text-green-600" /> WhatsApp
           </Button>
         )}
 

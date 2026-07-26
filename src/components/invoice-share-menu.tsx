@@ -1,7 +1,5 @@
-// Universal share menu for invoices. Uses Web Share API (with PDF file when
-// supported), and always offers WhatsApp / Email / SMS / Telegram / Copy link
-// fallbacks so the user can send an invoice anywhere.
-// Every action is recorded to `share_activity_logs` for compliance.
+// Enhanced share menu for invoices with WhatsApp template options.
+// Offers: Send Invoice, Payment Reminder, Statement, plus Email/SMS/Download
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,32 +10,26 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   Share2,
   MessageCircle,
   Mail,
   MessageSquare,
-  Send,
-  Link as LinkIcon,
-  Share,
   Download,
+  ReceiptText,
+  Bell,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { buildInvoicePdf } from "@/lib/invoice-pdf";
 import { getBusiness } from "@/lib/business";
 import { inr, shortDate } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
-
-type Channel =
-  | "whatsapp"
-  | "email"
-  | "sms"
-  | "telegram"
-  | "native"
-  | "copy_link"
-  | "copy_summary"
-  | "download_pdf";
+import { quickSendInvoice, quickSendReminder, formatStatementMessage, normalizePhoneForWhatsApp } from "@/lib/whatsapp";
 
 type Props = {
   invoice: any;
@@ -49,6 +41,8 @@ type Props = {
   label?: string;
   align?: "start" | "end";
 };
+
+type Channel = "whatsapp" | "email" | "sms" | "download_pdf" | "copy_summary";
 
 export function InvoiceShareMenu({
   invoice,
@@ -64,7 +58,11 @@ export function InvoiceShareMenu({
   const biz = getBusiness();
   const c = customer ?? invoice.customer;
 
+  const phone = (c?.mobile ?? "").replace(/\D/g, "");
+  const hasWhatsApp = phone && phone.length >= 10;
+
   const url = typeof window !== "undefined" ? window.location.origin + `/invoices/${invoice.id}` : "";
+
   const summary =
     `*${biz.name}* — Tax Invoice\n` +
     `Invoice #: ${invoice.invoice_no}\n` +
@@ -90,7 +88,7 @@ export function InvoiceShareMenu({
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
       });
     } catch {
-      // Non-blocking: never break sharing because logging failed
+      // Non-blocking
     }
   };
 
@@ -100,41 +98,66 @@ export function InvoiceShareMenu({
     return new File([blob], `Invoice-${invoice.invoice_no}.pdf`, { type: "application/pdf" });
   };
 
-  const nativeShare = async () => {
-    setBusy(true);
-    try {
-      const file = await buildPdfFile();
-      const nav = navigator as any;
-      const data: any = {
-        title: `Invoice ${invoice.invoice_no}`,
-        text: summary,
-        url,
-      };
-      if (nav.canShare && nav.canShare({ files: [file] })) {
-        data.files = [file];
-      }
-      if (nav.share) {
-        await nav.share(data);
-        await logShare("native");
-      } else {
-        await navigator.clipboard.writeText(summary);
-        toast.success("Invoice details copied to clipboard");
-        await logShare("copy_summary");
-      }
-    } catch (e: any) {
-      if (e?.name !== "AbortError") toast.error(e?.message ?? "Share failed");
-    } finally {
-      setBusy(false);
-    }
+  // WhatsApp actions
+  const sendInvoiceViaWhatsApp = () => {
+    const invData = {
+      invoice_no: invoice.invoice_no,
+      invoice_date: invoice.invoice_date,
+      total: Number(invoice.total),
+      paid: Number(invoice.paid ?? 0),
+      balance: Number(invoice.balance),
+      items: items?.map((it: any) => ({
+        product_name: it.product_name,
+        quantity: Number(it.quantity),
+        rate: Number(it.rate),
+        amount: Number(it.amount ?? it.quantity * it.rate),
+      })),
+    };
+    quickSendInvoice(
+      invData,
+      { name: c?.name ?? "", shop_name: c?.shop_name, mobile: c?.mobile },
+      { name: biz.name, mobile: biz.mobile, upi_vpa: biz.upi_vpa, bank_name: biz.bank_name, bank_account: biz.bank_account, bank_ifsc: biz.bank_ifsc, bank_holder: biz.bank_holder },
+    );
+    void logShare("whatsapp", c?.mobile ?? null);
   };
 
-  const whatsapp = () => {
-    const phone = (c?.mobile ?? "").replace(/[^\d]/g, "");
-    const link = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(summary)}`
-      : `https://wa.me/?text=${encodeURIComponent(summary)}`;
-    window.open(link, "_blank", "noopener,noreferrer");
-    void logShare("whatsapp", phone || null);
+  const sendReminderViaWhatsApp = (stage: "gentle" | "firm" | "final") => {
+    const invData = {
+      invoice_no: invoice.invoice_no,
+      invoice_date: invoice.invoice_date,
+      total: Number(invoice.total),
+      paid: Number(invoice.paid ?? 0),
+      balance: Number(invoice.balance),
+    };
+    quickSendReminder(
+      invData,
+      { name: c?.name ?? "", shop_name: c?.shop_name, mobile: c?.mobile },
+      { name: biz.name, mobile: biz.mobile, upi_vpa: biz.upi_vpa },
+      stage,
+    );
+    void logShare("whatsapp", c?.mobile ?? null);
+  };
+
+  const sendStatementViaWhatsApp = () => {
+    // For statement, we'd need all unpaid invoices - use current as placeholder
+    const invData = {
+      invoice_no: invoice.invoice_no,
+      invoice_date: invoice.invoice_date,
+      total: Number(invoice.total),
+      balance: Number(invoice.balance),
+    };
+    const msg = formatStatementMessage(
+      { name: c?.name ?? "", shop_name: c?.shop_name },
+      { name: biz.name, mobile: biz.mobile, upi_vpa: biz.upi_vpa },
+      [invData],
+      Number(invoice.balance),
+    );
+    const normalized = normalizePhoneForWhatsApp(c?.mobile);
+    const url = normalized
+      ? `https://wa.me/${normalized}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    void logShare("whatsapp", c?.mobile ?? null);
   };
 
   const email = () => {
@@ -146,39 +169,14 @@ export function InvoiceShareMenu({
   };
 
   const sms = () => {
-    const phone = (c?.mobile ?? "").replace(/[^\d+]/g, "");
-    const href = `sms:${phone}?&body=${encodeURIComponent(summary)}`;
+    const phoneNum = (c?.mobile ?? "").replace(/[^\\d+]/g, "");
+    const href = `sms:${phoneNum}?&body=${encodeURIComponent(summary)}`;
     window.location.href = href;
-    void logShare("sms", phone || null);
-  };
-
-  const telegram = () => {
-    const link = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(summary)}`;
-    window.open(link, "_blank", "noopener,noreferrer");
-    void logShare("telegram");
-  };
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Invoice link copied");
-      await logShare("copy_link");
-    } catch {
-      toast.error("Copy failed");
-    }
-  };
-
-  const copySummary = async () => {
-    try {
-      await navigator.clipboard.writeText(summary);
-      toast.success("Invoice summary copied");
-      await logShare("copy_summary");
-    } catch {
-      toast.error("Copy failed");
-    }
+    void logShare("sms", phoneNum || null);
   };
 
   const downloadPdf = async () => {
+    setBusy(true);
     try {
       const rows = items ?? (itemsLoader ? await itemsLoader() : []);
       const blob = buildInvoicePdf(invoice, rows);
@@ -193,6 +191,8 @@ export function InvoiceShareMenu({
       await logShare("download_pdf");
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to generate PDF");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -204,31 +204,54 @@ export function InvoiceShareMenu({
           {label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className="w-56">
-        <DropdownMenuLabel>Share invoice</DropdownMenuLabel>
-        <DropdownMenuItem onClick={nativeShare}>
-          <Share className="size-4 mr-2" /> Share via device…
+      <DropdownMenuContent align={align} className="w-60">
+        <DropdownMenuLabel>WhatsApp</DropdownMenuLabel>
+
+        {/* Send Invoice via WhatsApp */}
+        <DropdownMenuItem onClick={sendInvoiceViaWhatsApp} disabled={!hasWhatsApp}>
+          <MessageCircle className="size-4 mr-2 text-green-600" />
+          Send Invoice
+          {!hasWhatsApp && <span className="ml-auto text-[10px] text-muted-foreground">No phone</span>}
         </DropdownMenuItem>
+
+        {/* Payment Reminder submenu */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger disabled={!hasWhatsApp}>
+            <Bell className="size-4 mr-2 text-amber-600" />
+            Payment Reminder
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem onClick={() => sendReminderViaWhatsApp("gentle")}>
+              Gentle reminder
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => sendReminderViaWhatsApp("firm")}>
+              Firm follow-up
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => sendReminderViaWhatsApp("final")}>
+              Final notice
+            </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {/* Statement */}
+        <DropdownMenuItem onClick={sendStatementViaWhatsApp} disabled={!hasWhatsApp}>
+          <FileText className="size-4 mr-2 text-blue-600" />
+          Send Statement
+        </DropdownMenuItem>
+
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={whatsapp}>
-          <MessageCircle className="size-4 mr-2 text-green-600" /> WhatsApp
-        </DropdownMenuItem>
+        <DropdownMenuLabel>Other</DropdownMenuLabel>
+
         <DropdownMenuItem onClick={email}>
           <Mail className="size-4 mr-2 text-blue-600" /> Email
         </DropdownMenuItem>
+
         <DropdownMenuItem onClick={sms}>
           <MessageSquare className="size-4 mr-2" /> SMS
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={telegram}>
-          <Send className="size-4 mr-2 text-sky-500" /> Telegram
-        </DropdownMenuItem>
+
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={copyLink}>
-          <LinkIcon className="size-4 mr-2" /> Copy link
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={copySummary}>
-          <LinkIcon className="size-4 mr-2" /> Copy summary
-        </DropdownMenuItem>
+
         <DropdownMenuItem onClick={downloadPdf}>
           <Download className="size-4 mr-2" /> Download PDF
         </DropdownMenuItem>
