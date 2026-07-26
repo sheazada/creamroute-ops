@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_retailer/")({
+export const Route = createFileRoute("/retailer/")({
   component: RetailerDashboard,
 });
 

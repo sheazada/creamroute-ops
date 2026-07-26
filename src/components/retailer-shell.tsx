@@ -65,7 +65,7 @@ export function RetailerShell({ children }: { children: ReactNode }) {
   };
 
   const tabs = [
-    { to: "/retailer", label: "Home", icon: Home },
+    { to: "/retailer/", label: "Home", icon: Home },
     { to: "/retailer/order", label: "Order", icon: ShoppingCart },
     { to: "/retailer/orders", label: "Orders", icon: FileText },
     { to: "/retailer/ledger", label: "Ledger", icon: Wallet },
@@ -108,7 +108,9 @@ export function RetailerShell({ children }: { children: ReactNode }) {
       {/* Bottom tab bar */}
       <nav className="fixed bottom-0 inset-x-0 z-30 h-16 bg-background/95 backdrop-blur border-t no-print grid grid-cols-5">
         {tabs.map((t) => {
-          const active = path === t.to || (t.to !== "/retailer" && path.startsWith(t.to + "/"));
+          const active = t.to === "/retailer/" 
+            ? path === "/retailer" || path === "/retailer/"
+            : path === t.to || path.startsWith(t.to + "/");
           const Icon = t.icon;
           return (
             <Link

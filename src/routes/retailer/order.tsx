@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_retailer/order")({
+export const Route = createFileRoute("/retailer/order")({
   component: PlaceOrder,
 });
 

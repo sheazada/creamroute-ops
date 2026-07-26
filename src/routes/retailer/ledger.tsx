@@ -7,7 +7,7 @@ import { inr, shortDate } from "@/lib/format";
 import { Wallet, RefreshCw, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_retailer/ledger")({
+export const Route = createFileRoute("/retailer/ledger")({
   component: Ledger,
 });
 

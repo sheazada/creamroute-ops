@@ -8,7 +8,7 @@ import { inr, shortDate, num } from "@/lib/format";
 import { Package, FileText, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_retailer/orders")({
+export const Route = createFileRoute("/retailer/orders")({
   component: OrdersHistory,
 });
 

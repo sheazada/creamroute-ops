@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { User, Mail, Phone, MapPin, Save, Building, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_retailer/profile")({
+export const Route = createFileRoute("/retailer/profile")({
   component: Profile,
 });
 
