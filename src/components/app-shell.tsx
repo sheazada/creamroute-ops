@@ -22,6 +22,7 @@ import {
   Menu,
   Layers,
   Share2,
+  Compass,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +61,7 @@ const nav: {
       { to: "/deliveries", label: "Deliveries", icon: Truck, roles: ALL },
       { to: "/delivery-status", label: "Delivery Status", icon: BarChart3, roles: FIN },
       { to: "/routes", label: "Route Planning", icon: MapIcon, roles: FIN },
+      { to: "/route-optimization", label: "Route Optimization", icon: Compass, roles: FIN },
     ],
   },
   {
