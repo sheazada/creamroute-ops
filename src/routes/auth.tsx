@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Milk, Loader2, Shield, Users, Truck, HardHat, Briefcase } from "lucide-react";
+import { Milk, Loader2, Shield, Users, Truck, HardHat, Briefcase, Store } from "lucide-react";
 import { seedDemoUsers, DEMO_USERS, DEMO_PASSWORD } from "@/lib/dev-users.functions";
 
 const ROLE_ICONS: Record<string, any> = {
@@ -17,6 +17,7 @@ const ROLE_ICONS: Record<string, any> = {
   salesperson: Users,
   driver: Truck,
   helper: HardHat,
+  retailer: Store,
 };
 
 export const Route = createFileRoute("/auth")({
@@ -243,17 +244,7 @@ function AuthPage() {
                 );
               })}
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full h-9 gap-2 text-xs border-primary/30 hover:bg-primary/5"
-              onClick={() => quickLogin("retailer@demo.dairyflow.app")}
-            >
-              <Users className="size-3.5" />
-              Preview as Retailer (Test Only)
-            </Button>
-            <p className="text-[10px] text-amber-800/70">For development only — remove before production.</p>
+            <p className="text-[10px] text-amber-800/70">For development only — remove before production. Retailer logs in redirect to the retailer portal.</p>
           </div>
 
           <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
