@@ -78,12 +78,20 @@ function AuthPage() {
     setLoading(true);
     try {
       await doSignIn(roleEmail, DEMO_PASSWORD);
+      // Redirect retailer to retailer portal
+      if (roleEmail.includes("retailer")) {
+        navigate({ to: "/retailer", replace: true });
+      }
     } catch {
       try {
         setSeeding(true);
         await seed({ data: {} } as any);
         setSeeding(false);
         await doSignIn(roleEmail, DEMO_PASSWORD);
+        // Redirect retailer to retailer portal
+        if (roleEmail.includes("retailer")) {
+          navigate({ to: "/retailer", replace: true });
+        }
       } catch (e: any) {
         setSeeding(false);
         toast.error(e?.message ?? "Quick login failed");
@@ -235,6 +243,16 @@ function AuthPage() {
                 );
               })}
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full h-9 gap-2 text-xs border-primary/30 hover:bg-primary/5"
+              onClick={() => quickLogin("retailer@demo.dairyflow.app")}
+            >
+              <Users className="size-3.5" />
+              Preview as Retailer (Test Only)
+            </Button>
             <p className="text-[10px] text-amber-800/70">For development only — remove before production.</p>
           </div>
 

@@ -8,6 +8,7 @@ export const DEMO_USERS = [
   { role: "salesperson", email: "sales@demo.dairyflow.app", full_name: "Demo Salesperson" },
   { role: "driver", email: "driver@demo.dairyflow.app", full_name: "Demo Driver" },
   { role: "helper", email: "helper@demo.dairyflow.app", full_name: "Demo Helper" },
+  { role: "retailer", email: "retailer@demo.dairyflow.app", full_name: "Demo Retailer" },
 ] as const;
 
 export const seedDemoUsers = createServerFn({ method: "POST" }).handler(async () => {
