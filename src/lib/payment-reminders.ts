@@ -88,7 +88,7 @@ export const processPaymentReminders = createServerFn({ method: "POST" })
         // Priority: WhatsApp (if enabled and number exists) -> Email (if enabled and email exists) -> SMS
         // For MVP, we'll stick to the template's defined channel, but check if customer has it enabled.
         let recipient = "";
-        let channel = template.channel;
+        const channel = template.channel as "email" | "sms" | "whatsapp";
 
         if (template.channel === "whatsapp") {
           const num = invoice.customer?.whatsapp || invoice.customer?.mobile;
