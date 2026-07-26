@@ -14,6 +14,61 @@ export type Database = {
   }
   public: {
     Tables: {
+      collection_allocations: {
+        Row: {
+          allocated_amount: number
+          created_at: string
+          customer_id: string
+          driver_collection_id: string
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          payment_mode: string
+        }
+        Insert: {
+          allocated_amount?: number
+          created_at?: string
+          customer_id: string
+          driver_collection_id: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string
+        }
+        Update: {
+          allocated_amount?: number
+          created_at?: string
+          customer_id?: string
+          driver_collection_id?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_allocations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_allocations_driver_collection_id_fkey"
+            columns: ["driver_collection_id"]
+            isOneToOne: false
+            referencedRelation: "driver_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crate_transactions: {
         Row: {
           crate_type_id: string
@@ -533,6 +588,65 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_collections: {
+        Row: {
+          collected_amount: number
+          collection_no: string
+          created_at: string
+          delivery_date: string
+          driver_name: string | null
+          expected_amount: number
+          id: string
+          mismatch_amount: number
+          notes: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          route_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collected_amount?: number
+          collection_no: string
+          created_at?: string
+          delivery_date?: string
+          driver_name?: string | null
+          expected_amount?: number
+          id?: string
+          mismatch_amount?: number
+          notes?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          route_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collected_amount?: number
+          collection_no?: string
+          created_at?: string
+          delivery_date?: string
+          driver_name?: string | null
+          expected_amount?: number
+          id?: string
+          mismatch_amount?: number
+          notes?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          route_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_collections_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
             referencedColumns: ["id"]
           },
         ]
@@ -2202,6 +2316,7 @@ export type Database = {
       }
       generate_adjustment_no: { Args: never; Returns: string }
       generate_claim_no: { Args: never; Returns: string }
+      generate_collection_no: { Args: never; Returns: string }
       generate_consolidation_no: { Args: { p_date: string }; Returns: string }
       generate_cycle_code: {
         Args: { p_order_date: string; p_shift: string }
@@ -2270,6 +2385,10 @@ export type Database = {
       }
       recalc_supplier_outstanding: {
         Args: { _supplier_id: string }
+        Returns: undefined
+      }
+      reconcile_collection: {
+        Args: { _collection_id: string }
         Returns: undefined
       }
       record_notification_attempt: {
