@@ -14,6 +14,61 @@ export type Database = {
   }
   public: {
     Tables: {
+      collection_allocations: {
+        Row: {
+          allocated_amount: number
+          created_at: string
+          customer_id: string
+          driver_collection_id: string
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          payment_mode: string
+        }
+        Insert: {
+          allocated_amount?: number
+          created_at?: string
+          customer_id: string
+          driver_collection_id: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string
+        }
+        Update: {
+          allocated_amount?: number
+          created_at?: string
+          customer_id?: string
+          driver_collection_id?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_allocations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_allocations_driver_collection_id_fkey"
+            columns: ["driver_collection_id"]
+            isOneToOne: false
+            referencedRelation: "driver_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crate_transactions: {
         Row: {
           crate_type_id: string
@@ -269,6 +324,45 @@ export type Database = {
           },
         ]
       }
+      delivery_cycles: {
+        Row: {
+          created_at: string
+          cutoff_at: string
+          cycle_code: string
+          delivery_date: string
+          delivery_shift: string
+          id: string
+          notes: string | null
+          order_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cutoff_at: string
+          cycle_code: string
+          delivery_date: string
+          delivery_shift?: string
+          id?: string
+          notes?: string | null
+          order_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cutoff_at?: string
+          cycle_code?: string
+          delivery_date?: string
+          delivery_shift?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       delivery_runs: {
         Row: {
           created_at: string
@@ -348,6 +442,208 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "delivery_runs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_consolidation_items: {
+        Row: {
+          buffer_qty: number
+          created_at: string
+          demand_consolidation_id: string
+          final_procurement_qty: number
+          id: string
+          product_id: string | null
+          product_name: string
+          remarks: string | null
+          total_ordered_qty: number
+          total_value: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          buffer_qty?: number
+          created_at?: string
+          demand_consolidation_id: string
+          final_procurement_qty?: number
+          id?: string
+          product_id?: string | null
+          product_name: string
+          remarks?: string | null
+          total_ordered_qty?: number
+          total_value?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          buffer_qty?: number
+          created_at?: string
+          demand_consolidation_id?: string
+          final_procurement_qty?: number
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          remarks?: string | null
+          total_ordered_qty?: number
+          total_value?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_consolidation_items_demand_consolidation_id_fkey"
+            columns: ["demand_consolidation_id"]
+            isOneToOne: false
+            referencedRelation: "demand_consolidations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_consolidation_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_consolidations: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          consolidation_date: string
+          consolidation_no: string
+          created_at: string
+          created_by: string | null
+          delivery_cycle_id: string
+          id: string
+          notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          consolidation_date: string
+          consolidation_no: string
+          created_at?: string
+          created_by?: string | null
+          delivery_cycle_id: string
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          consolidation_date?: string
+          consolidation_no?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_cycle_id?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_consolidations_delivery_cycle_id_fkey"
+            columns: ["delivery_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_source_orders: {
+        Row: {
+          created_at: string
+          demand_consolidation_id: string
+          order_id: string
+        }
+        Insert: {
+          created_at?: string
+          demand_consolidation_id: string
+          order_id: string
+        }
+        Update: {
+          created_at?: string
+          demand_consolidation_id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_source_orders_demand_consolidation_id_fkey"
+            columns: ["demand_consolidation_id"]
+            isOneToOne: false
+            referencedRelation: "demand_consolidations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_source_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_collections: {
+        Row: {
+          collected_amount: number
+          collection_no: string
+          created_at: string
+          delivery_date: string
+          driver_name: string | null
+          expected_amount: number
+          id: string
+          mismatch_amount: number
+          notes: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          route_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collected_amount?: number
+          collection_no: string
+          created_at?: string
+          delivery_date?: string
+          driver_name?: string | null
+          expected_amount?: number
+          id?: string
+          mismatch_amount?: number
+          notes?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          route_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collected_amount?: number
+          collection_no?: string
+          created_at?: string
+          delivery_date?: string
+          driver_name?: string | null
+          expected_amount?: number
+          id?: string
+          mismatch_amount?: number
+          notes?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          route_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_collections_route_id_fkey"
             columns: ["route_id"]
             isOneToOne: false
             referencedRelation: "routes"
@@ -606,6 +902,63 @@ export type Database = {
           },
         ]
       }
+      invoice_revisions: {
+        Row: {
+          changes_json: Json
+          created_at: string
+          id: string
+          invoice_id: string
+          original_invoice_id: string | null
+          original_total: number
+          revised_by: string | null
+          revised_invoice_no: string | null
+          revised_total: number
+          revision_number: number
+          revision_reason: string
+        }
+        Insert: {
+          changes_json: Json
+          created_at?: string
+          id?: string
+          invoice_id: string
+          original_invoice_id?: string | null
+          original_total: number
+          revised_by?: string | null
+          revised_invoice_no?: string | null
+          revised_total: number
+          revision_number?: number
+          revision_reason: string
+        }
+        Update: {
+          changes_json?: Json
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          original_invoice_id?: string | null
+          original_total?: number
+          revised_by?: string | null
+          revised_invoice_no?: string | null
+          revised_total?: number
+          revision_number?: number
+          revision_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_revisions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_revisions_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           balance: number
@@ -618,12 +971,15 @@ export type Database = {
           igst: number
           invoice_date: string
           invoice_no: string
+          is_revised: boolean
           notes: string | null
           order_id: string | null
           paid: number
+          revision_count: number
           sgst: number
           status: string
           subtotal: number
+          superseded_by: string | null
           total: number
           updated_at: string
         }
@@ -638,12 +994,15 @@ export type Database = {
           igst?: number
           invoice_date?: string
           invoice_no: string
+          is_revised?: boolean
           notes?: string | null
           order_id?: string | null
           paid?: number
+          revision_count?: number
           sgst?: number
           status?: string
           subtotal?: number
+          superseded_by?: string | null
           total?: number
           updated_at?: string
         }
@@ -658,12 +1017,15 @@ export type Database = {
           igst?: number
           invoice_date?: string
           invoice_no?: string
+          is_revised?: boolean
           notes?: string | null
           order_id?: string | null
           paid?: number
+          revision_count?: number
           sgst?: number
           status?: string
           subtotal?: number
+          superseded_by?: string | null
           total?: number
           updated_at?: string
         }
@@ -680,6 +1042,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -1098,31 +1467,43 @@ export type Database = {
           amount: number
           gst_rate: number
           id: string
+          ordered_qty: number | null
           product_id: string
           product_name: string
           purchase_id: string
           quantity: number
           rate: number
+          variance_notes: string | null
+          variance_qty: number | null
+          variance_type: string | null
         }
         Insert: {
           amount: number
           gst_rate?: number
           id?: string
+          ordered_qty?: number | null
           product_id: string
           product_name: string
           purchase_id: string
           quantity: number
           rate: number
+          variance_notes?: string | null
+          variance_qty?: number | null
+          variance_type?: string | null
         }
         Update: {
           amount?: number
           gst_rate?: number
           id?: string
+          ordered_qty?: number | null
           product_id?: string
           product_name?: string
           purchase_id?: string
           quantity?: number
           rate?: number
+          variance_notes?: string | null
+          variance_qty?: number | null
+          variance_type?: string | null
         }
         Relationships: [
           {
@@ -1146,6 +1527,7 @@ export type Database = {
           bill_no: string
           challan_url: string | null
           created_at: string
+          delivery_cycle_id: string | null
           gst: number
           id: string
           notes: string | null
@@ -1161,6 +1543,7 @@ export type Database = {
           bill_no: string
           challan_url?: string | null
           created_at?: string
+          delivery_cycle_id?: string | null
           gst?: number
           id?: string
           notes?: string | null
@@ -1176,6 +1559,7 @@ export type Database = {
           bill_no?: string
           challan_url?: string | null
           created_at?: string
+          delivery_cycle_id?: string | null
           gst?: number
           id?: string
           notes?: string | null
@@ -1189,6 +1573,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "purchases_delivery_cycle_id_fkey"
+            columns: ["delivery_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_cycles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchases_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -1196,6 +1587,100 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reminder_logs: {
+        Row: {
+          channel: string
+          created_at: string
+          customer_id: string
+          error_message: string | null
+          id: string
+          invoice_id: string | null
+          sent_at: string
+          status: string
+          template_id: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          customer_id: string
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          sent_at?: string
+          status?: string
+          template_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          customer_id?: string
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          sent_at?: string
+          status?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "reminder_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminder_templates: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          days_overdue: number
+          id: string
+          is_active: boolean
+          name: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          channel: string
+          created_at?: string
+          days_overdue: number
+          id?: string
+          is_active?: boolean
+          name: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          days_overdue?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       route_stops: {
         Row: {
@@ -1566,6 +2051,94 @@ export type Database = {
           },
         ]
       }
+      sudha_claims: {
+        Row: {
+          claim_amount: number
+          claim_date: string
+          claim_no: string
+          claim_type: string
+          created_at: string
+          created_by: string | null
+          credited_at: string | null
+          evidence_url: string | null
+          id: string
+          product_id: string | null
+          product_name: string
+          purchase_id: string | null
+          purchase_item_id: string | null
+          quantity: number
+          reason: string
+          status: string
+          submitted_to_sudha_at: string | null
+          sudha_response: string | null
+          updated_at: string
+        }
+        Insert: {
+          claim_amount?: number
+          claim_date?: string
+          claim_no: string
+          claim_type: string
+          created_at?: string
+          created_by?: string | null
+          credited_at?: string | null
+          evidence_url?: string | null
+          id?: string
+          product_id?: string | null
+          product_name: string
+          purchase_id?: string | null
+          purchase_item_id?: string | null
+          quantity?: number
+          reason: string
+          status?: string
+          submitted_to_sudha_at?: string | null
+          sudha_response?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claim_amount?: number
+          claim_date?: string
+          claim_no?: string
+          claim_type?: string
+          created_at?: string
+          created_by?: string | null
+          credited_at?: string | null
+          evidence_url?: string | null
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          purchase_id?: string | null
+          purchase_item_id?: string | null
+          quantity?: number
+          reason?: string
+          status?: string
+          submitted_to_sudha_at?: string | null
+          sudha_response?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sudha_claims_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sudha_claims_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sudha_claims_purchase_item_id_fkey"
+            columns: ["purchase_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_payments: {
         Row: {
           amount: number
@@ -1659,224 +2232,6 @@ export type Database = {
         }
         Relationships: []
       }
-      sudha_challans: {
-        Row: {
-          id: string
-          challan_no: string
-          challan_date: string
-          supplier_id: string | null
-          delivery_cycle_id: string | null
-          delivery_date: string | null
-          vehicle_no: string | null
-          driver_name: string | null
-          subtotal: number
-          cgst: number
-          sgst: number
-          igst: number
-          total: number
-          status: string
-          notes: string | null
-          verified_by: string | null
-          verified_at: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          challan_no: string
-          challan_date?: string
-          supplier_id?: string | null
-          delivery_cycle_id?: string | null
-          delivery_date?: string | null
-          vehicle_no?: string | null
-          driver_name?: string | null
-          subtotal?: number
-          cgst?: number
-          sgst?: number
-          igst?: number
-          total?: number
-          status?: string
-          notes?: string | null
-          verified_by?: string | null
-          verified_at?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          challan_no?: string
-          challan_date?: string
-          supplier_id?: string | null
-          delivery_cycle_id?: string | null
-          delivery_date?: string | null
-          vehicle_no?: string | null
-          driver_name?: string | null
-          subtotal?: number
-          cgst?: number
-          sgst?: number
-          igst?: number
-          total?: number
-          status?: string
-          notes?: string | null
-          verified_by?: string | null
-          verified_at?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "sudha_challans_supplier_id_fkey"; columns: ["supplier_id"]; isOneToOne: false; referencedRelation: "suppliers"; referencedColumns: ["id"] }
-        ]
-      }
-      sudha_challan_items: {
-        Row: {
-          id: string
-          challan_id: string
-          product_id: string | null
-          product_name: string
-          ordered_qty: number
-          received_qty: number
-          rate: number
-          gst_rate: number
-          amount: number
-          variance_type: string
-          variance_qty: number
-          notes: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          challan_id: string
-          product_id?: string | null
-          product_name: string
-          ordered_qty?: number
-          received_qty?: number
-          rate?: number
-          gst_rate?: number
-          amount?: number
-          variance_type?: string
-          variance_qty?: number
-          notes?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          challan_id?: string
-          product_id?: string | null
-          product_name?: string
-          ordered_qty?: number
-          received_qty?: number
-          rate?: number
-          gst_rate?: number
-          amount?: number
-          variance_type?: string
-          variance_qty?: number
-          notes?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "sudha_challan_items_challan_id_fkey"; columns: ["challan_id"]; isOneToOne: false; referencedRelation: "sudha_challans"; referencedColumns: ["id"] }
-          { foreignKeyName: "sudha_challan_items_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }
-        ]
-      }
-      sudha_claims: {
-        Row: {
-          id: string
-          claim_no: string
-          challan_id: string | null
-          claim_date: string
-          claim_type: string
-          product_id: string | null
-          product_name: string
-          quantity: number
-          claim_amount: number
-          reason: string
-          evidence_url: string | null
-          status: string
-          submitted_to_sudha_at: string | null
-          sudha_response: string | null
-          credited_at: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          claim_no: string
-          challan_id?: string | null
-          claim_date?: string
-          claim_type: string
-          product_id?: string | null
-          product_name: string
-          quantity?: number
-          claim_amount?: number
-          reason: string
-          evidence_url?: string | null
-          status?: string
-          submitted_to_sudha_at?: string | null
-          sudha_response?: string | null
-          credited_at?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          claim_no?: string
-          challan_id?: string | null
-          claim_date?: string
-          claim_type?: string
-          product_id?: string | null
-          product_name?: string
-          quantity?: number
-          claim_amount?: number
-          reason?: string
-          evidence_url?: string | null
-          status?: string
-          submitted_to_sudha_at?: string | null
-          sudha_response?: string | null
-          credited_at?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "sudha_claims_challan_id_fkey"; columns: ["challan_id"]; isOneToOne: false; referencedRelation: "sudha_challans"; referencedColumns: ["id"] }
-          { foreignKeyName: "sudha_claims_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }
-        ]
-      }
-      suppliers: {
-        Row: {
-          id: string
-          name: string
-          gstin: string | null
-          mobile: string | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          gstin?: string | null
-          mobile?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          gstin?: string | null
-          mobile?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           id: string
@@ -1921,7 +2276,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      daily_reconciliation: {
+        Row: {
+          challan_no: string | null
+          date: string | null
+          distributed_to_retailers: number | null
+          leftover: number | null
+          ordered_from_sudha: number | null
+          product_name: string | null
+          received_from_sudha: number | null
+          variance_amount: number | null
+          variance_type: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       apply_delivery_quantities: {
@@ -1930,6 +2298,10 @@ export type Database = {
       }
       can_manage_finance: { Args: { _uid: string }; Returns: boolean }
       can_manage_sales: { Args: { _uid: string }; Returns: boolean }
+      create_demand_consolidation: {
+        Args: { p_delivery_cycle_id: string }
+        Returns: string
+      }
       enqueue_delivery_notifications: {
         Args: { _delivery_id: string }
         Returns: number
@@ -1938,7 +2310,18 @@ export type Database = {
         Args: { _run_id: string }
         Returns: number
       }
+      ensure_delivery_cycle: {
+        Args: { p_delivery_date: string; p_shift?: string }
+        Returns: string
+      }
       generate_adjustment_no: { Args: never; Returns: string }
+      generate_claim_no: { Args: never; Returns: string }
+      generate_collection_no: { Args: never; Returns: string }
+      generate_consolidation_no: { Args: { p_date: string }; Returns: string }
+      generate_cycle_code: {
+        Args: { p_order_date: string; p_shift: string }
+        Returns: string
+      }
       generate_recon_no: { Args: never; Returns: string }
       get_crate_balance_as_of: {
         Args: { p_as_of_date?: string; p_crate_type_id?: string }
@@ -1961,6 +2344,7 @@ export type Database = {
           product_name: string
         }[]
       }
+      get_next_revision_no: { Args: { _invoice_id: string }; Returns: number }
       get_stock_valuation: {
         Args: never
         Returns: {
@@ -1972,6 +2356,10 @@ export type Database = {
           total_qty: number
           total_value: number
         }[]
+      }
+      has_reminder_been_sent: {
+        Args: { _invoice_id: string; _template_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -1997,6 +2385,10 @@ export type Database = {
       }
       recalc_supplier_outstanding: {
         Args: { _supplier_id: string }
+        Returns: undefined
+      }
+      reconcile_collection: {
+        Args: { _collection_id: string }
         Returns: undefined
       }
       record_notification_attempt: {
@@ -2040,6 +2432,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revise_invoice: {
+        Args: {
+          _invoice_id: string
+          _revised_by: string
+          _revised_items: Json
+          _revision_reason: string
+        }
+        Returns: Json
       }
     }
     Enums: {

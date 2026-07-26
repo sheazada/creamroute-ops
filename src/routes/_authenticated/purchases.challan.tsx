@@ -196,7 +196,7 @@ function ChallanOcr() {
     setLines(updated);
   };
   const rmLine = (i: number) => setLines(lines.filter((_, idx) => idx !== i));
-  const addLine = () => setLines([...lines, { product_id: "", product_name: "", quantity: 1, rate: 0, gst_rate: 5 }]);
+  const addLine = () => setLines([...lines, { id: crypto.randomUUID(), product_id: "", product_name: "", quantity: 1, rate: 0, gst_rate: 5 }]);
 
   const approve = async () => {
     if (!supplierId) return toast.error("Choose supplier");

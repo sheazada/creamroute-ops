@@ -48,7 +48,7 @@ export const processPaymentReminders = createServerFn({ method: "POST" })
       const { data: invoices, error: iErr } = await supabaseAdmin
         .from("invoices")
         .select(
-          "id, invoice_no, balance, due_date, customer_id, customer:customers(name, shop_name, mobile, email, notify_whatsapp, notify_email, whatsapp)"
+          "id, invoice_no, balance, due_date, customer_id, customer:customers(name, shop_name, mobile, email, notify_whatsapp, notify_email, notify_sms, whatsapp)"
         )
         .gt("balance", 0)
         .lte("due_date", cutoffStr)
@@ -80,7 +80,7 @@ export const processPaymentReminders = createServerFn({ method: "POST" })
           .replace(/{customer_name}/g, customerName)
           .replace(/{outstanding}/g, `₹${Number(invoice.balance).toLocaleString("en-IN")}`)
           .replace(/{invoice_no}/g, invoice.invoice_no)
-          .replace(/{due_date}/g, new Date(invoice.due_date).toLocaleDateString("en-IN"));
+          .replace(/{due_date}/g, invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("en-IN") : "—");
 
         const subject = template.subject?.replace(/{invoice_no}/g, invoice.invoice_no) || `Payment Reminder: Invoice ${invoice.invoice_no}`;
 
@@ -88,7 +88,7 @@ export const processPaymentReminders = createServerFn({ method: "POST" })
         // Priority: WhatsApp (if enabled and number exists) -> Email (if enabled and email exists) -> SMS
         // For MVP, we'll stick to the template's defined channel, but check if customer has it enabled.
         let recipient = "";
-        let channel = template.channel;
+        const channel = template.channel as "email" | "sms" | "whatsapp";
 
         if (template.channel === "whatsapp") {
           const num = invoice.customer?.whatsapp || invoice.customer?.mobile;

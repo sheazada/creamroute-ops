@@ -111,7 +111,8 @@ export function ReviseInvoiceDialog({
       return toast.error(error.message);
     }
 
-    toast.success(`Invoice revised! New invoice: ${data.revised_invoice_no}`);
+    const result = (data ?? {}) as { revised_invoice_no?: string };
+    toast.success(`Invoice revised! New invoice: ${result.revised_invoice_no ?? ""}`);
     qc.invalidateQueries({ queryKey: ["invoices"] });
     qc.invalidateQueries({ queryKey: ["invoice", invoiceId] });
     qc.invalidateQueries({ queryKey: ["invoice-revisions", invoiceId] });
