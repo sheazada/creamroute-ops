@@ -15,7 +15,7 @@ import { optimizeStops, haversineKm } from "@/lib/route-optimize";
 import { toast } from "sonner";
 import {
   MapPin,
-  Route,
+  Route as RouteIcon,
   Truck,
   Users,
   TrendingUp,
@@ -278,7 +278,7 @@ function RouteOptimization() {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Routes
             </span>
-            <Route className="size-4 text-primary" />
+            <RouteIcon className="size-4 text-primary" />
           </div>
           <div className="text-2xl font-bold font-mono">{routes.length}</div>
         </Card>
@@ -301,7 +301,7 @@ function RouteOptimization() {
         <TabsContent value="optimized" className="mt-4 space-y-4">
           {optimizedRoutes.length === 0 ? (
             <Card className="p-12 text-center">
-              <Route className="size-10 mx-auto mb-3 text-muted-foreground" />
+              <RouteIcon className="size-10 mx-auto mb-3 text-muted-foreground" />
               <div className="text-sm font-semibold mb-1">No optimized routes yet</div>
               <div className="text-xs text-muted-foreground">
                 Click "Optimize Routes" to generate optimized delivery sequences
