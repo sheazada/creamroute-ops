@@ -119,7 +119,7 @@ function DeliveryDemand() {
 
       const invByOrder = new Map<string, any>();
       for (const inv of invoices ?? []) {
-        invByOrder.set(inv.order_id, inv);
+        if (inv.order_id) invByOrder.set(inv.order_id, inv);
       }
 
       const delByInvoice = new Map<string, any>();
@@ -311,7 +311,7 @@ function ShopCard({
 }) {
   const sendWhatsAppOrder = () => {
     const biz = { name: "DairyFlow Distributors", mobile: "" };
-    const customer = { name: shop.customer_name, shop_name: shop.shop_name };
+    const customer = { name: shop.customer_name, shop_name: shop.shop_name ?? undefined };
     const msg = formatOrderConfirmation(
       shop.order_no,
       shop.order_no,

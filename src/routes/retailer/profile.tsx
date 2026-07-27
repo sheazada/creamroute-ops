@@ -52,7 +52,7 @@ function Profile() {
       const { data } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", me!.user_id)
+        .eq("id", me!.user_id!)
         .maybeSingle();
       return data;
     },

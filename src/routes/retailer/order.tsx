@@ -99,7 +99,9 @@ function PlaceOrder() {
 
   // Get unique categories
   const categories = useMemo(() => {
-    const cats = new Set(products.map((p) => p.category).filter(Boolean));
+    const cats = new Set(
+      products.map((p) => p.category).filter((c): c is string => Boolean(c)),
+    );
     return ["all", ...Array.from(cats)];
   }, [products]);
 

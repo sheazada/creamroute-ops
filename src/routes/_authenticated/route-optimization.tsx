@@ -85,7 +85,7 @@ function RouteOptimization() {
         .not("longitude", "is", null)
         .eq("status", "active")
         .order("name");
-      return (data ?? []) as Retailer[];
+      return (data ?? []) as unknown as Retailer[];
     },
   });
 
@@ -156,9 +156,11 @@ function RouteOptimization() {
             : null
         );
 
-        const stops = result.optimized.map((idx, seq) => {
-          const retailer = withGps[idx];
-          const prev = seq > 0 ? withGps[result.optimized[seq - 1]] : null;
+        const byId = new Map(withGps.map((r) => [r.id, r]));
+        const stops = result.ordered.map((o, seq) => {
+          const retailer = byId.get(o.id)!;
+          const prevId = seq > 0 ? result.ordered[seq - 1].id : null;
+          const prev = prevId ? byId.get(prevId)! : null;
           const distance = prev
             ? haversineKm(
                 { lat: prev.latitude!, lng: prev.longitude! },

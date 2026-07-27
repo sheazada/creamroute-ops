@@ -167,6 +167,8 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          area: string | null
+          assigned_route_id: string | null
           created_at: string
           credit_limit: number
           email: string | null
@@ -181,13 +183,17 @@ export type Database = {
           notify_sms: boolean
           notify_whatsapp: boolean
           outstanding: number
+          retailer_code: string | null
           shop_name: string | null
           status: string
           updated_at: string
+          user_id: string | null
           whatsapp: string | null
         }
         Insert: {
           address?: string | null
+          area?: string | null
+          assigned_route_id?: string | null
           created_at?: string
           credit_limit?: number
           email?: string | null
@@ -202,13 +208,17 @@ export type Database = {
           notify_sms?: boolean
           notify_whatsapp?: boolean
           outstanding?: number
+          retailer_code?: string | null
           shop_name?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           whatsapp?: string | null
         }
         Update: {
           address?: string | null
+          area?: string | null
+          assigned_route_id?: string | null
           created_at?: string
           credit_limit?: number
           email?: string | null
@@ -223,12 +233,22 @@ export type Database = {
           notify_sms?: boolean
           notify_whatsapp?: boolean
           outstanding?: number
+          retailer_code?: string | null
           shop_name?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_assigned_route_id_fkey"
+            columns: ["assigned_route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deliveries: {
         Row: {
@@ -1682,6 +1702,63 @@ export type Database = {
         }
         Relationships: []
       }
+      retailer_ledger_entries: {
+        Row: {
+          created_at: string
+          credit_amount: number
+          debit_amount: number
+          entry_date: string
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          retailer_id: string
+          running_balance: number
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credit_amount?: number
+          debit_amount?: number
+          entry_date?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          retailer_id: string
+          running_balance?: number
+          transaction_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credit_amount?: number
+          debit_amount?: number
+          entry_date?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          retailer_id?: string
+          running_balance?: number
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retailer_ledger_entries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retailer_ledger_entries_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       route_stops: {
         Row: {
           created_at: string
@@ -2444,7 +2521,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "manager" | "salesperson" | "driver" | "helper"
+      app_role:
+        | "admin"
+        | "manager"
+        | "salesperson"
+        | "driver"
+        | "helper"
+        | "retailer"
       notification_channel: "email" | "sms" | "whatsapp"
       notification_status:
         | "queued"
@@ -2580,7 +2663,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "manager", "salesperson", "driver", "helper"],
+      app_role: [
+        "admin",
+        "manager",
+        "salesperson",
+        "driver",
+        "helper",
+        "retailer",
+      ],
       notification_channel: ["email", "sms", "whatsapp"],
       notification_status: [
         "queued",
