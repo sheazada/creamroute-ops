@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
+    if (error || !data.user) throw redirect({ to: "/auth", search: { next: undefined } });
 
     const { data: roleRows } = await supabase
       .from("user_roles")
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (isRetailerRole(roles)) throw redirect({ to: "/retailer" });
 
     const landing = landingForRoles(roles);
-    if (landing === "/auth") throw redirect({ to: "/auth" });
+    if (landing === "/auth") throw redirect({ to: "/auth", search: { next: undefined } });
 
     if (!canAccessPath(location.pathname, roles) && location.pathname !== landing) {
       throw redirect({ to: landing });

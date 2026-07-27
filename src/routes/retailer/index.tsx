@@ -195,7 +195,7 @@ function RetailerDashboard() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-sm">Recent Invoices</h2>
             <Button asChild variant="ghost" size="sm" className="gap-1 text-xs">
-              <Link to="/retailer/invoices">
+              <Link to="/retailer/orders">
                 View all <ArrowRight className="size-3" />
               </Link>
             </Button>
