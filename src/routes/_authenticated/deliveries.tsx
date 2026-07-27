@@ -210,7 +210,7 @@ function CollectPaymentDialog({ delivery, onClose, onSaved }: { delivery: Delive
   const open = !!delivery;
   const bal = Number(delivery?.invoice?.balance ?? 0);
   const total = Number(delivery?.invoice?.total ?? 0);
-  const paid = Number(delivery?.invoice?.paid ?? 0);
+  const paid = total - bal;
 
   // Fetch payment history for this invoice
   const { data: paymentHistory = [] } = useQuery({
