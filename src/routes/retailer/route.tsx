@@ -1,9 +1,10 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { RetailerShell } from "@/components/retailer-shell";
-
 import { supabase } from "@/integrations/supabase/client";
+import { isRetailerRole, landingForRoles } from "@/lib/access";
 
 export const Route = createFileRoute("/retailer")({
+  ssr: false,
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data?.user) {
@@ -17,9 +18,8 @@ export const Route = createFileRoute("/retailer")({
 
     const roleList = (roles ?? []).map((r) => r.role as string);
 
-    // Allow both 'retailer' and 'retailer_user' roles
-    if (!roleList.includes("retailer_user") && !roleList.includes("retailer")) {
-      throw redirect({ to: "/dashboard" });
+    if (!isRetailerRole(roleList)) {
+      throw redirect({ to: landingForRoles(roleList) });
     }
 
     return { user: data.user, roles: roleList };
