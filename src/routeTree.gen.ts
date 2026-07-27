@@ -11,12 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as RetailerRouteRouteImport } from './routes/retailer/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RetailerIndexRouteImport } from './routes/retailer/index'
+import { Route as RetailerProfileRouteImport } from './routes/retailer/profile'
+import { Route as RetailerOrdersRouteImport } from './routes/retailer/orders'
+import { Route as RetailerOrderRouteImport } from './routes/retailer/order'
+import { Route as RetailerLedgerRouteImport } from './routes/retailer/ledger'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
 import { Route as AuthenticatedShareLogRouteImport } from './routes/_authenticated/share-log'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedRoutesRouteImport } from './routes/_authenticated/routes'
+import { Route as AuthenticatedRouteOptimizationRouteImport } from './routes/_authenticated/route-optimization'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
@@ -26,10 +33,12 @@ import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authen
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
 import { Route as AuthenticatedDemandConsolidationRouteImport } from './routes/_authenticated/demand-consolidation'
 import { Route as AuthenticatedDeliveryStatusRouteImport } from './routes/_authenticated/delivery-status'
+import { Route as AuthenticatedDeliveryDemandRouteImport } from './routes/_authenticated/delivery-demand'
 import { Route as AuthenticatedDeliveriesRouteImport } from './routes/_authenticated/deliveries'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedCratesRouteImport } from './routes/_authenticated/crates'
+import { Route as AuthenticatedClaimsRouteImport } from './routes/_authenticated/claims'
 import { Route as AuthenticatedCashReconciliationRouteImport } from './routes/_authenticated/cash-reconciliation'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -56,6 +65,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RetailerRouteRoute = RetailerRouteRouteImport.update({
+  id: '/retailer',
+  path: '/retailer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -64,6 +78,31 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const RetailerIndexRoute = RetailerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RetailerRouteRoute,
+} as any)
+const RetailerProfileRoute = RetailerProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => RetailerRouteRoute,
+} as any)
+const RetailerOrdersRoute = RetailerOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => RetailerRouteRoute,
+} as any)
+const RetailerOrderRoute = RetailerOrderRouteImport.update({
+  id: '/order',
+  path: '/order',
+  getParentRoute: () => RetailerRouteRoute,
+} as any)
+const RetailerLedgerRoute = RetailerLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => RetailerRouteRoute,
 } as any)
 const AuthenticatedSuppliersRoute = AuthenticatedSuppliersRouteImport.update({
   id: '/suppliers',
@@ -85,6 +124,12 @@ const AuthenticatedRoutesRoute = AuthenticatedRoutesRouteImport.update({
   path: '/routes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRouteOptimizationRoute =
+  AuthenticatedRouteOptimizationRouteImport.update({
+    id: '/route-optimization',
+    path: '/route-optimization',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -134,6 +179,12 @@ const AuthenticatedDeliveryStatusRoute =
     path: '/delivery-status',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDeliveryDemandRoute =
+  AuthenticatedDeliveryDemandRouteImport.update({
+    id: '/delivery-demand',
+    path: '/delivery-demand',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDeliveriesRoute = AuthenticatedDeliveriesRouteImport.update({
   id: '/deliveries',
   path: '/deliveries',
@@ -152,6 +203,11 @@ const AuthenticatedCustomersRoute = AuthenticatedCustomersRouteImport.update({
 const AuthenticatedCratesRoute = AuthenticatedCratesRouteImport.update({
   id: '/crates',
   path: '/crates',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedClaimsRoute = AuthenticatedClaimsRouteImport.update({
+  id: '/claims',
+  path: '/claims',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCashReconciliationRoute =
@@ -244,15 +300,18 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/retailer': typeof RetailerRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
+  '/claims': typeof AuthenticatedClaimsRoute
   '/crates': typeof AuthenticatedCratesRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/delivery-demand': typeof AuthenticatedDeliveryDemandRoute
   '/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/demand-consolidation': typeof AuthenticatedDemandConsolidationRoute
   '/inventory': typeof AuthenticatedInventoryRoute
@@ -262,10 +321,16 @@ export interface FileRoutesByFullPath {
   '/products': typeof AuthenticatedProductsRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/route-optimization': typeof AuthenticatedRouteOptimizationRoute
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/share-log': typeof AuthenticatedShareLogRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
+  '/retailer/ledger': typeof RetailerLedgerRoute
+  '/retailer/order': typeof RetailerOrderRoute
+  '/retailer/orders': typeof RetailerOrdersRoute
+  '/retailer/profile': typeof RetailerProfileRoute
+  '/retailer/': typeof RetailerIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/customer-ledger/$id': typeof AuthenticatedCustomerLedgerIdRoute
@@ -286,10 +351,12 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
+  '/claims': typeof AuthenticatedClaimsRoute
   '/crates': typeof AuthenticatedCratesRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/delivery-demand': typeof AuthenticatedDeliveryDemandRoute
   '/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/demand-consolidation': typeof AuthenticatedDemandConsolidationRoute
   '/inventory': typeof AuthenticatedInventoryRoute
@@ -299,10 +366,16 @@ export interface FileRoutesByTo {
   '/products': typeof AuthenticatedProductsRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/route-optimization': typeof AuthenticatedRouteOptimizationRoute
   '/routes': typeof AuthenticatedRoutesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/share-log': typeof AuthenticatedShareLogRoute
   '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
+  '/retailer/ledger': typeof RetailerLedgerRoute
+  '/retailer/order': typeof RetailerOrderRoute
+  '/retailer/orders': typeof RetailerOrdersRoute
+  '/retailer/profile': typeof RetailerProfileRoute
+  '/retailer': typeof RetailerIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/customer-ledger/$id': typeof AuthenticatedCustomerLedgerIdRoute
@@ -320,15 +393,18 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/retailer': typeof RetailerRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
+  '/_authenticated/claims': typeof AuthenticatedClaimsRoute
   '/_authenticated/crates': typeof AuthenticatedCratesRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/_authenticated/delivery-demand': typeof AuthenticatedDeliveryDemandRoute
   '/_authenticated/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/_authenticated/demand-consolidation': typeof AuthenticatedDemandConsolidationRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
@@ -338,10 +414,16 @@ export interface FileRoutesById {
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/route-optimization': typeof AuthenticatedRouteOptimizationRoute
   '/_authenticated/routes': typeof AuthenticatedRoutesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/share-log': typeof AuthenticatedShareLogRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
+  '/retailer/ledger': typeof RetailerLedgerRoute
+  '/retailer/order': typeof RetailerOrderRoute
+  '/retailer/orders': typeof RetailerOrdersRoute
+  '/retailer/profile': typeof RetailerProfileRoute
+  '/retailer/': typeof RetailerIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/customer-ledger/$id': typeof AuthenticatedCustomerLedgerIdRoute
@@ -359,15 +441,18 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/retailer'
     | '/auth'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/cash-reconciliation'
+    | '/claims'
     | '/crates'
     | '/customers'
     | '/dashboard'
     | '/deliveries'
+    | '/delivery-demand'
     | '/delivery-status'
     | '/demand-consolidation'
     | '/inventory'
@@ -377,10 +462,16 @@ export interface FileRouteTypes {
     | '/products'
     | '/reconcile'
     | '/reports'
+    | '/route-optimization'
     | '/routes'
     | '/settings'
     | '/share-log'
     | '/suppliers'
+    | '/retailer/ledger'
+    | '/retailer/order'
+    | '/retailer/orders'
+    | '/retailer/profile'
+    | '/retailer/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/customer-ledger/$id'
@@ -401,10 +492,12 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/cash-reconciliation'
+    | '/claims'
     | '/crates'
     | '/customers'
     | '/dashboard'
     | '/deliveries'
+    | '/delivery-demand'
     | '/delivery-status'
     | '/demand-consolidation'
     | '/inventory'
@@ -414,10 +507,16 @@ export interface FileRouteTypes {
     | '/products'
     | '/reconcile'
     | '/reports'
+    | '/route-optimization'
     | '/routes'
     | '/settings'
     | '/share-log'
     | '/suppliers'
+    | '/retailer/ledger'
+    | '/retailer/order'
+    | '/retailer/orders'
+    | '/retailer/profile'
+    | '/retailer'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/customer-ledger/$id'
@@ -434,15 +533,18 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/retailer'
     | '/auth'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/cash-reconciliation'
+    | '/_authenticated/claims'
     | '/_authenticated/crates'
     | '/_authenticated/customers'
     | '/_authenticated/dashboard'
     | '/_authenticated/deliveries'
+    | '/_authenticated/delivery-demand'
     | '/_authenticated/delivery-status'
     | '/_authenticated/demand-consolidation'
     | '/_authenticated/inventory'
@@ -452,10 +554,16 @@ export interface FileRouteTypes {
     | '/_authenticated/products'
     | '/_authenticated/reconcile'
     | '/_authenticated/reports'
+    | '/_authenticated/route-optimization'
     | '/_authenticated/routes'
     | '/_authenticated/settings'
     | '/_authenticated/share-log'
     | '/_authenticated/suppliers'
+    | '/retailer/ledger'
+    | '/retailer/order'
+    | '/retailer/orders'
+    | '/retailer/profile'
+    | '/retailer/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/customer-ledger/$id'
@@ -473,6 +581,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  RetailerRouteRoute: typeof RetailerRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -497,6 +606,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/retailer': {
+      id: '/retailer'
+      path: '/retailer'
+      fullPath: '/retailer'
+      preLoaderRoute: typeof RetailerRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -510,6 +626,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/retailer/': {
+      id: '/retailer/'
+      path: '/'
+      fullPath: '/retailer/'
+      preLoaderRoute: typeof RetailerIndexRouteImport
+      parentRoute: typeof RetailerRouteRoute
+    }
+    '/retailer/profile': {
+      id: '/retailer/profile'
+      path: '/profile'
+      fullPath: '/retailer/profile'
+      preLoaderRoute: typeof RetailerProfileRouteImport
+      parentRoute: typeof RetailerRouteRoute
+    }
+    '/retailer/orders': {
+      id: '/retailer/orders'
+      path: '/orders'
+      fullPath: '/retailer/orders'
+      preLoaderRoute: typeof RetailerOrdersRouteImport
+      parentRoute: typeof RetailerRouteRoute
+    }
+    '/retailer/order': {
+      id: '/retailer/order'
+      path: '/order'
+      fullPath: '/retailer/order'
+      preLoaderRoute: typeof RetailerOrderRouteImport
+      parentRoute: typeof RetailerRouteRoute
+    }
+    '/retailer/ledger': {
+      id: '/retailer/ledger'
+      path: '/ledger'
+      fullPath: '/retailer/ledger'
+      preLoaderRoute: typeof RetailerLedgerRouteImport
+      parentRoute: typeof RetailerRouteRoute
     }
     '/_authenticated/suppliers': {
       id: '/_authenticated/suppliers'
@@ -537,6 +688,13 @@ declare module '@tanstack/react-router' {
       path: '/routes'
       fullPath: '/routes'
       preLoaderRoute: typeof AuthenticatedRoutesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/route-optimization': {
+      id: '/_authenticated/route-optimization'
+      path: '/route-optimization'
+      fullPath: '/route-optimization'
+      preLoaderRoute: typeof AuthenticatedRouteOptimizationRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reports': {
@@ -602,6 +760,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDeliveryStatusRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/delivery-demand': {
+      id: '/_authenticated/delivery-demand'
+      path: '/delivery-demand'
+      fullPath: '/delivery-demand'
+      preLoaderRoute: typeof AuthenticatedDeliveryDemandRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/deliveries': {
       id: '/_authenticated/deliveries'
       path: '/deliveries'
@@ -628,6 +793,13 @@ declare module '@tanstack/react-router' {
       path: '/crates'
       fullPath: '/crates'
       preLoaderRoute: typeof AuthenticatedCratesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/claims': {
+      id: '/_authenticated/claims'
+      path: '/claims'
+      fullPath: '/claims'
+      preLoaderRoute: typeof AuthenticatedClaimsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cash-reconciliation': {
@@ -754,10 +926,12 @@ const AuthenticatedSuppliersRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCashReconciliationRoute: typeof AuthenticatedCashReconciliationRoute
+  AuthenticatedClaimsRoute: typeof AuthenticatedClaimsRoute
   AuthenticatedCratesRoute: typeof AuthenticatedCratesRoute
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDeliveriesRoute: typeof AuthenticatedDeliveriesRoute
+  AuthenticatedDeliveryDemandRoute: typeof AuthenticatedDeliveryDemandRoute
   AuthenticatedDeliveryStatusRoute: typeof AuthenticatedDeliveryStatusRoute
   AuthenticatedDemandConsolidationRoute: typeof AuthenticatedDemandConsolidationRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
@@ -767,6 +941,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedRouteOptimizationRoute: typeof AuthenticatedRouteOptimizationRoute
   AuthenticatedRoutesRoute: typeof AuthenticatedRoutesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedShareLogRoute: typeof AuthenticatedShareLogRoute
@@ -784,10 +959,12 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCashReconciliationRoute: AuthenticatedCashReconciliationRoute,
+  AuthenticatedClaimsRoute: AuthenticatedClaimsRoute,
   AuthenticatedCratesRoute: AuthenticatedCratesRoute,
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDeliveriesRoute: AuthenticatedDeliveriesRoute,
+  AuthenticatedDeliveryDemandRoute: AuthenticatedDeliveryDemandRoute,
   AuthenticatedDeliveryStatusRoute: AuthenticatedDeliveryStatusRoute,
   AuthenticatedDemandConsolidationRoute: AuthenticatedDemandConsolidationRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
@@ -797,6 +974,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedRouteOptimizationRoute: AuthenticatedRouteOptimizationRoute,
   AuthenticatedRoutesRoute: AuthenticatedRoutesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedShareLogRoute: AuthenticatedShareLogRoute,
@@ -815,9 +993,30 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface RetailerRouteRouteChildren {
+  RetailerLedgerRoute: typeof RetailerLedgerRoute
+  RetailerOrderRoute: typeof RetailerOrderRoute
+  RetailerOrdersRoute: typeof RetailerOrdersRoute
+  RetailerProfileRoute: typeof RetailerProfileRoute
+  RetailerIndexRoute: typeof RetailerIndexRoute
+}
+
+const RetailerRouteRouteChildren: RetailerRouteRouteChildren = {
+  RetailerLedgerRoute: RetailerLedgerRoute,
+  RetailerOrderRoute: RetailerOrderRoute,
+  RetailerOrdersRoute: RetailerOrdersRoute,
+  RetailerProfileRoute: RetailerProfileRoute,
+  RetailerIndexRoute: RetailerIndexRoute,
+}
+
+const RetailerRouteRouteWithChildren = RetailerRouteRoute._addFileChildren(
+  RetailerRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  RetailerRouteRoute: RetailerRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
