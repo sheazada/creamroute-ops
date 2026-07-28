@@ -293,7 +293,6 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <Command shouldFilter={false}>
         <CommandInput
-          ref={inputRef}
           placeholder="Search customers, orders, invoices, products, payments…"
           value={query}
           onValueChange={setQuery}
