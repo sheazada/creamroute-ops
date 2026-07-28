@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { inr, num, isoDate, shortDate } from "@/lib/format";
 import { Download, ExternalLink, FileText, Printer } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Cell = string | number | { text: string; to?: string; params?: Record<string, string> };
 
@@ -27,7 +28,7 @@ function Reports() {
     queryKey: ["reports", from, to],
     queryFn: async () => {
       const toEnd = to;
-      const [inv, items, pays, purch, pItems, custs, sups, sPays] = await Promise.all([
+      const [inv, items, pays, purch, pItems, custs, sups, sPays, exps] = await Promise.all([
         supabase.from("invoices").select("id, invoice_no, invoice_date, customer_id, subtotal, cgst, sgst, igst, total, paid, balance, status, customer:customers(name, shop_name, gstin)").gte("invoice_date", from).lte("invoice_date", toEnd).order("invoice_date"),
         supabase.from("invoice_items").select("product_name, hsn, quantity, taxable, tax_amount, gst_rate, amount, invoice:invoices!inner(invoice_date, customer_id, cgst, igst)").gte("invoice.invoice_date", from).lte("invoice.invoice_date", toEnd),
         supabase.from("payments").select("payment_no, payment_date, amount, mode, reference, customer_id, invoice_id, customer:customers(name, shop_name)").gte("payment_date", from).lte("payment_date", toEnd).order("payment_date"),
@@ -36,6 +37,7 @@ function Reports() {
         supabase.from("customers").select("id, name, shop_name, outstanding").order("outstanding", { ascending: false }),
         supabase.from("suppliers").select("id, name, company, outstanding").order("outstanding", { ascending: false }),
         supabase.from("supplier_payments").select("payment_no, payment_date, amount, mode, reference, supplier_id, purchase_id").gte("payment_date", from).lte("payment_date", toEnd).order("payment_date"),
+        supabase.from("expenses").select("id, category_id, amount, expense_date, description, payment_mode, category:expense_categories(name, color)").gte("expense_date", from).lte("expense_date", toEnd).order("expense_date", { ascending: false }),
       ]);
       return {
         invoices: inv.data ?? [],
@@ -46,6 +48,7 @@ function Reports() {
         customers: custs.data ?? [],
         suppliers: sups.data ?? [],
         supplierPayments: sPays.data ?? [],
+        expenses: exps.data ?? [],
       };
     },
   });
@@ -58,11 +61,21 @@ function Reports() {
     const totalCollected = (data?.payments ?? []).reduce((s, r: any) => s + Number(r.amount), 0);
     const totalPurchase = (data?.purchases ?? []).reduce((s, r: any) => s + Number(r.total), 0);
     const totalPurchaseTaxable = (data?.purchases ?? []).reduce((s, r: any) => s + Number(r.subtotal), 0);
+    const totalExpenses = (data?.expenses ?? []).reduce((s, r: any) => s + Number(r.amount), 0);
     const outstandingCust = (data?.customers ?? []).reduce((s, r: any) => s + Number(r.outstanding || 0), 0);
     const outstandingSup = (data?.suppliers ?? []).reduce((s, r: any) => s + Number(r.outstanding || 0), 0);
     const grossProfit = totalTaxable - totalPurchaseTaxable;
+    const netProfit = grossProfit - totalExpenses;
     const margin = totalTaxable > 0 ? (grossProfit / totalTaxable) * 100 : 0;
-    return { totalSales, totalTax, totalTaxable, totalCollected, totalPurchase, totalPurchaseTaxable, outstandingCust, outstandingSup, invoiceCount: invs.length, grossProfit, margin };
+    const netMargin = totalTaxable > 0 ? (netProfit / totalTaxable) * 100 : 0;
+    return {
+      totalSales, totalTax, totalTaxable, totalCollected,
+      totalPurchase, totalPurchaseTaxable, totalExpenses,
+      outstandingCust, outstandingSup,
+      invoiceCount: invs.length,
+      expenseCount: (data?.expenses ?? []).length,
+      grossProfit, netProfit, margin, netMargin,
+    };
   }, [data]);
 
   return (
@@ -83,19 +96,22 @@ function Reports() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
         <Kpi label="Invoices" value={num(kpi.invoiceCount)} />
         <Kpi label="Sales" value={inr(kpi.totalSales)} />
         <Kpi label="GST" value={inr(kpi.totalTax)} />
         <Kpi label="Collections" value={inr(kpi.totalCollected)} />
         <Kpi label="Purchases" value={inr(kpi.totalPurchase)} />
-        <Kpi label="Gross Profit" value={inr(kpi.grossProfit)} />
+        <Kpi label="Gross Profit" value={inr(kpi.grossProfit)} positive={kpi.grossProfit >= 0} />
+        <Kpi label="Expenses" value={inr(kpi.totalExpenses)} negative={kpi.totalExpenses > 0} />
+        <Kpi label="Net Profit" value={inr(kpi.netProfit)} positive={kpi.netProfit >= 0} />
       </div>
 
       <Tabs defaultValue="sales">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="sales">Sales Register</TabsTrigger>
           <TabsTrigger value="purchases">Purchase Register</TabsTrigger>
+          <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="cust-ledger">Customer Ledger</TabsTrigger>
           <TabsTrigger value="sup-ledger">Supplier Ledger</TabsTrigger>
           <TabsTrigger value="profit">Profit &amp; Loss</TabsTrigger>
@@ -149,6 +165,23 @@ function Reports() {
           />
         </TabsContent>
 
+        <TabsContent value="expenses">
+          <ReportTable
+            title="Expenses Register"
+            meta={`${from} to ${to} · ${kpi.expenseCount} expenses · Total ${inr(kpi.totalExpenses)}`}
+            headers={["Date", "Category", "Description", "Mode", "Reference", "Amount"]}
+            rows={(data?.expenses ?? []).map((r: any) => [
+              shortDate(r.expense_date),
+              { text: r.category?.name ?? "Uncategorized" },
+              r.description ?? "—",
+              (r.payment_mode ?? "—").toUpperCase(),
+              r.reference_no ?? "—",
+              inr(r.amount),
+            ])}
+            totals={{ 5: inr(kpi.totalExpenses) }}
+          />
+        </TabsContent>
+
         <TabsContent value="cust-ledger">
           <CustomerLedger from={from} to={to} customers={data?.customers ?? []} />
         </TabsContent>
@@ -158,7 +191,7 @@ function Reports() {
         </TabsContent>
 
         <TabsContent value="profit">
-          <ProfitReport kpi={kpi} from={from} to={to} />
+          <ProfitReport kpi={kpi} from={from} to={to} expenses={data?.expenses ?? []} />
         </TabsContent>
 
         <TabsContent value="gst">
@@ -189,21 +222,59 @@ function Reports() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({
+  label,
+  value,
+  positive,
+  negative,
+}: {
+  label: string;
+  value: string;
+  positive?: boolean;
+  negative?: boolean;
+}) {
   return (
     <Card className="p-4">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="text-xl md:text-2xl font-semibold font-mono mt-1 truncate">{value}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className={cn(
+          "text-xl md:text-2xl font-semibold font-mono mt-1 truncate",
+          positive && !negative && "text-success",
+          negative && !positive && "text-destructive",
+        )}
+      >
+        {value}
+      </div>
     </Card>
   );
 }
 
-function ProfitReport({ kpi, from, to }: { kpi: any; from: string; to: string }) {
+function ProfitReport({ kpi, from, to, expenses }: { kpi: any; from: string; to: string; expenses: any[] }) {
+  const expenseByCategory = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of expenses ?? []) {
+      const name = e.category?.name ?? "Uncategorized";
+      map.set(name, (map.get(name) ?? 0) + Number(e.amount));
+    }
+    return Array.from(map.entries())
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [expenses]);
+
   const rows: (string | number)[][] = [
     ["Revenue (taxable sales)", inr(kpi.totalTaxable)],
     ["Cost of goods (taxable purchases)", inr(kpi.totalPurchaseTaxable)],
     ["Gross Profit", inr(kpi.grossProfit)],
     ["Gross Margin %", `${kpi.margin.toFixed(2)}%`],
+    ["", ""],
+    ["Operating Expenses", inr(kpi.totalExpenses)],
+    ...expenseByCategory.map((c) => [`  · ${c.name}`, inr(c.total)]),
+    ["", ""],
+    ["Net Profit / (Loss)", inr(kpi.netProfit)],
+    ["Net Margin %", `${kpi.netMargin.toFixed(2)}%`],
+    ["", ""],
     ["— GST collected (output)", inr(kpi.totalTax)],
     ["— Collections received", inr(kpi.totalCollected)],
     ["— Customer outstanding", inr(kpi.outstandingCust)],
@@ -211,10 +282,11 @@ function ProfitReport({ kpi, from, to }: { kpi: any; from: string; to: string })
   ];
   return (
     <ReportTable
-      title="Profit & Loss (summary)"
-      meta={`${from} to ${to}`}
+      title="Profit & Loss"
+      meta={`${from} to ${to} · ${kpi.expenseCount} expenses recorded`}
       headers={["Particulars", "Amount"]}
       rows={rows}
+      highlightRowLabel={["Net Profit / (Loss)", "Gross Profit"]}
     />
   );
 }
@@ -501,13 +573,14 @@ function SupplierLedger({ from, to, suppliers }: { from: string; to: string; sup
 }
 
 function ReportTable({
-  headers, rows, totals, title, meta,
+  headers, rows, totals, title, meta, highlightRowLabel = [],
 }: {
   headers: string[];
   rows: Cell[][];
   totals?: Record<number, string>;
   title?: string;
   meta?: string;
+  highlightRowLabel?: string[];
 }) {
   const cellText = (c: Cell): string => (typeof c === "object" && c !== null ? c.text : String(c));
   const cellNode = (c: Cell): ReactNode => {
@@ -584,11 +657,27 @@ ${meta ? `<div class="meta">${esc(meta)}</div>` : ""}
           </thead>
           <tbody className="divide-y">
             {rows.length === 0 && <tr><td colSpan={headers.length} className="text-center py-12 text-muted-foreground">No data.</td></tr>}
-            {rows.map((r, i) => (
-              <tr key={i} className="hover:bg-muted/30">
-                {r.map((c, j) => <td key={j} className={`px-4 py-2.5 whitespace-nowrap ${j === 0 ? "font-medium" : "text-right font-mono text-xs"}`}>{cellNode(c)}</td>)}
-              </tr>
-            ))}
+            {rows.map((r, i) => {
+              const label = cellText(r[0]);
+              const isHighlighted = highlightRowLabel.includes(label);
+              const isGrossProfit = label === "Gross Profit";
+              const isNetProfit = label === "Net Profit / (Loss)";
+              const rowClass = isNetProfit
+                ? "bg-primary/10 font-bold"
+                : isGrossProfit
+                  ? "bg-muted/40 font-semibold"
+                  : "hover:bg-muted/30";
+              const valueClass = isNetProfit
+                ? "text-right font-mono text-sm font-bold"
+                : isGrossProfit
+                  ? "text-right font-mono font-semibold"
+                  : "text-right font-mono text-xs";
+              return (
+                <tr key={i} className={rowClass}>
+                  {r.map((c, j) => <td key={j} className={`px-4 py-2.5 whitespace-nowrap ${j === 0 ? "font-medium" : valueClass}`}>{cellNode(c)}</td>)}
+                </tr>
+              );
+            })}
             {totals && rows.length > 0 && (
               <tr className="bg-muted/60 font-semibold">
                 {headers.map((_, i) => (
