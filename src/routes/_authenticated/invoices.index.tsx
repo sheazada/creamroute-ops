@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
-import { inr, shortDate } from "@/lib/format";
+import { inr, shortDate, isoDate } from "@/lib/format";
 import { useRealtimeSync } from "@/lib/realtime";
 import { Plus, Search, ShoppingCart, Download, X } from "lucide-react";
 import { InvoiceShareMenu } from "@/components/invoice-share-menu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { toCsv, downloadCsv } from "@/lib/bulk";
 
 export const Route = createFileRoute("/_authenticated/invoices/")({
   component: Invoices,
@@ -42,6 +43,26 @@ function Invoices() {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+
+  // CSV Export with GST breakdown
+  const exportToCsv = () => {
+    const rows = data.map((inv) => ({
+      "Invoice #": inv.invoice_no,
+      "Customer": inv.customer?.shop_name ?? inv.customer?.name ?? "",
+      "Date": shortDate(inv.invoice_date),
+      "Subtotal": inv.subtotal,
+      "CGST": inv.cgst,
+      "SGST": inv.sgst,
+      "IGST": inv.igst,
+      "Total": inv.total,
+      "Paid": inv.paid,
+      "Balance": inv.balance,
+      "Status": inv.status,
+    }));
+    const csv = toCsv(rows);
+    downloadCsv(csv, `invoices_${isoDate()}.csv`);
+    toast.success("Exported invoices to CSV with GST breakdown");
+  };
   const { data } = useQuery({
     queryKey: ["invoices"],
     queryFn: async () =>

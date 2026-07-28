@@ -10,10 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, shortDate, isoDate, genDocNo } from "@/lib/format";
 import { useRealtimeSync } from "@/lib/realtime";
-import { Plus, Search, ReceiptText, User, CheckSquare, Square, FileText } from "lucide-react";
+import { Plus, Search, ReceiptText, User, CheckSquare, Square, FileText, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { toCsv, downloadCsv } from "@/lib/bulk";
 
 export const Route = createFileRoute("/_authenticated/orders/")({
   component: Orders,
@@ -172,17 +173,38 @@ function Orders() {
 
   const selectedApprovedCount = filtered.filter((o) => selectedIds.has(o.id) && o.status === "approved").length;
 
+  // CSV Export
+  const exportToCsv = () => {
+    const rows = filtered.map((o) => ({
+      "Order #": o.order_no,
+      "Customer": o.customer?.shop_name ?? o.customer?.name ?? "",
+      "Date": shortDate(o.order_date),
+      "Items": o.items?.length ?? 0,
+      "Total": o.total,
+      "Status": o.status,
+      "Outstanding": o.customer?.outstanding ?? 0,
+    }));
+    const csv = toCsv(rows);
+    downloadCsv(csv, `orders_${isoDate()}.csv`);
+    toast.success("Exported orders to CSV");
+  };
+
   return (
     <PageContainer>
       <PageHeader
         title="Orders"
         description="All retailer orders — created by admin or self-service."
         actions={
-          <Button asChild size="sm" className="gap-1.5">
-            <Link to="/orders/new">
-              <Plus className="size-4" /> New Order
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={exportToCsv} className="gap-1.5">
+              <Download className="size-4" /> Export CSV
+            </Button>
+            <Button asChild size="sm" className="gap-1.5">
+              <Link to="/orders/new">
+                <Plus className="size-4" /> New Order
+              </Link>
+            </Button>
+          </div>
         }
       />
 

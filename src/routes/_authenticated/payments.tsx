@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { inr, shortDate, genDocNo } from "@/lib/format";
+import { inr, shortDate, genDocNo, isoDate } from "@/lib/format";
 import { useRealtimeSync } from "@/lib/realtime";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { toast } from "sonner";
+import { toCsv, downloadCsv } from "@/lib/bulk";
 
 export const Route = createFileRoute("/_authenticated/payments")({
   component: Payments,
@@ -35,16 +36,37 @@ function Payments() {
     queryFn: async () => (await supabase.from("payments").select("*, customer:customers(name), invoice:invoices(invoice_no)").order("created_at", { ascending: false })).data ?? [],
   });
 
+  // CSV Export
+  const exportToCsv = () => {
+    const rows = (data ?? []).map((p: any) => ({
+      "Receipt #": p.payment_no,
+      "Date": shortDate(p.payment_date),
+      "Customer": p.customer?.name ?? "",
+      "Invoice": p.invoice?.invoice_no ?? "",
+      "Mode": p.mode,
+      "Reference": p.reference ?? "",
+      "Amount": p.amount,
+    }));
+    const csv = toCsv(rows);
+    downloadCsv(csv, `payments_${isoDate()}.csv`);
+    toast.success("Exported payments to CSV");
+  };
+
   return (
     <PageContainer>
       <PageHeader
         title="Payments"
         description="Record collections against invoices — updates customer ledger automatically."
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button size="sm" className="gap-1.5"><Plus className="size-4" /> Record Payment</Button></DialogTrigger>
-            <PaymentDialog onSaved={() => { setOpen(false); qc.invalidateQueries(); }} />
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={exportToCsv} className="gap-1.5">
+              <Download className="size-4" /> Export CSV
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild><Button size="sm" className="gap-1.5"><Plus className="size-4" /> Record Payment</Button></DialogTrigger>
+              <PaymentDialog onSaved={() => { setOpen(false); qc.invalidateQueries(); }} />
+            </Dialog>
+          </div>
         }
       />
       <Card className="p-0 overflow-hidden">
