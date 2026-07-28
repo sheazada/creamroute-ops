@@ -12,7 +12,7 @@ export const Route = createFileRoute("/retailer")({
   ssr: false,
   beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
+    if (error || !data.user) throw redirect({ to: "/auth", search: { next: undefined } });
 
     const { data: roleRows } = await supabase
       .from("user_roles")

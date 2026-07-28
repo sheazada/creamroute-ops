@@ -102,9 +102,8 @@ export const seedDemoUsers = createServerFn({ method: "POST" }).handler(async ()
           email: u.email,
           status: "active",
           credit_limit: 25000,
-          credit_days: 7,
-          ordering_mode: "self_service",
           outstanding: 0,
+
         });
         if (error) {
           console.warn("[seed] failed to create retailer customer:", error.message);
@@ -122,9 +121,11 @@ export const seedDemoUsers = createServerFn({ method: "POST" }).handler(async ()
  * Admin action: link an existing customer row to an existing auth user by email.
  * Used from the Roles & Permissions admin page.
  */
-export const linkCustomerToUser = createServerFn({ method: "POST" }).handler(
-  async ({ data }: { data: { customerId: string; userEmail: string } }) => {
+export const linkCustomerToUser = createServerFn({ method: "POST" })
+  .inputValidator((data: { customerId: string; userEmail: string }) => data)
+  .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
 
     if (!data.customerId || !data.userEmail) {
       throw new Error("customerId and userEmail are required");
@@ -158,9 +159,11 @@ export const linkCustomerToUser = createServerFn({ method: "POST" }).handler(
 /**
  * Admin action: unlink a customer from their auth user (set user_id = NULL).
  */
-export const unlinkCustomerFromUser = createServerFn({ method: "POST" }).handler(
-  async ({ data }: { data: { customerId: string } }) => {
+export const unlinkCustomerFromUser = createServerFn({ method: "POST" })
+  .inputValidator((data: { customerId: string }) => data)
+  .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     const { error } = await supabaseAdmin
       .from("customers")
       .update({ user_id: null })

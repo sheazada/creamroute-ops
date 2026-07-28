@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
     // 1. Authenticate
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
+    if (error || !data.user) throw redirect({ to: "/auth", search: { next: undefined } });
 
     // 2. Resolve roles.
     const { data: roleRows } = await supabase
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (isRetailerRole(roles)) throw redirect({ to: "/retailer" });
 
     const landing = landingForRoles(roles);
-    if (landing === "/auth") throw redirect({ to: "/auth" });
+    if (landing === "/auth") throw redirect({ to: "/auth", search: { next: undefined } });
 
     // 4. Permission check.
     const path = location.pathname;

@@ -251,9 +251,10 @@ function RolesManagement() {
         <TabsContent value="roles" className="mt-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {ALL_ROLES.map((role) => {
-              const allowedRoutes = Object.entries(ROUTE_ACCESS)
-                .filter(([, roles]) => roles.includes(role))
-                .map(([path]) => path);
+              const allowedRoutes = ROUTE_ACCESS
+                .filter((entry) => entry.roles.includes(role))
+                .map((entry) => entry.prefix);
+
               return (
                 <Card key={role} className="p-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -329,7 +330,7 @@ function UserRow({
     setBusy(true);
     const { error } = await supabase
       .from("user_roles")
-      .insert({ user_id: user.id, role: newRole as string });
+      .insert({ user_id: user.id, role: newRole });
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -346,7 +347,7 @@ function UserRow({
       .from("user_roles")
       .delete()
       .eq("user_id", user.id)
-      .eq("role", role);
+      .eq("role", role as StaffRole);
     setBusy(false);
     if (error) {
       toast.error(error.message);
