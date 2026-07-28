@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Milk, Loader2, Shield, Users, Truck, HardHat, Briefcase, Store } from "lucide-react";
 import { seedDemoUsers, DEMO_USERS, DEMO_PASSWORD } from "@/lib/dev-users.functions";
+import { logAccessEvent } from "@/lib/audit.server";
 
 const ROLE_ICONS: Record<string, any> = {
   admin: Shield,
@@ -62,16 +63,51 @@ function AuthPage() {
   }, []);
 
   const doSignIn = async (emailArg: string, passwordArg: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email: emailArg, password: passwordArg });
-    if (error) throw error;
-    toast.success("Welcome back");
-    goPostAuth();
+    const { data, error } = await supabase.auth.signInWithPassword({ email: emailArg, password: passwordArg });
+    if (error) {
+      // Fire-and-forget log — must not block the UI.
+      logAccessEvent({
+        data: {
+          eventType: "login_failure",
+          userId: null,
+          userEmail: emailArg,
+          userRoles: [],
+          requiredRoles: [],
+          routePath: "/auth",
+          reason: error.message,
+        },
+      }).catch(() => {});
+      throw error;
+    }
+    // Success — log with resolved roles.
+    const roles = await (async () => {
+      try {
+        const { data: r } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id);
+        return (r ?? []).map((x) => x.role);
+      } catch {
+        return [];
+      }
+    })();
+    logAccessEvent({
+      data: {
+        eventType: "login_success",
+        userId: data.user.id,
+        userEmail: data.user.email ?? emailArg,
+        userRoles: roles,
+        requiredRoles: [],
+        routePath: "/auth",
+      },
+    }).catch(() => {});
+    return data;
   };
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    try { await doSignIn(email, password); } catch (err: any) { toast.error(err.message); }
+    try { await doSignIn(email, password); toast.success("Welcome back"); goPostAuth(); } catch (err: any) { toast.error(err.message); }
     setLoading(false);
   };
 
@@ -79,9 +115,12 @@ function AuthPage() {
     setLoading(true);
     try {
       await doSignIn(roleEmail, DEMO_PASSWORD);
+      toast.success("Welcome back");
       // Redirect retailer to retailer portal
       if (roleEmail.includes("retailer")) {
         navigate({ to: "/retailer", replace: true });
+      } else {
+        goPostAuth();
       }
     } catch {
       try {
@@ -89,9 +128,12 @@ function AuthPage() {
         await seed({ data: {} } as any);
         setSeeding(false);
         await doSignIn(roleEmail, DEMO_PASSWORD);
+        toast.success("Demo users seeded. Welcome back");
         // Redirect retailer to retailer portal
         if (roleEmail.includes("retailer")) {
           navigate({ to: "/retailer", replace: true });
+        } else {
+          goPostAuth();
         }
       } catch (e: any) {
         setSeeding(false);

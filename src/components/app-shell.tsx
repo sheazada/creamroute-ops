@@ -23,6 +23,7 @@ import {
   Layers,
   Share2,
   Compass,
+  Shield,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -90,7 +91,13 @@ const nav: {
       { to: "/share-log", label: "Share Log", icon: Share2, roles: ["admin"] },
     ],
   },
-  { label: "Admin", items: [{ to: "/settings", label: "Settings", icon: Settings, roles: ["admin"] }] },
+  {
+    label: "Admin",
+    items: [
+      { to: "/settings", label: "Settings", icon: Settings, roles: ["admin"] },
+      { to: "/admin/roles", label: "Roles & Permissions", icon: Shield, roles: ["admin"] },
+    ],
+  },
 ];
 
 
