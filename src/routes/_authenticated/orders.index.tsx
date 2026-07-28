@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { inr, shortDate, isoDate } from "@/lib/format";
+import { inr, shortDate, isoDate, genDocNo } from "@/lib/format";
 import { useRealtimeSync } from "@/lib/realtime";
-import { Plus, Search, ReceiptText, User } from "lucide-react";
+import { Plus, Search, ReceiptText, User, CheckSquare, Square, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/orders/")({
   component: Orders,
@@ -46,6 +48,7 @@ function Orders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", statusFilter, dateFilter],
@@ -90,6 +93,84 @@ function Orders() {
     invoiced: "bg-emerald-100 text-emerald-800 border-emerald-200",
     delivered: "bg-slate-100 text-slate-700 border-slate-200",
   };
+
+  // Bulk selection helpers
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((o) => o.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  // Bulk invoice creation
+  const [creatingInvoices, setCreatingInvoices] = useState(false);
+  const createInvoicesForSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const toInvoice = filtered.filter((o) => selectedIds.has(o.id) && o.status === "approved");
+    if (toInvoice.length === 0) {
+      toast.error("No approved orders selected. Only approved orders can be invoiced.");
+      return;
+    }
+    setCreatingInvoices(true);
+    let created = 0;
+    for (const order of toInvoice) {
+      try {
+        // Create invoice from order
+        const { data: invoice, error } = await supabase
+          .from("invoices")
+          .insert({
+            invoice_no: genDocNo("INV"),
+            customer_id: order.customer_id,
+            invoice_date: isoDate(),
+            subtotal: order.subtotal,
+            total: order.total,
+            status: "pending",
+            notes: `Auto-generated from order ${order.order_no}`,
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        // Create invoice items from order items
+        const { data: items } = await supabase
+          .from("order_items")
+          .select("*")
+          .eq("order_id", order.id);
+        
+        if (items) {
+          await supabase.from("invoice_items").insert(
+            items.map((i) => ({
+              invoice_id: invoice.id,
+              product_name: i.product_name,
+              quantity: i.quantity,
+              rate: i.rate,
+              amount: i.amount,
+            }))
+          );
+        }
+        
+        // Update order status
+        await supabase.from("orders").update({ status: "invoiced" }).eq("id", order.id);
+        created++;
+      } catch (e: any) {
+        console.error(`Failed to invoice ${order.order_no}:`, e);
+      }
+    }
+    toast.success(`Created ${created} invoice${created !== 1 ? "s" : ""}`);
+    setSelectedIds(new Set());
+    setCreatingInvoices(false);
+  };
+
+  const selectedApprovedCount = filtered.filter((o) => selectedIds.has(o.id) && o.status === "approved").length;
 
   return (
     <PageContainer>
@@ -149,10 +230,51 @@ function Orders() {
 
       {/* Orders table */}
       <Card className="p-0 overflow-hidden">
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="p-3 bg-primary/5 border-b flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-semibold">{selectedIds.size}</span>
+              <span className="text-muted-foreground">selected</span>
+              {selectedApprovedCount > 0 && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-primary">{selectedApprovedCount} approved</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </Button>
+              {selectedApprovedCount > 0 && (
+                <Button
+                  size="sm"
+                  onClick={createInvoicesForSelected}
+                  disabled={creatingInvoices}
+                  className="gap-1.5"
+                >
+                  <FileText className="size-4" />
+                  {creatingInvoices ? "Creating..." : `Create ${selectedApprovedCount} Invoice${selectedApprovedCount !== 1 ? "s" : ""}`}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <th className="text-left px-4 py-3 font-semibold w-10">
+                  <Checkbox
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-semibold">Order #</th>
                 <th className="text-left px-4 py-3 font-semibold">Customer</th>
                 <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Outstanding</th>
@@ -164,19 +286,26 @@ function Orders() {
             </thead>
             <tbody className="divide-y">
               {isLoading && (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">Loading…</td></tr>
               )}
               {!isLoading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     No orders found. <Link to="/orders/new" className="text-primary hover:underline">Create one</Link>.
                   </td>
                 </tr>
               )}
               {filtered.map((o) => {
                 const overLimit = o.customer && Number(o.customer.credit_limit) > 0 && Number(o.customer.outstanding) > Number(o.customer.credit_limit);
+                const isSelected = selectedIds.has(o.id);
                 return (
-                  <tr key={o.id} className="hover:bg-muted/30">
+                  <tr key={o.id} className={cn("hover:bg-muted/30", isSelected && "bg-primary/5")}>
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(o.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs font-semibold">{o.order_no}</td>
                     <td className="px-4 py-3">
                       <div className="font-medium flex items-center gap-1.5">
@@ -207,7 +336,7 @@ function Orders() {
             {filtered.length > 0 && (
               <tfoot>
                 <tr className="bg-primary/5 font-semibold">
-                  <td colSpan={5} className="px-4 py-3 text-right">{filtered.length} orders</td>
+                  <td colSpan={6} className="px-4 py-3 text-right">{filtered.length} orders</td>
                   <td className="px-4 py-3 text-right font-mono text-lg">{inr(totals.totalValue)}</td>
                   <td></td>
                 </tr>
