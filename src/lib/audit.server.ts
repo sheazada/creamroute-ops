@@ -2,9 +2,10 @@
 // Used by both the login page (login events) and route guards (access_denied events).
 
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-type AuditEvent = {
+export type AuditEvent = {
   eventType: "login_success" | "login_failure" | "logout" | "access_denied";
   userId: string | null;
   userEmail: string | null;
@@ -14,31 +15,38 @@ type AuditEvent = {
   reason?: string | null;
 };
 
-function extractClientInfo(headers: Headers) {
+function extractClientInfo() {
+  let headers: Headers | null = null;
+  try {
+    headers = getRequestHeaders() as unknown as Headers;
+  } catch {
+    headers = null;
+  }
   return {
     ip:
-      headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      headers.get("x-real-ip") ??
-      headers.get("cf-connecting-ip") ??
+      headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      headers?.get("x-real-ip") ??
+      headers?.get("cf-connecting-ip") ??
       "unknown",
-    userAgent: headers.get("user-agent") ?? "unknown",
+    userAgent: headers?.get("user-agent") ?? "unknown",
   };
 }
 
-export const logAccessEvent = createServerFn({ method: "POST" }).handler(
-  async ({ data, headers }: { data: AuditEvent; headers: Headers }) => {
-    const { ip, userAgent } = extractClientInfo(headers);
+export const logAccessEvent = createServerFn({ method: "POST" })
+  .inputValidator((data: AuditEvent) => data)
+  .handler(async ({ data }) => {
+    const { ip, userAgent } = extractClientInfo();
 
     const { error } = await supabaseAdmin.rpc("log_access_event", {
       _event_type: data.eventType,
-      _user_id: data.userId,
-      _user_email: data.userEmail,
+      _user_id: data.userId as string,
+      _user_email: data.userEmail as string,
       _user_roles: data.userRoles,
       _required_roles: data.requiredRoles,
-      _route_path: data.routePath,
+      _route_path: data.routePath as string,
       _ip_address: ip,
       _user_agent: userAgent,
-      _reason: data.reason ?? null,
+      _reason: (data.reason ?? null) as string,
     });
 
     if (error) {
@@ -46,12 +54,12 @@ export const logAccessEvent = createServerFn({ method: "POST" }).handler(
       console.error("[audit] log_access_event failed:", error);
     }
     return { ok: !error };
-  },
-);
+  });
 
 // Fetch recent audit events (admin use).
-export const fetchAccessAuditLog = createServerFn({ method: "GET" }).handler(
-  async ({ data }: { data: { limit?: number; eventType?: string } }) => {
+export const fetchAccessAuditLog = createServerFn({ method: "GET" })
+  .inputValidator((data: { limit?: number; eventType?: string } | undefined) => data ?? {})
+  .handler(async ({ data }) => {
     const limit = data.limit ?? 100;
     let q = supabaseAdmin
       .from("access_audit_logs")
@@ -66,5 +74,4 @@ export const fetchAccessAuditLog = createServerFn({ method: "GET" }).handler(
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return rows ?? [];
-  },
-);
+  });

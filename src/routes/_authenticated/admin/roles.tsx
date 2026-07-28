@@ -329,7 +329,7 @@ function UserRow({
     setBusy(true);
     const { error } = await supabase
       .from("user_roles")
-      .insert({ user_id: user.id, role: newRole as string });
+      .insert({ user_id: user.id, role: newRole });
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -346,7 +346,7 @@ function UserRow({
       .from("user_roles")
       .delete()
       .eq("user_id", user.id)
-      .eq("role", role);
+      .eq("role", role as StaffRole);
     setBusy(false);
     if (error) {
       toast.error(error.message);

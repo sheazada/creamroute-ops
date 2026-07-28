@@ -29,11 +29,12 @@ export class AccessDeniedError extends Error {
     super(
       `Access denied to ${context.attemptedPath ?? "this page"}. ` +
         `Required: ${context.requiredRoles.join(", ")}. ` +
-        `User has: ${context.userRoles.join(", ") || "(none)"}.`,
+        `User has: ${(context.userRoles ?? []).join(", ") || "(none)"}.`,
     );
     this.name = "AccessDeniedError";
     this.requiredRoles = context.requiredRoles;
-    this.userRoles = context.userRoles;
+    this.userRoles = context.userRoles ?? [];
+
     this.attemptedPath = context.attemptedPath ?? "";
   }
 }
