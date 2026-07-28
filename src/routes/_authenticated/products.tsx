@@ -12,9 +12,11 @@ import { inr } from "@/lib/format";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Search, AlertTriangle, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Plus, Search, AlertTriangle, ArrowUpRight, ArrowDownLeft, Upload, Download } from "lucide-react";
 import { StockAdjustButtons } from "@/components/stock-adjust-dialog";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/products")({
   component: Products,
@@ -23,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/products")({
 function Products() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const qc = useQueryClient();
 
   const { data } = useQuery({
@@ -32,6 +36,21 @@ function Products() {
       return data ?? [];
     },
   });
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === data.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.map((p) => p.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
 
   const filtered = (data ?? []).filter((p) => {
     if (!q) return true;
@@ -52,6 +71,32 @@ function Products() {
         }
       />
       <Card className="p-0 overflow-hidden">
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="p-3 bg-primary/5 border-b flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-semibold">{selectedIds.size}</span>
+              <span className="text-muted-foreground">selected</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setBulkEditOpen(true)}
+                className="gap-1.5"
+              >
+                <ArrowUpRight className="size-4" />
+                Edit Prices
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="p-4 border-b flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -62,6 +107,12 @@ function Products() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th className="text-left px-6 py-3 font-semibold w-10">
+                <Checkbox
+                  checked={data.length > 0 && selectedIds.size === data.length}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </th>
               <th className="text-left px-6 py-3 font-semibold">Product</th>
               <th className="text-left px-6 py-3 font-semibold">Brand</th>
               <th className="text-left px-6 py-3 font-semibold">HSN</th>
@@ -76,14 +127,21 @@ function Products() {
             {filtered.length === 0 && (
               <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No products. Add one to get started.</td></tr>
             )}
-            {filtered.map((p) => {
-              const low = Number(p.current_stock) <= Number(p.min_stock);
-              return (
-                <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="px-6 py-3">
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">{p.category} · {p.unit}</div>
-                  </td>
+              {filtered.map((p) => {
+                const low = Number(p.current_stock) <= Number(p.min_stock);
+                const isSelected = selectedIds.has(p.id);
+                return (
+                  <tr key={p.id} className={cn("hover:bg-muted/30", isSelected && "bg-primary/5")}>
+                    <td className="px-6 py-3">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(p.id)}
+                      />
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-xs text-muted-foreground">{p.category} · {p.unit}</div>
+                    </td>
                   <td className="px-6 py-3 text-muted-foreground">{p.brand ?? "—"}</td>
                   <td className="px-6 py-3 font-mono text-xs text-muted-foreground">{p.hsn ?? "—"}</td>
                   <td className="px-6 py-3 text-right font-mono">{inr(p.mrp)}</td>
@@ -113,6 +171,18 @@ function Products() {
           </tbody>
         </table>
       </Card>
+
+      {/* Bulk Price Edit Dialog */}
+      {bulkEditOpen && (
+        <BulkPriceEditDialog
+          products={filtered.filter((p) => selectedIds.has(p.id))}
+          onClose={() => setBulkEditOpen(false)}
+          onSaved={() => {
+            setBulkEditOpen(false);
+            setSelectedIds(new Set());
+          }}
+        />
+      )}
     </PageContainer>
   );
 }
@@ -164,5 +234,113 @@ function ProductDialog({ onSaved }: { onSaved: () => void }) {
       </div>
       <DialogFooter><Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save product"}</Button></DialogFooter>
     </DialogContent>
+  );
+}
+
+function BulkPriceEditDialog({
+  products,
+  onClose,
+  onSaved,
+}: {
+  products: any[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [prices, setPrices] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    products.forEach((p) => {
+      init[p.id] = String(p.selling_price);
+    });
+    return init;
+  });
+  const [mrps, setMrps] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    products.forEach((p) => {
+      init[p.id] = String(p.mrp);
+    });
+    return init;
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    let updated = 0;
+    for (const p of products) {
+      try {
+        const { error } = await supabase
+          .from("products")
+          .update({
+            selling_price: Number(prices[p.id]),
+            mrp: Number(mrps[p.id]),
+          })
+          .eq("id", p.id);
+        if (error) throw error;
+        updated++;
+      } catch (e: any) {
+        console.error(`Failed to update ${p.name}:`, e);
+      }
+    }
+    toast.success(`Updated prices for ${updated} product${updated !== 1 ? "s" : ""}`);
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Bulk Price Edit</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Edit selling prices for {products.length} selected product{products.length !== 1 ? "s" : ""}.
+          </p>
+        </DialogHeader>
+
+        <div className="border rounded-md overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <th className="text-left px-4 py-2 font-semibold">Product</th>
+                <th className="text-right px-4 py-2 font-semibold">Current Price</th>
+                <th className="text-right px-4 py-2 font-semibold">New Selling Price</th>
+                <th className="text-right px-4 py-2 font-semibold">New MRP</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {products.map((p) => (
+                <tr key={p.id}>
+                  <td className="px-4 py-2 font-medium truncate max-w-[200px]">{p.name}</td>
+                  <td className="px-4 py-2 text-right font-mono text-muted-foreground">
+                    {inr(p.selling_price)}
+                  </td>
+                  <td className="px-4 py-2">
+                    <Input
+                      type="number"
+                      value={prices[p.id]}
+                      onChange={(e) => setPrices({ ...prices, [p.id]: e.target.value })}
+                      className="h-8 w-24 text-right ml-auto"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <Input
+                      type="number"
+                      value={mrps[p.id]}
+                      onChange={(e) => setMrps({ ...mrps, [p.id]: e.target.value })}
+                      className="h-8 w-24 text-right ml-auto"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving…" : `Update ${products.length} Price${products.length !== 1 ? "s" : ""}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

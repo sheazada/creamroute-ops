@@ -19,11 +19,12 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff, Bell, Send, CheckCircle2, XCircle, Clock, Ban, MessageSquare, BookOpen } from "lucide-react";
+import { Plus, Search, MessageCircle, Mail, Phone, ReceiptText, Users, Wallet, AlertTriangle, Pencil, BellOff, Bell, Send, CheckCircle2, XCircle, Clock, Ban, MessageSquare, BookOpen, Upload, Download } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getBusiness } from "@/lib/business";
 import { cn } from "@/lib/utils";
+import { parseCsv, readFileAsText, toCsv, downloadCsv } from "@/lib/bulk";
 
 export const Route = createFileRoute("/_authenticated/customers")({
   component: Customers,
@@ -39,6 +40,7 @@ function Customers() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "dues" | "clear">("all");
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const qc = useQueryClient();
 
   const { data: customers } = useQuery({
@@ -75,12 +77,17 @@ function Customers() {
         title="Customers & Ledger"
         description="Retail shops, credit limits, outstanding dues and reminders."
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="size-4" /> Add Customer</Button>
-            </DialogTrigger>
-            <CustomerDialog onSaved={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["customers"] }); }} />
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+              <Upload className="size-4" /> Import CSV
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5"><Plus className="size-4" /> Add Customer</Button>
+              </DialogTrigger>
+              <CustomerDialog onSaved={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["customers"] }); }} />
+            </Dialog>
+          </div>
         }
       />
 
@@ -193,6 +200,17 @@ function Customers() {
           </table>
         </div>
       </Card>
+
+      {/* Import CSV Dialog */}
+      {importOpen && (
+        <ImportCsvDialog
+          onClose={() => setImportOpen(false)}
+          onSaved={() => {
+            setImportOpen(false);
+            qc.invalidateQueries({ queryKey: ["customers"] });
+          }}
+        />
+      )}
     </PageContainer>
   );
 }
@@ -534,5 +552,137 @@ function CustomerNotificationsDialog({ customer }: { customer: any }) {
         )}
       </div>
     </DialogContent>
+  );
+}
+
+function ImportCsvDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<Record<string, string>[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    try {
+      const text = await readFileAsText(f);
+      const rows = parseCsv(text);
+      setPreview(rows);
+    } catch (e: any) {
+      toast.error(`Failed to read file: ${e.message}`);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const rows = [
+      { shop_name: "Sample Store", owner_name: "John Doe", mobile: "9876543210", address: "123 Main St", credit_limit: "50000" },
+    ];
+    const csv = toCsv(rows);
+    downloadCsv(csv, "customer_import_template.csv");
+  };
+
+  const importRows = async () => {
+    if (preview.length === 0) return;
+    setSaving(true);
+    const rowsToInsert = preview.map((r) => ({
+      name: r.owner_name || r.shop_name || "Unknown",
+      shop_name: r.shop_name || null,
+      mobile: r.mobile || null,
+      address: r.address || null,
+      credit_limit: Number(r.credit_limit) || 0,
+      status: "active",
+    }));
+
+    const { error } = await supabase.from("customers").insert(rowsToInsert);
+    setSaving(false);
+
+    if (error) {
+      toast.error(`Import failed: ${error.message}`);
+    } else {
+      toast.success(`Imported ${rowsToInsert.length} customer${rowsToInsert.length !== 1 ? "s" : ""}`);
+      onSaved();
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Import Customers from CSV</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Upload a CSV file to bulk-import customers.
+          </p>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-1.5">
+              <Download className="size-4" /> Download Template
+            </Button>
+            <div className="text-xs text-muted-foreground">
+              CSV columns: shop_name, owner_name, mobile, address, credit_limit
+            </div>
+          </div>
+
+          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center">
+            <Input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFile}
+              className="hidden"
+              id="csv-upload"
+            />
+            <Label htmlFor="csv-upload" className="cursor-pointer">
+              <Upload className="size-8 mx-auto mb-2 text-muted-foreground" />
+              <div className="text-sm font-medium">
+                {file ? file.name : "Click to upload CSV"}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {file ? `${preview.length} rows parsed` : "or drag and drop"}
+              </div>
+            </Label>
+          </div>
+
+          {preview.length > 0 && (
+            <div className="border rounded-md overflow-hidden">
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <th className="text-left px-3 py-2 font-semibold">Shop</th>
+                      <th className="text-left px-3 py-2 font-semibold">Owner</th>
+                      <th className="text-left px-3 py-2 font-semibold">Mobile</th>
+                      <th className="text-right px-3 py-2 font-semibold">Credit Limit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {preview.slice(0, 20).map((row, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 truncate max-w-[200px]">{row.shop_name}</td>
+                        <td className="px-3 py-2 truncate max-w-[150px]">{row.owner_name}</td>
+                        <td className="px-3 py-2 font-mono text-xs">{row.mobile}</td>
+                        <td className="px-3 py-2 text-right font-mono">{inr(Number(row.credit_limit) || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {preview.length > 20 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/30">
+                    Showing 20 of {preview.length} rows
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={importRows} disabled={saving || preview.length === 0}>
+            {saving ? "Importing…" : `Import ${preview.length} Customer${preview.length !== 1 ? "s" : ""}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
