@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_audit_logs: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          reason: string | null
+          required_roles: string[] | null
+          route_path: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_roles: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          required_roles?: string[] | null
+          route_path?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_roles?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          required_roles?: string[] | null
+          route_path?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_roles?: string[] | null
+        }
+        Relationships: []
+      }
       collection_allocations: {
         Row: {
           allocated_amount: number
@@ -2411,6 +2453,7 @@ export type Database = {
           shop_name: string
         }[]
       }
+      get_customer_by_user_email: { Args: { _email: string }; Returns: string }
       get_near_expiry_stock: {
         Args: { _days?: number }
         Returns: {
@@ -2446,6 +2489,24 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _uid: string }; Returns: boolean }
+      link_customer_to_user: {
+        Args: { _customer_id: string; _email: string }
+        Returns: string
+      }
+      log_access_event: {
+        Args: {
+          _event_type: string
+          _ip_address: string
+          _reason: string
+          _required_roles: string[]
+          _route_path: string
+          _user_agent: string
+          _user_email: string
+          _user_id: string
+          _user_roles: string[]
+        }
+        Returns: undefined
+      }
       post_stock_adjustment: {
         Args: { _adjustment_id: string }
         Returns: undefined
