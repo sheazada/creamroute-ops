@@ -547,7 +547,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 // ---- Hook to trigger global search --------------------------------------
 export function useGlobalSearchTrigger() {
   const [open, setOpen] = useState(false);
-  const qc = useQueryClient();
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
