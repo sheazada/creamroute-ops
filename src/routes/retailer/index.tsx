@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { inr, shortDate, num } from "@/lib/format";
+import { makeRetailerCustomerQueryFn } from "@/lib/retailer-customer";
 import {
   ShoppingCart,
   FileText,
@@ -22,30 +23,16 @@ export const Route = createFileRoute("/retailer/")({
 });
 
 function RetailerDashboard() {
-  // Get retailer info
-  const { data: me, error: meError } = useQuery({
+  // Get retailer info via shared helper (user_id first, email fallback).
+  const { data: me } = useQuery({
     queryKey: ["retailer-me"],
     queryFn: async () => {
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes.user) return null;
-      try {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("*")
-          .eq("user_id", userRes.user.id)
-          .maybeSingle();
-        
-        if (error) {
-          console.warn("Customer lookup failed:", error.message);
-          return null;
-        }
-        return data;
-      } catch (err) {
-        console.warn("Failed to fetch retailer:", err);
-        return null;
-      }
+      const fn = makeRetailerCustomerQueryFn(userRes.user.id, userRes.user.email ?? null);
+      return fn();
     },
-    retry: false,
+    retry: 1,
   });
 
   // Recent orders

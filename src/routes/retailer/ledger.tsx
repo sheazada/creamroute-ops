@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { inr, shortDate } from "@/lib/format";
+import { makeRetailerCustomerQueryFn } from "@/lib/retailer-customer";
 import { Wallet, RefreshCw, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,24 +31,10 @@ function Ledger() {
     queryFn: async () => {
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes.user) return null;
-      try {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("*")
-          .eq("user_id", userRes.user.id)
-          .maybeSingle();
-        
-        if (error) {
-          console.warn("Customer lookup failed:", error.message);
-          return null;
-        }
-        return data;
-      } catch (err) {
-        console.warn("Failed to fetch retailer:", err);
-        return null;
-      }
+      const fn = makeRetailerCustomerQueryFn(userRes.user.id, userRes.user.email ?? null);
+      return fn();
     },
-    retry: false,
+    retry: 1,
   });
 
   const { data: entries = [], isLoading } = useQuery({

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { makeRetailerCustomerQueryFn } from "@/lib/retailer-customer";
 import {
   Home,
   ShoppingCart,
@@ -42,31 +43,13 @@ export function RetailerShell({ children }: { children: ReactNode }) {
     },
   });
 
-  // Get retailer info (customer record linked to user)
-  const { data: retailer, error: retailerError } = useQuery({
+  // Get retailer info (customer record linked to user) via shared helper.
+  const { data: retailer } = useQuery({
     queryKey: ["retailer-info", me?.user?.id],
     enabled: !!me?.user,
-    queryFn: async () => {
-      if (!me?.user) return null;
-      try {
-        // Try to find retailer linked by user_id
-        const { data: customer, error } = await supabase
-          .from("customers")
-          .select("*")
-          .eq("user_id", me.user.id)
-          .maybeSingle();
-        
-        if (error) {
-          console.warn("Customer query failed:", error.message);
-          return null;
-        }
-        return customer;
-      } catch (err) {
-        console.warn("Failed to fetch retailer info:", err);
-        return null;
-      }
-    },
-    retry: false,
+    queryFn: makeRetailerCustomerQueryFn(me?.user?.id ?? null, me?.user?.email ?? null),
+    retry: 1,
+    staleTime: 2 * 60 * 1000,
   });
 
   const signOut = async () => {

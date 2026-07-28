@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { inr, shortDate, num } from "@/lib/format";
+import { makeRetailerCustomerQueryFn } from "@/lib/retailer-customer";
 import { Package, FileText, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,24 +19,10 @@ function OrdersHistory() {
     queryFn: async () => {
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes.user) return null;
-      try {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("*")
-          .eq("user_id", userRes.user.id)
-          .maybeSingle();
-        
-        if (error) {
-          console.warn("Customer lookup failed:", error.message);
-          return null;
-        }
-        return data;
-      } catch (err) {
-        console.warn("Failed to fetch retailer:", err);
-        return null;
-      }
+      const fn = makeRetailerCustomerQueryFn(userRes.user.id, userRes.user.email ?? null);
+      return fn();
     },
-    retry: false,
+    retry: 1,
   });
 
   const { data: orders = [], isLoading } = useQuery({

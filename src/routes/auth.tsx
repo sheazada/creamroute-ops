@@ -147,7 +147,12 @@ function AuthPage() {
     setSeeding(true);
     try {
       const res: any = await seed({ data: {} } as any);
-      toast.success(`Demo users ready (${res.created.length} created, ${res.existing.length} refreshed)`);
+      const summary = [
+        res.created?.length ? `${res.created.length} created` : null,
+        res.existing?.length ? `${res.existing.length} refreshed` : null,
+        res.linkedRetailers?.length ? `${res.linkedRetailers.length} retailers linked to customer records` : null,
+      ].filter(Boolean).join(", ");
+      toast.success(`Demo users ready${summary ? `: ${summary}` : ""}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Seed failed");
     }
