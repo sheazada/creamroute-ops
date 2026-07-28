@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { inr, num, isoDate, shortDate, genDocNo } from "@/lib/format";
+import { useRealtimeSync } from "@/lib/realtime";
 import { sendWhatsApp, formatOrderConfirmation } from "@/lib/whatsapp";
 import {
   CheckCircle2,
@@ -60,6 +61,21 @@ type ShopOrder = {
 function DeliveryDemand() {
   const nav = useNavigate();
   const qc = useQueryClient();
+
+  // Live-update when deliveries/invoices/orders change (e.g. a driver marks
+  // a stop delivered in another tab, or an invoice is paid).
+  useRealtimeSync({
+    tableName: "deliveries",
+    invalidateKeys: [["delivery-demand"]],
+  });
+  useRealtimeSync({
+    tableName: "invoices",
+    invalidateKeys: [["delivery-demand"]],
+  });
+  useRealtimeSync({
+    tableName: "orders",
+    invalidateKeys: [["delivery-demand"]],
+  });
   const [date, setDate] = useState(isoDate());
   const [routeFilter, setRouteFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");

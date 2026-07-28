@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, inrCompact, num, isoDate, shortDate } from "@/lib/format";
+import { useRealtimeDashboard } from "@/lib/realtime";
 import {
   ArrowUpRight,
   Package,
@@ -51,6 +52,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
+  // Live-updates the dashboard whenever orders/invoices/deliveries/payments change.
+  useRealtimeDashboard();
+
   const today = isoDate();
   const monthStart = isoDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const sevenDaysAgo = isoDate(new Date(Date.now() - 6 * 24 * 3600 * 1000));

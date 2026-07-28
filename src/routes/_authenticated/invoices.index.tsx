@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, shortDate } from "@/lib/format";
+import { useRealtimeSync } from "@/lib/realtime";
 import { Plus, Search, ShoppingCart, Download, X } from "lucide-react";
 import { InvoiceShareMenu } from "@/components/invoice-share-menu";
 import { toast } from "sonner";
@@ -27,6 +28,16 @@ const daysBetween = (a: string | null | undefined, b = new Date()) => {
 };
 
 function Invoices() {
+  // Live-update when invoices or payments change (payments affect balance).
+  useRealtimeSync({
+    tableName: "invoices",
+    invalidateKeys: [["invoices"]],
+  });
+  useRealtimeSync({
+    tableName: "payments",
+    invalidateKeys: [["invoices"]],
+  });
+
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [from, setFrom] = useState("");

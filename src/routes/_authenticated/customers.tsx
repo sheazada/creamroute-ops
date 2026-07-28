@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, inrCompact } from "@/lib/format";
+import { useRealtimeSync } from "@/lib/realtime";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,12 @@ export const Route = createFileRoute("/_authenticated/customers")({
 });
 
 function Customers() {
+  // Live-update outstanding balances when payments are recorded.
+  useRealtimeSync({
+    tableName: "payments",
+    invalidateKeys: [["customers"]],
+  });
+
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "dues" | "clear">("all");
   const [open, setOpen] = useState(false);

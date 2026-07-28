@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { inr, shortDate, genDocNo } from "@/lib/format";
+import { useRealtimeSync } from "@/lib/realtime";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +20,13 @@ export const Route = createFileRoute("/_authenticated/payments")({
 });
 
 function Payments() {
+  // Live-update when new payments are recorded. Also invalidate customers
+  // since a new payment changes the customer's outstanding balance.
+  useRealtimeSync({
+    tableName: "payments",
+    invalidateKeys: [["payments"], ["customers"]],
+  });
+
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
 

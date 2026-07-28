@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { inr, num, isoDate, shortDate } from "@/lib/format";
+import { useRealtimeSync } from "@/lib/realtime";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Download, Printer, Truck, Package, ShoppingCart, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,16 @@ type OrderItem = {
 };
 
 function DemandConsolidation() {
+  // Live-update the pickup list when orders are placed.
+  useRealtimeSync({
+    tableName: "orders",
+    invalidateKeys: [["demand-items"]],
+  });
+  useRealtimeSync({
+    tableName: "order_items",
+    invalidateKeys: [["demand-items"]],
+  });
+
   const [date, setDate] = useState(isoDate());
   const [loaded, setLoaded] = useState<Record<string, boolean>>({});
 

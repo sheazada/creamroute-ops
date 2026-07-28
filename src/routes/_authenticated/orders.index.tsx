@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inr, shortDate, isoDate } from "@/lib/format";
+import { useRealtimeSync } from "@/lib/realtime";
 import { Plus, Search, ReceiptText, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,12 @@ type Order = {
 };
 
 function Orders() {
+  // Live-update when orders change.
+  useRealtimeSync({
+    tableName: "orders",
+    invalidateKeys: [["orders"]],
+  });
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [query, setQuery] = useState("");

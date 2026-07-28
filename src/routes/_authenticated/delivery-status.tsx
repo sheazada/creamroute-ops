@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { inr, shortDate, isoDate } from "@/lib/format";
+import { useRealtimeSync } from "@/lib/realtime";
 import { AlertTriangle, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,12 @@ const PARTIAL = new Set(["partially_delivered", "partial"]);
 const FAIL = new Set(["failed"]);
 
 function DeliveryStatusPage() {
+  // Live-update when deliveries change.
+  useRealtimeSync({
+    tableName: "deliveries",
+    invalidateKeys: [["delivery-status"]],
+  });
+
   const [date, setDate] = useState(isoDate(new Date()));
 
   const { data: deliveries, isLoading, refetch } = useQuery({
