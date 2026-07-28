@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { GlobalSearch, useGlobalSearchTrigger } from "@/components/global-search";
 
 type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
 const ALL: Role[] = ["admin", "manager", "salesperson", "driver", "helper"];
@@ -241,6 +242,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const me = useMe();
   const alerts = useAlertsCount();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { open: searchOpen, setOpen: setSearchOpen, trigger: openSearch } = useGlobalSearchTrigger();
   const role: Role = ((me.data?.roles?.[0] as Role) ?? "salesperson");
   const mobileTabs = mobileTabsByRole[role] ?? mobileTabsByRole.salesperson;
 
@@ -323,18 +325,22 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="text-sm font-semibold tracking-tight truncate">DairyFlow</span>
           </Link>
 
-          {/* Search — desktop only */}
-          <div className="relative flex-1 max-w-md hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search customers, invoices, products…"
-              className="pl-9 h-9 bg-muted/60 border-transparent focus-visible:bg-background"
-            />
-          </div>
+          {/* Search trigger — desktop */}
+          <Button
+            variant="outline"
+            className="hidden md:flex flex-1 max-w-md h-9 justify-start text-left text-muted-foreground gap-2 bg-muted/60 border-transparent hover:bg-muted"
+            onClick={openSearch}
+          >
+            <Search className="size-4" />
+            <span className="text-sm">Search customers, invoices, products…</span>
+            <kbd className="ml-auto flex items-center gap-0.5 rounded bg-background px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground border">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
           <div className="flex-1 md:hidden" />
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <Button variant="ghost" size="icon" className="relative md:hidden" aria-label="Search">
+            <Button variant="ghost" size="icon" className="relative md:hidden" aria-label="Search" onClick={openSearch}>
               <Search className="size-4" />
             </Button>
             <Button variant="ghost" size="icon" className="relative" aria-label="Alerts">
@@ -357,6 +363,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <main className="flex-1 min-w-0 pb-16 lg:pb-0">{children}</main>
+
+        {/* Global search command palette */}
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
         {/* Mobile bottom tab bar */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 h-16 bg-background/95 backdrop-blur border-t no-print grid grid-cols-4">
