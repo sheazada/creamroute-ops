@@ -184,7 +184,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, name, shop_name, mobile, outstanding, status")
         .ilike("name", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as CustomerResult[];
+      return (data ?? []) as CustomerRow[];
     },
   });
 
@@ -197,7 +197,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, order_no, order_date, total, status, customer:customers(name, shop_name)")
         .ilike("order_no", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as OrderResult[];
+      return (data ?? []) as OrderRow[];
     },
   });
 
@@ -210,7 +210,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, invoice_no, invoice_date, total, balance, status, customer:customers(name, shop_name)")
         .ilike("invoice_no", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as InvoiceResult[];
+      return (data ?? []) as InvoiceRow[];
     },
   });
 
@@ -223,7 +223,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, name, category, brand, current_stock, min_stock, selling_price, status")
         .ilike("name", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as ProductResult[];
+      return (data ?? []) as ProductRow[];
     },
   });
 
@@ -236,7 +236,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, payment_no, payment_date, amount, mode, customer:customers(name, shop_name)")
         .ilike("payment_no", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as PaymentResult[];
+      return (data ?? []) as PaymentRow[];
     },
   });
 
