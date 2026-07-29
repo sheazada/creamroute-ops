@@ -20,6 +20,8 @@ export const processPaymentReminders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ dryRun: z.boolean().optional() }).parse(i ?? {}))
   .handler(async ({ data, context }) => {
+    await requireRole(context.supabase, context.userId, FINANCE_ROLES);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

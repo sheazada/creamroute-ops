@@ -33,6 +33,7 @@ export const processQueuedNotifications = createServerFn({ method: "POST" })
     z.object({ limit: z.number().int().min(1).max(50).optional() }).parse(i ?? {}),
   )
   .handler(async ({ data, context }) => {
+    await requireRole(context.supabase, context.userId, FINANCE_ROLES);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const limit = data.limit ?? 20;
 
