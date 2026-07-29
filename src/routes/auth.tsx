@@ -47,12 +47,9 @@ function AuthPage() {
   const seed = useServerFn(seedDemoUsers);
 
   const goPostAuth = () => {
+    // Always use full page reload to ensure auth session is properly loaded
     const dest = safeNext(next);
-    if (dest) {
-      window.location.href = dest;
-    } else {
-      navigate({ to: "/", replace: true });
-    }
+    window.location.href = dest || "/";
   };
 
   useEffect(() => {

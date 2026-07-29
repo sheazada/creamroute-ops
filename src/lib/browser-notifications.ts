@@ -3,9 +3,8 @@
 
 import { toast } from "sonner";
 
-// VAPID public key (you'll need to generate your own for production)
-// For now, we're using a placeholder - replace with your actual VAPID public key
-const VAPID_PUBLIC_KEY = "YOUR_VAPID_PUBLIC_KEY";
+// VAPID public key for push notifications
+const VAPID_PUBLIC_KEY = "BLdJdq0AZpnIG6E0fGEEeKze3IWcKaX1iz7Ih92hwq19US-qsw_jc4UCBS2OpqA9sa0wcc0Pt2LVAufHn9k88Qk";
 
 // Check if browser supports push notifications
 export function isPushSupported(): boolean {
@@ -95,6 +94,9 @@ export async function unsubscribeFromPush(): Promise<boolean> {
   }
 
   try {
+    // Remove from server first
+    await removeSubscriptionFromServer(subscription.endpoint);
+    // Then unsubscribe from push
     await subscription.unsubscribe();
     console.log("[Notifications] Unsubscribed from push");
     return true;
@@ -105,7 +107,7 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 }
 
 // Convert VAPID key from base64 to Uint8Array
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
@@ -115,7 +117,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     outputArray[i] = rawData.charCodeAt(i);
   }
   
-  return outputArray;
+  return outputArray.buffer as ArrayBuffer;
 }
 
 // Show local notification (for testing or immediate feedback)
@@ -125,8 +127,7 @@ export function showLocalNotification(title: string, body: string, icon?: string
       body,
       icon: icon || "/favicon.ico",
       badge: "/favicon.ico",
-      vibrate: [200, 100, 200],
-    });
+    } as NotificationOptions);
   }
 }
 
@@ -151,31 +152,73 @@ export async function initializeNotifications(): Promise<void> {
       const newSubscription = await subscribeToPush();
       
       if (newSubscription) {
-        // Save subscription to server
+        // Save subscription to server (Supabase)
         await saveSubscriptionToServer(newSubscription);
       }
+    } else {
+      // Already subscribed — make sure server has it
+      await saveSubscriptionToServer(subscription);
     }
   }
 }
 
-// Save push subscription to server
+// Save push subscription to server (saves to Supabase push_subscriptions table)
 export async function saveSubscriptionToServer(subscription: PushSubscription): Promise<void> {
   try {
-    // You'll need to create an API endpoint to handle this
-    // For now, we're just logging it
-    console.log("[Notifications] Subscription to save:", JSON.stringify(subscription));
-    
-    // Example: POST to your backend
-    // await fetch('/api/notifications/subscribe', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     endpoint: subscription.endpoint,
-    //     keys: subscription.toJSON().keys,
-    //   }),
-    // });
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes.user) {
+      console.warn("[Notifications] No authenticated user, skipping subscription save");
+      return;
+    }
+
+    const keys = subscription.toJSON().keys;
+    if (!keys?.p256dh || !keys?.auth) {
+      console.error("[Notifications] Subscription missing keys");
+      return;
+    }
+
+    // Upsert: delete any existing subscription for this endpoint, then insert
+    await supabase
+      .from("push_subscriptions")
+      .delete()
+      .eq("endpoint", subscription.endpoint);
+
+    const { error } = await supabase
+      .from("push_subscriptions")
+      .insert({
+        user_id: userRes.user.id,
+        endpoint: subscription.endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+      });
+
+    if (error) {
+      console.error("[Notifications] Failed to save subscription:", error.message);
+    } else {
+      console.log("[Notifications] Subscription saved to server");
+    }
   } catch (error) {
     console.error("[Notifications] Failed to save subscription:", error);
+  }
+}
+
+// Remove push subscription from server
+export async function removeSubscriptionFromServer(endpoint: string): Promise<void> {
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { error } = await supabase
+      .from("push_subscriptions")
+      .delete()
+      .eq("endpoint", endpoint);
+
+    if (error) {
+      console.error("[Notifications] Failed to remove subscription:", error.message);
+    } else {
+      console.log("[Notifications] Subscription removed from server");
+    }
+  } catch (error) {
+    console.error("[Notifications] Failed to remove subscription:", error);
   }
 }
 

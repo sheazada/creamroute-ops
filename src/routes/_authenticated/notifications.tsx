@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -22,9 +22,13 @@ import {
   Users,
   XCircle,
   AlertCircle,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { shortDate } from "@/lib/format";
+import { sendPushToUser } from "@/lib/push-send.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
   component: NotificationsPage,
@@ -45,6 +49,36 @@ function NotificationsPage() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
   const [search, setSearch] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
+  const sendTestPushFn = useServerFn(sendPushToUser);
+
+  const sendTestPush = async () => {
+    setSendingTest(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      if (!userRes.user) {
+        toast.error("Not logged in");
+        return;
+      }
+
+      await sendTestPushFn({
+        data: {
+          userId: userRes.user.id,
+          title: "🔔 Test Notification",
+          body: "Push notifications are working! This is a test message.",
+          type: "general",
+        },
+      });
+
+      toast.success("Test push sent! Check your browser notifications.");
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    } catch (error) {
+      console.error("Test push failed:", error);
+      toast.error("Failed to send test push");
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications", filter],
@@ -123,11 +157,23 @@ function NotificationsPage() {
         title="Notifications"
         description={`${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`}
         actions={
-          unreadCount > 0 ? (
-            <Button size="sm" variant="outline" onClick={markAllAsRead}>
-              Mark all as read
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={sendTestPush}
+              disabled={sendingTest}
+              className="gap-2"
+            >
+              <Send className="size-3" />
+              {sendingTest ? "Sending..." : "Send Test Push"}
             </Button>
-          ) : null
+            {unreadCount > 0 && (
+              <Button size="sm" variant="outline" onClick={markAllAsRead}>
+                Mark all as read
+              </Button>
+            )}
+          </div>
         }
       />
 
