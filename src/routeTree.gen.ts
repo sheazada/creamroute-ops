@@ -31,6 +31,7 @@ import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPaymentRemindersRouteImport } from './routes/_authenticated/payment-reminders'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
+import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedDemandConsolidationRouteImport } from './routes/_authenticated/demand-consolidation'
 import { Route as AuthenticatedDeliveryStatusRouteImport } from './routes/_authenticated/delivery-status'
 import { Route as AuthenticatedDeliveryDemandRouteImport } from './routes/_authenticated/delivery-demand'
@@ -166,6 +167,11 @@ const AuthenticatedNotificationsRoute =
 const AuthenticatedInventoryRoute = AuthenticatedInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedExpensesRoute = AuthenticatedExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDemandConsolidationRoute =
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/delivery-demand': typeof AuthenticatedDeliveryDemandRoute
   '/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/demand-consolidation': typeof AuthenticatedDemandConsolidationRoute
+  '/expenses': typeof AuthenticatedExpensesRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/payment-reminders': typeof AuthenticatedPaymentRemindersRoute
@@ -366,6 +373,7 @@ export interface FileRoutesByTo {
   '/delivery-demand': typeof AuthenticatedDeliveryDemandRoute
   '/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/demand-consolidation': typeof AuthenticatedDemandConsolidationRoute
+  '/expenses': typeof AuthenticatedExpensesRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/payment-reminders': typeof AuthenticatedPaymentRemindersRoute
@@ -415,6 +423,7 @@ export interface FileRoutesById {
   '/_authenticated/delivery-demand': typeof AuthenticatedDeliveryDemandRoute
   '/_authenticated/delivery-status': typeof AuthenticatedDeliveryStatusRoute
   '/_authenticated/demand-consolidation': typeof AuthenticatedDemandConsolidationRoute
+  '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/payment-reminders': typeof AuthenticatedPaymentRemindersRoute
@@ -464,6 +473,7 @@ export interface FileRouteTypes {
     | '/delivery-demand'
     | '/delivery-status'
     | '/demand-consolidation'
+    | '/expenses'
     | '/inventory'
     | '/notifications'
     | '/payment-reminders'
@@ -510,6 +520,7 @@ export interface FileRouteTypes {
     | '/delivery-demand'
     | '/delivery-status'
     | '/demand-consolidation'
+    | '/expenses'
     | '/inventory'
     | '/notifications'
     | '/payment-reminders'
@@ -558,6 +569,7 @@ export interface FileRouteTypes {
     | '/_authenticated/delivery-demand'
     | '/_authenticated/delivery-status'
     | '/_authenticated/demand-consolidation'
+    | '/_authenticated/expenses'
     | '/_authenticated/inventory'
     | '/_authenticated/notifications'
     | '/_authenticated/payment-reminders'
@@ -758,6 +770,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInventoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/expenses': {
+      id: '/_authenticated/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof AuthenticatedExpensesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/demand-consolidation': {
       id: '/_authenticated/demand-consolidation'
       path: '/demand-consolidation'
@@ -953,6 +972,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDeliveryDemandRoute: typeof AuthenticatedDeliveryDemandRoute
   AuthenticatedDeliveryStatusRoute: typeof AuthenticatedDeliveryStatusRoute
   AuthenticatedDemandConsolidationRoute: typeof AuthenticatedDemandConsolidationRoute
+  AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedPaymentRemindersRoute: typeof AuthenticatedPaymentRemindersRoute
@@ -987,6 +1007,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDeliveryDemandRoute: AuthenticatedDeliveryDemandRoute,
   AuthenticatedDeliveryStatusRoute: AuthenticatedDeliveryStatusRoute,
   AuthenticatedDemandConsolidationRoute: AuthenticatedDemandConsolidationRoute,
+  AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedPaymentRemindersRoute: AuthenticatedPaymentRemindersRoute,
