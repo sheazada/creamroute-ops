@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole, STAFF_ROLES, FINANCE_ROLES } from "@/lib/authz";
 import { z } from "zod";
 
 /**
@@ -11,6 +12,7 @@ export const enqueueDeliveryNotifications = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ deliveryId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
+    await requireRole(context.supabase, context.userId, STAFF_ROLES);
     const { data: inserted, error } = await context.supabase.rpc(
       "enqueue_delivery_notifications",
       { _delivery_id: data.deliveryId },
@@ -31,6 +33,7 @@ export const processQueuedNotifications = createServerFn({ method: "POST" })
     z.object({ limit: z.number().int().min(1).max(50).optional() }).parse(i ?? {}),
   )
   .handler(async ({ data, context }) => {
+    await requireRole(context.supabase, context.userId, FINANCE_ROLES);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const limit = data.limit ?? 20;
 
