@@ -12,6 +12,7 @@ export const enqueueDeliveryNotifications = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ deliveryId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
+    await requireRole(context.supabase, context.userId, STAFF_ROLES);
     const { data: inserted, error } = await context.supabase.rpc(
       "enqueue_delivery_notifications",
       { _delivery_id: data.deliveryId },
