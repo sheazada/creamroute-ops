@@ -3,6 +3,8 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole } from "@/lib/authz";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type AuditEvent = {
