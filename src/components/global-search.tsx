@@ -50,6 +50,54 @@ import { cn } from "@/lib/utils";
 
 type SearchState = "idle" | "open" | "closed";
 
+/** Raw row shapes returned by the Supabase queries below. */
+type CustomerRow = {
+  id: string;
+  name: string;
+  shop_name: string | null;
+  mobile: string | null;
+  outstanding: number;
+  status: string;
+};
+type CustomerRef = { name: string; shop_name: string | null } | null;
+type OrderRow = {
+  id: string;
+  order_no: string;
+  order_date: string;
+  total: number;
+  status: string;
+  customer: CustomerRef;
+};
+type InvoiceRow = {
+  id: string;
+  invoice_no: string;
+  invoice_date: string;
+  total: number;
+  balance: number;
+  status: string;
+  customer: CustomerRef;
+};
+type ProductRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  brand: string | null;
+  current_stock: number;
+  min_stock: number;
+  selling_price: number;
+  status: string;
+};
+type PaymentRow = {
+  id: string;
+  payment_no: string;
+  payment_date: string;
+  amount: number;
+  mode: string;
+  customer: CustomerRef;
+};
+
+
+
 type CustomerResult = {
   type: "customer";
   id: string;
@@ -136,7 +184,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, name, shop_name, mobile, outstanding, status")
         .ilike("name", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as CustomerResult[];
+      return (data ?? []) as CustomerRow[];
     },
   });
 
@@ -149,7 +197,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, order_no, order_date, total, status, customer:customers(name, shop_name)")
         .ilike("order_no", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as OrderResult[];
+      return (data ?? []) as OrderRow[];
     },
   });
 
@@ -162,7 +210,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, invoice_no, invoice_date, total, balance, status, customer:customers(name, shop_name)")
         .ilike("invoice_no", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as InvoiceResult[];
+      return (data ?? []) as InvoiceRow[];
     },
   });
 
@@ -175,7 +223,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, name, category, brand, current_stock, min_stock, selling_price, status")
         .ilike("name", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as ProductResult[];
+      return (data ?? []) as ProductRow[];
     },
   });
 
@@ -188,7 +236,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         .select("id, payment_no, payment_date, amount, mode, customer:customers(name, shop_name)")
         .ilike("payment_no", `%${debouncedQuery}%`)
         .limit(5);
-      return (data ?? []) as PaymentResult[];
+      return (data ?? []) as PaymentRow[];
     },
   });
 

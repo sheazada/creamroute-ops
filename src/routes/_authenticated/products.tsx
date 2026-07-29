@@ -29,7 +29,7 @@ function Products() {
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const qc = useQueryClient();
 
-  const { data } = useQuery({
+  const { data = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const { data } = await supabase.from("products").select("*").order("name");
