@@ -101,53 +101,8 @@ function AuthPage() {
     setLoading(false);
   };
 
-  const quickLogin = async (roleEmail: string) => {
-    setLoading(true);
-    try {
-      await doSignIn(roleEmail, DEMO_PASSWORD);
-      toast.success("Welcome back");
-      // Redirect retailer to retailer portal
-      if (roleEmail.includes("retailer")) {
-        navigate({ to: "/retailer", replace: true });
-      } else {
-        goPostAuth();
-      }
-    } catch {
-      try {
-        setSeeding(true);
-        await seed({ data: {} } as any);
-        setSeeding(false);
-        await doSignIn(roleEmail, DEMO_PASSWORD);
-        toast.success("Demo users seeded. Welcome back");
-        // Redirect retailer to retailer portal
-        if (roleEmail.includes("retailer")) {
-          navigate({ to: "/retailer", replace: true });
-        } else {
-          goPostAuth();
-        }
-      } catch (e: any) {
-        setSeeding(false);
-        toast.error(e?.message ?? "Quick login failed");
-      }
-    }
-    setLoading(false);
-  };
 
-  const seedNow = async () => {
-    setSeeding(true);
-    try {
-      const res: any = await seed({ data: {} } as any);
-      const summary = [
-        res.created?.length ? `${res.created.length} created` : null,
-        res.existing?.length ? `${res.existing.length} refreshed` : null,
-        res.linkedRetailers?.length ? `${res.linkedRetailers.length} retailers linked to customer records` : null,
-      ].filter(Boolean).join(", ");
-      toast.success(`Demo users ready${summary ? `: ${summary}` : ""}`);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Seed failed");
-    }
-    setSeeding(false);
-  };
+
 
   const signUp = async (e: React.FormEvent) => {
     e.preventDefault();
