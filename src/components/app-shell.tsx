@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { GlobalSearch, useGlobalSearchTrigger } from "@/components/global-search";
+import { NotificationManager } from "@/components/notification-manager";
 
 type Role = "admin" | "manager" | "salesperson" | "driver" | "helper";
 const ALL: Role[] = ["admin", "manager", "salesperson", "driver", "helper"];
@@ -89,8 +90,8 @@ const nav: {
     items: [
       { to: "/reports", label: "Reports", icon: BarChart3, roles: FIN },
       { to: "/expenses", label: "Expenses", icon: Receipt, roles: FIN },
+      { to: "/notifications", label: "Notifications", icon: Bell, roles: ALL },
       { to: "/payment-reminders", label: "Payment Reminders", icon: Bell, roles: FIN },
-      { to: "/notifications", label: "Notification Logs", icon: Share2, roles: FIN },
       { to: "/share-log", label: "Share Log", icon: Share2, roles: ["admin"] },
     ],
   },
@@ -342,6 +343,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex-1 md:hidden" />
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <NotificationManager className="hidden sm:flex mr-2" />
             <Button variant="ghost" size="icon" className="relative md:hidden" aria-label="Search" onClick={openSearch}>
               <Search className="size-4" />
             </Button>
