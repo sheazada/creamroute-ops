@@ -1298,6 +1298,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          data: Json
+          id: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           amount: number
@@ -1729,6 +1762,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       reminder_logs: {
         Row: {
@@ -2501,6 +2567,16 @@ export type Database = {
         Args: { p_delivery_cycle_id: string }
         Returns: string
       }
+      create_notification: {
+        Args: {
+          _body: string
+          _data?: Json
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
       enqueue_delivery_notifications: {
         Args: { _delivery_id: string }
         Returns: number
@@ -2556,6 +2632,10 @@ export type Database = {
           total_qty: number
           total_value: number
         }[]
+      }
+      get_unread_notification_count: {
+        Args: { _user_id: string }
+        Returns: number
       }
       has_reminder_been_sent: {
         Args: { _invoice_id: string; _template_id: string }
