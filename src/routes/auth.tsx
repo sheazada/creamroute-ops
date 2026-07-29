@@ -261,38 +261,8 @@ function AuthPage() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs font-semibold text-amber-900">Dev quick login</p>
-                <p className="text-[11px] text-amber-800/80">Instant sign-in for each role. Password: <code className="font-mono">{DEMO_PASSWORD}</code></p>
-              </div>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={seedNow} disabled={seeding || loading}>
-                {seeding && <Loader2 className="size-3 animate-spin mr-1" />}
-                Seed
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {DEMO_USERS.map((u) => {
-                const Icon = ROLE_ICONS[u.role] ?? Users;
-                return (
-                  <Button
-                    key={u.role}
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="h-9 justify-start gap-2 text-xs"
-                    disabled={loading || seeding}
-                    onClick={() => quickLogin(u.email)}
-                  >
-                    <Icon className="size-3.5" />
-                    <span className="capitalize">{u.role}</span>
-                  </Button>
-                );
-              })}
-            </div>
-            <p className="text-[10px] text-amber-800/70">For development only — remove before production. Retailer logs in redirect to the retailer portal.</p>
-          </div>
+
+
 
           <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">One login for everyone</p>
