@@ -46,7 +46,7 @@ function Invoices() {
 
   // CSV Export with GST breakdown
   const exportToCsv = () => {
-    const rows = data.map((inv) => ({
+    const rows = (data ?? []).map((inv) => ({
       "Invoice #": inv.invoice_no,
       "Customer": inv.customer?.shop_name ?? inv.customer?.name ?? "",
       "Date": shortDate(inv.invoice_date),
