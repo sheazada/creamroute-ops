@@ -195,7 +195,7 @@ function Reports() {
         </TabsContent>
 
         <TabsContent value="gst">
-          <GstSummary items={data?.items ?? []} invoices={data?.invoices ?? []} />
+          <GstSummary items={data?.items ?? []} invoices={data?.invoices ?? []} purchases={data?.purchases ?? []} pItems={data?.pItems ?? []} />
         </TabsContent>
 
         <TabsContent value="collections">
@@ -291,39 +291,287 @@ function ProfitReport({ kpi, from, to, expenses }: { kpi: any; from: string; to:
   );
 }
 
-function GstSummary({ items, invoices }: { items: any[]; invoices: any[] }) {
-  const byRate = new Map<number, { taxable: number; cgst: number; sgst: number; igst: number }>();
-  const byHsn = new Map<string, { taxable: number; tax: number; qty: number }>();
+function GstSummary({ items, invoices, purchases, pItems }: { items: any[]; invoices: any[]; purchases: any[]; pItems: any[] }) {
+  // GSTR-1: Outward supplies (Sales)
+  const salesByRate = new Map<number, { taxable: number; cgst: number; sgst: number; igst: number; count: number }>();
+  const salesByHsn = new Map<string, { taxable: number; tax: number; qty: number; hsn: string }>();
+  
   for (const it of items) {
     const rate = Number(it.gst_rate || 0);
     const taxable = Number(it.taxable || 0);
     const tax = Number(it.tax_amount || 0);
     const inter = Number(it.invoice?.igst || 0) > 0;
-    const cur = byRate.get(rate) ?? { taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+    const cur = salesByRate.get(rate) ?? { taxable: 0, cgst: 0, sgst: 0, igst: 0, count: 0 };
     cur.taxable += taxable;
     if (inter) cur.igst += tax; else { cur.cgst += tax / 2; cur.sgst += tax / 2; }
-    byRate.set(rate, cur);
+    cur.count++;
+    salesByRate.set(rate, cur);
+    
     const h = it.hsn || "—";
-    const hcur = byHsn.get(h) ?? { taxable: 0, tax: 0, qty: 0 };
+    const hcur = salesByHsn.get(h) ?? { taxable: 0, tax: 0, qty: 0, hsn: h };
     hcur.taxable += taxable; hcur.tax += tax; hcur.qty += Number(it.quantity || 0);
-    byHsn.set(h, hcur);
+    salesByHsn.set(h, hcur);
   }
-  const rateRows = Array.from(byRate.entries()).sort((a, b) => a[0] - b[0]);
-  const hsnRows = Array.from(byHsn.entries()).sort((a, b) => b[1].taxable - a[1].taxable);
-  const totalTaxable = invoices.reduce((s: number, r: any) => s + Number(r.subtotal), 0);
+  
+  // GSTR-2: Inward supplies (Purchases)
+  const purchaseByRate = new Map<number, { taxable: number; cgst: number; sgst: number; igst: number; count: number }>();
+  const purchaseByHsn = new Map<string, { taxable: number; tax: number; qty: number; hsn: string }>();
+  
+  for (const it of pItems) {
+    const rate = Number(it.gst_rate || 0);
+    const taxable = Number(it.rate) * Number(it.quantity);
+    const tax = taxable * (rate / 100);
+    const cur = purchaseByRate.get(rate) ?? { taxable: 0, cgst: 0, sgst: 0, igst: 0, count: 0 };
+    cur.taxable += taxable;
+    cur.cgst += tax / 2; cur.sgst += tax / 2; // Assuming intra-state for purchases
+    cur.count++;
+    purchaseByRate.set(rate, cur);
+    
+    const hsn = "—"; // Purchase items don't have HSN in current schema
+    const hcur = purchaseByHsn.get(hsn) ?? { taxable: 0, tax: 0, qty: 0, hsn: hsn };
+    hcur.taxable += taxable; hcur.tax += tax; hcur.qty += Number(it.quantity || 0);
+    purchaseByHsn.set(hsn, hcur);
+  }
+  
+  const salesRateRows = Array.from(salesByRate.entries()).sort((a, b) => a[0] - b[0]);
+  const salesHsnRows = Array.from(salesByHsn.entries()).sort((a, b) => b[1].taxable - a[1].taxable);
+  const purchaseRateRows = Array.from(purchaseByRate.entries()).sort((a, b) => a[0] - b[0]);
+  const purchaseHsnRows = Array.from(purchaseByHsn.entries()).sort((a, b) => b[1].taxable - a[1].taxable);
+  
+  const totalSalesTaxable = invoices.reduce((s: number, r: any) => s + Number(r.subtotal), 0);
+  const totalSalesTax = salesRateRows.reduce((s, [, v]) => s + v.cgst + v.sgst + v.igst, 0);
+  const totalPurchaseTaxable = purchases.reduce((s: number, r: any) => s + Number(r.subtotal), 0);
+  const totalPurchaseTax = purchaseRateRows.reduce((s, [, v]) => s + v.cgst + v.sgst + v.igst, 0);
+  const netTaxLiability = totalSalesTax - totalPurchaseTax;
+  
+  // Export GSTR-1 (Sales) to JSON
+  const exportGstr1Json = () => {
+    const gstr1Data = {
+      gstin: "YOUR_GSTIN",
+      fp: new Date().toISOString().slice(0, 7),
+      b2b: invoices
+        .filter((inv: any) => inv.customer?.gstin && Number(inv.total) > 0)
+        .map((inv: any) => ({
+          ctin: inv.customer.gstin,
+          inv: [{
+            inum: inv.invoice_no,
+            idt: inv.invoice_date,
+            val: Number(inv.total),
+            itms: [{
+              num: 1,
+              itm_det: {
+                txval: Number(inv.subtotal),
+                csamt: 0,
+                camt: Number(inv.cgst),
+                samt: Number(inv.sgst),
+                iamt: Number(inv.igst),
+              }
+            }]
+          }]
+        })),
+      b2cl: invoices
+        .filter((inv: any) => !inv.customer?.gstin && Number(inv.total) > 50000)
+        .map((inv: any) => ({
+          pos: "07",
+          inv: [{
+            inum: inv.invoice_no,
+            idt: inv.invoice_date,
+            val: Number(inv.total),
+            itms: [{
+              num: 1,
+              itm_det: {
+                txval: Number(inv.subtotal),
+                csamt: 0,
+                camt: Number(inv.cgst),
+                samt: Number(inv.sgst),
+                iamt: Number(inv.igst),
+              }
+            }]
+          }]
+        })),
+      hsn: salesHsnRows.map(([hsn, v]) => ({
+        num: hsn === "—" ? "" : hsn,
+        desc: "Goods",
+        uqc: "NOS",
+        qty: v.qty,
+        val: v.taxable,
+        txval: v.taxable,
+        camt: v.tax / 2,
+        samt: v.tax / 2,
+        iamt: 0,
+        csamt: 0,
+      }))
+    };
+    
+    const jsonStr = JSON.stringify(gstr1Data, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `GSTR1_${new Date().toISOString().slice(0, 7)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Export GSTR-2 (Purchases) to JSON
+  const exportGstr2Json = () => {
+    const gstr2Data = {
+      gstin: "YOUR_GSTIN",
+      fp: new Date().toISOString().slice(0, 7),
+      b2b: purchases
+        .filter((p: any) => (p as any).supplier?.gstin && Number(p.total) > 0)
+        .map((p: any) => ({
+          ctin: (p as any).supplier.gstin,
+          inv: [{
+            inum: p.bill_no || "—",
+            idt: p.purchase_date,
+            val: Number(p.total),
+            itms: [{
+              num: 1,
+              itm_det: {
+                txval: Number(p.subtotal),
+                csamt: 0,
+                camt: Number(p.gst) / 2,
+                samt: Number(p.gst) / 2,
+                iamt: 0,
+              }
+            }]
+          }]
+        })),
+      hsn: purchaseHsnRows.map(([hsn, v]) => ({
+        num: hsn === "—" ? "" : hsn,
+        desc: "Goods",
+        uqc: "NOS",
+        qty: v.qty,
+        val: v.taxable,
+        txval: v.taxable,
+        camt: v.tax / 2,
+        samt: v.tax / 2,
+        iamt: 0,
+        csamt: 0,
+      }))
+    };
+    
+    const jsonStr = JSON.stringify(gstr2Data, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `GSTR2_${new Date().toISOString().slice(0, 7)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Export Summary to CSV
+  const exportSummaryCsv = () => {
+    const rows = [
+      ["GST Summary Report", `Period: ${new Date().toISOString().slice(0, 7)}`],
+      [],
+      ["GSTR-1: Outward Supplies (Sales)"],
+      ["GST Rate", "Invoices", "Taxable Amount", "CGST", "SGST", "IGST", "Total Tax"],
+      ...salesRateRows.map(([rate, v]) => [`${rate}%`, String(v.count), v.taxable.toFixed(2), v.cgst.toFixed(2), v.sgst.toFixed(2), v.igst.toFixed(2), (v.cgst + v.sgst + v.igst).toFixed(2)]),
+      ["Total", "", totalSalesTaxable.toFixed(2), salesRateRows.reduce((s, [, v]) => s + v.cgst, 0).toFixed(2), salesRateRows.reduce((s, [, v]) => s + v.sgst, 0).toFixed(2), salesRateRows.reduce((s, [, v]) => s + v.igst, 0).toFixed(2), totalSalesTax.toFixed(2)],
+      [],
+      ["GSTR-2: Inward Supplies (Purchases)"],
+      ["GST Rate", "Invoices", "Taxable Amount", "CGST", "SGST", "IGST", "Total Tax"],
+      ...purchaseRateRows.map(([rate, v]) => [`${rate}%`, String(v.count), v.taxable.toFixed(2), v.cgst.toFixed(2), v.sgst.toFixed(2), v.igst.toFixed(2), (v.cgst + v.sgst + v.igst).toFixed(2)]),
+      ["Total", "", totalPurchaseTaxable.toFixed(2), purchaseRateRows.reduce((s, [, v]) => s + v.cgst, 0).toFixed(2), purchaseRateRows.reduce((s, [, v]) => s + v.sgst, 0).toFixed(2), purchaseRateRows.reduce((s, [, v]) => s + v.igst, 0).toFixed(2), totalPurchaseTax.toFixed(2)],
+      [],
+      ["Net Tax Liability", "", "", "", "", "", netTaxLiability.toFixed(2)],
+    ];
+    
+    const csv = rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `GST_Summary_${new Date().toISOString().slice(0, 7)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <ReportTable
-        headers={["GST %", "Taxable", "CGST", "SGST", "IGST", "Total Tax"]}
-        rows={rateRows.map(([rate, v]) => [`${rate}%`, inr(v.taxable), inr(v.cgst), inr(v.sgst), inr(v.igst), inr(v.cgst + v.sgst + v.igst)])}
-        title="Rate-wise summary"
-      />
-      <ReportTable
-        headers={["HSN", "Qty", "Taxable", "Tax"]}
-        rows={hsnRows.map(([h, v]) => [h, num(v.qty, 2), inr(v.taxable), inr(v.tax)])}
-        title="HSN summary"
-        totals={{ 2: inr(totalTaxable) }}
-      />
+    <div className="space-y-4">
+      {/* Export Buttons */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="font-semibold text-sm">GST Returns Export</div>
+            <div className="text-xs text-muted-foreground mt-0.5">Download JSON files for GST portal upload</div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={exportSummaryCsv} className="gap-1.5">
+              <Download className="size-4" /> Summary CSV
+            </Button>
+            <Button size="sm" onClick={exportGstr1Json} className="gap-1.5">
+              <Download className="size-4" /> GSTR-1 JSON
+            </Button>
+            <Button size="sm" onClick={exportGstr2Json} className="gap-1.5">
+              <Download className="size-4" /> GSTR-2 JSON
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sales Taxable</div>
+          <div className="text-xl font-bold font-mono mt-1">{inr(totalSalesTaxable)}</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sales Tax</div>
+          <div className="text-xl font-bold font-mono mt-1 text-destructive">{inr(totalSalesTax)}</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Purchase Tax (ITC)</div>
+          <div className="text-xl font-bold font-mono mt-1 text-success">{inr(totalPurchaseTax)}</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Net Tax Liability</div>
+          <div className={cn("text-xl font-bold font-mono mt-1", netTaxLiability >= 0 ? "text-destructive" : "text-success")}>
+            {inr(Math.abs(netTaxLiability))}
+          </div>
+        </Card>
+      </div>
+
+      {/* GSTR-1: Sales */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold">GSTR-1: Outward Supplies (Sales)</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ReportTable
+            headers={["GST %", "Invoices", "Taxable", "CGST", "SGST", "IGST", "Total Tax"]}
+            rows={salesRateRows.map(([rate, v]) => [`${rate}%`, String(v.count), inr(v.taxable), inr(v.cgst), inr(v.sgst), inr(v.igst), inr(v.cgst + v.sgst + v.igst)])}
+            title="Rate-wise"
+            totals={{ 2: inr(totalSalesTaxable), 3: inr(salesRateRows.reduce((s, [, v]) => s + v.cgst, 0)), 4: inr(salesRateRows.reduce((s, [, v]) => s + v.sgst, 0)), 5: inr(salesRateRows.reduce((s, [, v]) => s + v.igst, 0)), 6: inr(totalSalesTax) }}
+          />
+          <ReportTable
+            headers={["HSN Code", "Qty", "Taxable", "Tax Amount"]}
+            rows={salesHsnRows.map(([h, v]) => [h, num(v.qty, 2), inr(v.taxable), inr(v.tax)])}
+            title="HSN-wise"
+            totals={{ 1: num(salesHsnRows.reduce((s, [, v]) => s + v.qty, 0), 2), 2: inr(totalSalesTaxable), 3: inr(totalSalesTax) }}
+          />
+        </div>
+      </div>
+
+      {/* GSTR-2: Purchases */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold">GSTR-2: Inward Supplies (Purchases)</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ReportTable
+            headers={["GST %", "Invoices", "Taxable", "CGST", "SGST", "IGST", "Total Tax"]}
+            rows={purchaseRateRows.map(([rate, v]) => [`${rate}%`, String(v.count), inr(v.taxable), inr(v.cgst), inr(v.sgst), inr(v.igst), inr(v.cgst + v.sgst + v.igst)])}
+            title="Rate-wise"
+            totals={{ 2: inr(totalPurchaseTaxable), 3: inr(purchaseRateRows.reduce((s, [, v]) => s + v.cgst, 0)), 4: inr(purchaseRateRows.reduce((s, [, v]) => s + v.sgst, 0)), 5: inr(purchaseRateRows.reduce((s, [, v]) => s + v.igst, 0)), 6: inr(totalPurchaseTax) }}
+          />
+          <ReportTable
+            headers={["HSN Code", "Qty", "Taxable", "Tax Amount"]}
+            rows={purchaseHsnRows.map(([h, v]) => [h, num(v.qty, 2), inr(v.taxable), inr(v.tax)])}
+            title="HSN-wise"
+            totals={{ 1: num(purchaseHsnRows.reduce((s, [, v]) => s + v.qty, 0), 2), 2: inr(totalPurchaseTaxable), 3: inr(totalPurchaseTax) }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
