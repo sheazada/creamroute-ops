@@ -158,22 +158,26 @@ export async function initializeNotifications(): Promise<void> {
   }
 }
 
-// Save push subscription to server
+// Save push subscription to the backend
 export async function saveSubscriptionToServer(subscription: PushSubscription): Promise<void> {
   try {
-    // You'll need to create an API endpoint to handle this
-    // For now, we're just logging it
-    console.log("[Notifications] Subscription to save:", JSON.stringify(subscription));
-    
-    // Example: POST to your backend
-    // await fetch('/api/notifications/subscribe', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     endpoint: subscription.endpoint,
-    //     keys: subscription.toJSON().keys,
-    //   }),
-    // });
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes.user) return;
+
+    const keys = subscription.toJSON().keys;
+    if (!keys?.p256dh || !keys?.auth) return;
+
+    await supabase.from("push_subscriptions").upsert(
+      {
+        user_id: userRes.user.id,
+        endpoint: subscription.endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        user_agent: navigator.userAgent,
+      },
+      { onConflict: "endpoint" }
+    );
   } catch (error) {
     console.error("[Notifications] Failed to save subscription:", error);
   }
