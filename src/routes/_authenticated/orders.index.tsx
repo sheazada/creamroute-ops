@@ -151,10 +151,13 @@ function Orders() {
           await supabase.from("invoice_items").insert(
             items.map((i) => ({
               invoice_id: invoice.id,
+              product_id: i.product_id,
               product_name: i.product_name,
               quantity: i.quantity,
               rate: i.rate,
-              amount: i.amount,
+              taxable: Number(i.amount),
+              tax_amount: 0,
+              amount: Number(i.amount),
             }))
           );
         }

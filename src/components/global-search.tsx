@@ -50,6 +50,54 @@ import { cn } from "@/lib/utils";
 
 type SearchState = "idle" | "open" | "closed";
 
+/** Raw row shapes returned by the Supabase queries below. */
+type CustomerRow = {
+  id: string;
+  name: string;
+  shop_name: string | null;
+  mobile: string | null;
+  outstanding: number;
+  status: string;
+};
+type CustomerRef = { name: string; shop_name: string | null } | null;
+type OrderRow = {
+  id: string;
+  order_no: string;
+  order_date: string;
+  total: number;
+  status: string;
+  customer: CustomerRef;
+};
+type InvoiceRow = {
+  id: string;
+  invoice_no: string;
+  invoice_date: string;
+  total: number;
+  balance: number;
+  status: string;
+  customer: CustomerRef;
+};
+type ProductRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  brand: string | null;
+  current_stock: number;
+  min_stock: number;
+  selling_price: number;
+  status: string;
+};
+type PaymentRow = {
+  id: string;
+  payment_no: string;
+  payment_date: string;
+  amount: number;
+  mode: string;
+  customer: CustomerRef;
+};
+
+
+
 type CustomerResult = {
   type: "customer";
   id: string;
