@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole, SALES_ROLES } from "@/lib/authz";
 import { z } from "zod";
 
 const InputSchema = z.object({
