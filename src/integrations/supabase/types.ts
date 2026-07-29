@@ -2488,6 +2488,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_internal_staff: { Args: { _uid: string }; Returns: boolean }
       is_staff: { Args: { _uid: string }; Returns: boolean }
       link_customer_to_user: {
         Args: { _customer_id: string; _email: string }
