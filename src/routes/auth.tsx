@@ -33,8 +33,6 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [seeding, setSeeding] = useState(false);
-  const seed = useServerFn(seedDemoUsers);
 
   const goPostAuth = () => {
     const dest = safeNext(next);
