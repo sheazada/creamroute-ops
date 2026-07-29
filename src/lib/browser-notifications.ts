@@ -3,9 +3,9 @@
 
 import { toast } from "sonner";
 
-// VAPID public key (you'll need to generate your own for production)
-// For now, we're using a placeholder - replace with your actual VAPID public key
-const VAPID_PUBLIC_KEY = "YOUR_VAPID_PUBLIC_KEY";
+// VAPID public key (safe to expose; the private key is stored as a backend secret)
+const VAPID_PUBLIC_KEY =
+  "BFJlVxBxqlCPXZbxtHRrcdSw95lP_BBSrxBVy3bpvTxtVMrEOEoEKYzp9Ghtjnd7bRKXy33etMkQb2uG00Ndyso";
 
 // Check if browser supports push notifications
 export function isPushSupported(): boolean {
@@ -105,16 +105,17 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 }
 
 // Convert VAPID key from base64 to Uint8Array
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  
+  const buffer = new ArrayBuffer(rawData.length);
+  const outputArray = new Uint8Array(buffer);
+
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
-  
+
   return outputArray;
 }
 
@@ -125,7 +126,6 @@ export function showLocalNotification(title: string, body: string, icon?: string
       body,
       icon: icon || "/favicon.ico",
       badge: "/favicon.ico",
-      vibrate: [200, 100, 200],
     });
   }
 }
@@ -158,22 +158,26 @@ export async function initializeNotifications(): Promise<void> {
   }
 }
 
-// Save push subscription to server
+// Save push subscription to the backend
 export async function saveSubscriptionToServer(subscription: PushSubscription): Promise<void> {
   try {
-    // You'll need to create an API endpoint to handle this
-    // For now, we're just logging it
-    console.log("[Notifications] Subscription to save:", JSON.stringify(subscription));
-    
-    // Example: POST to your backend
-    // await fetch('/api/notifications/subscribe', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     endpoint: subscription.endpoint,
-    //     keys: subscription.toJSON().keys,
-    //   }),
-    // });
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes.user) return;
+
+    const keys = subscription.toJSON().keys;
+    if (!keys?.p256dh || !keys?.auth) return;
+
+    await supabase.from("push_subscriptions").upsert(
+      {
+        user_id: userRes.user.id,
+        endpoint: subscription.endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        user_agent: navigator.userAgent,
+      },
+      { onConflict: "endpoint" }
+    );
   } catch (error) {
     console.error("[Notifications] Failed to save subscription:", error);
   }
