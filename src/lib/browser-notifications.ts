@@ -3,9 +3,9 @@
 
 import { toast } from "sonner";
 
-// VAPID public key (you'll need to generate your own for production)
-// For now, we're using a placeholder - replace with your actual VAPID public key
-const VAPID_PUBLIC_KEY = "YOUR_VAPID_PUBLIC_KEY";
+// VAPID public key (safe to expose; the private key is stored as a backend secret)
+const VAPID_PUBLIC_KEY =
+  "BFJlVxBxqlCPXZbxtHRrcdSw95lP_BBSrxBVy3bpvTxtVMrEOEoEKYzp9Ghtjnd7bRKXy33etMkQb2uG00Ndyso";
 
 // Check if browser supports push notifications
 export function isPushSupported(): boolean {
