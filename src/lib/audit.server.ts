@@ -56,11 +56,16 @@ export const logAccessEvent = createServerFn({ method: "POST" })
     return { ok: !error };
   });
 
-// Fetch recent audit events (admin use).
+// Fetch recent audit events (admin only).
 export const fetchAccessAuditLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: { limit?: number; eventType?: string } | undefined) => data ?? {})
-  .handler(async ({ data }) => {
-    const limit = data.limit ?? 100;
+  .handler(async ({ data, context }) => {
+    // The table's RLS restricts SELECT to admins; the service-role client
+    // bypasses RLS, so enforce the same restriction explicitly here.
+    await requireRole(context.supabase, context.userId, ["admin"]);
+
+    const limit = Math.min(Math.max(data.limit ?? 100, 1), 500);
     let q = supabaseAdmin
       .from("access_audit_logs")
       .select("*")
@@ -75,3 +80,4 @@ export const fetchAccessAuditLog = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
