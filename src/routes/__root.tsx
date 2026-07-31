@@ -13,6 +13,11 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { SentryErrorBoundary } from "@/components/sentry-error-boundary";
+import { initSentryClient } from "@/lib/sentry-client";
+
+// Initialize Sentry client as early as possible
+initSentryClient();
 
 function NotFoundComponent() {
   return (
@@ -124,17 +129,45 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    // Lazy-import setUserContext / clearUserContext to avoid Sentry import in non-Sentry builds
+    const sentryPromise = import("@/lib/sentry").catch(() => ({ setUserContext: () => {}, clearUserContext: () => {} }));
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+
+      // Update Sentry user context on auth state change
+      const { setUserContext, clearUserContext } = await sentryPromise;
+      if (event === "SIGNED_OUT") {
+        clearUserContext();
+      } else if (session?.user) {
+        // Resolve role
+        let role = "unknown";
+        try {
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id);
+          role = (roles?.[0]?.role as string) ?? "unknown";
+        } catch {
+          // ignore
+        }
+        setUserContext({
+          id: session.user.id,
+          email: session.user.email,
+          role,
+        });
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <SentryErrorBoundary route="root">
+        <Outlet />
+      </SentryErrorBoundary>
       <Toaster position="top-right" richColors />
     </QueryClientProvider>
   );

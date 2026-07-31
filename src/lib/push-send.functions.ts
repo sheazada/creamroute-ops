@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { Json } from "@/integrations/supabase/types";
+import { withErrorCapture } from "./sentry-server";
 
 const pushPayloadSchema = z.object({
   userId: z.string().uuid(),
@@ -21,6 +22,7 @@ export const sendPushToUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => pushPayloadSchema.parse(i))
   .handler(async ({ data, context }) => {
+    return withErrorCapture({ userId: context.userId }, "sendPushToUser", async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // 1. Create notification record
@@ -129,6 +131,7 @@ export const sendPushToUser = createServerFn({ method: "POST" })
       notificationId: notification.id,
       errors: errors.length > 0 ? errors : undefined,
     };
+    });
   });
 
 const broadcastPayloadSchema = z.object({
