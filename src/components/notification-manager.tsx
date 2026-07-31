@@ -13,6 +13,8 @@ import {
 } from "@/lib/browser-notifications";
 import { getUnreadNotificationCount } from "@/lib/push-send.functions";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
@@ -27,11 +29,33 @@ export function NotificationManager({ className }: { className?: string }) {
   const navigate = useNavigate();
 
   // Fetch unread count from database
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setSignedIn(!!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSignedIn(!!session);
+    });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchUnread = useServerFn(getUnreadNotificationCount);
   const { data: unreadData } = useQuery({
     queryKey: ["unread-notification-count"],
+    enabled: signedIn,
+    retry: false,
     queryFn: async () => {
-      const result = await getUnreadNotificationCount({ data: undefined });
-      return result as { count: number };
+      try {
+        const result = await fetchUnread({ data: undefined });
+        return result as { count: number };
+      } catch {
+        return { count: 0 };
+      }
     },
     refetchInterval: 30_000, // Poll every 30 seconds
     staleTime: 15_000,
