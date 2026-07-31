@@ -19,6 +19,16 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const DEV_PASSWORD = "Demo@1234";
+const DEV_ACCOUNTS: { label: string; email: string }[] = [
+  { label: "Admin", email: "admin@demo.dairyflow.app" },
+  { label: "Manager", email: "manager@demo.dairyflow.app" },
+  { label: "Salesperson", email: "sales@demo.dairyflow.app" },
+  { label: "Driver", email: "driver@demo.dairyflow.app" },
+  { label: "Helper", email: "helper@demo.dairyflow.app" },
+  { label: "Retailer", email: "retailer@demo.dairyflow.app" },
+];
+
 function safeNext(next: string | undefined): string | null {
   if (!next) return null;
   // Only allow same-origin relative paths.
@@ -87,6 +97,18 @@ function AuthPage() {
       },
     }).catch(() => {});
     return data;
+  };
+
+  const quickLogin = async (devEmail: string) => {
+    setLoading(true);
+    try {
+      await doSignIn(devEmail, DEV_PASSWORD);
+      toast.success(`Signed in as ${devEmail}`);
+      goPostAuth();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Dev login failed. Create this account first.");
+    }
+    setLoading(false);
   };
 
   const signIn = async (e: React.FormEvent) => {
@@ -201,8 +223,28 @@ function AuthPage() {
             </TabsContent>
           </Tabs>
 
-
-
+          {import.meta.env.DEV && (
+            <div className="mt-4 rounded-lg border border-dashed p-3">
+              <p className="text-xs font-medium">Dev quick login <span className="text-muted-foreground font-normal">(local development only)</span></p>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {DEV_ACCOUNTS.map((a) => (
+                  <Button
+                    key={a.email}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={loading}
+                    onClick={() => quickLogin(a.email)}
+                  >
+                    {a.label}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Signs in with the shared dev password. Create these accounts once via Create account, then assign roles in Settings.
+              </p>
+            </div>
+          )}
 
           <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">One login for everyone</p>
