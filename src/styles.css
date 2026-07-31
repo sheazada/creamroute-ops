@@ -207,3 +207,91 @@
 }
 @media print { @page { size: A4; margin: 12mm; } }
 @media print { body.print-thermal { margin: 0; } }
+
+/* ── High Contrast Mode ─────────────────────────────────────────── */
+@media (forced-colors: active) {
+  :root {
+    --background: Canvas;
+    --foreground: CanvasText;
+    --primary: LinkText;
+    --primary-foreground: Canvas;
+    --destructive: Mark;
+    --destructive-foreground: Canvas;
+    --border: CanvasText;
+    --ring: LinkText;
+    --card: Canvas;
+    --card-foreground: CanvasText;
+    --muted: Canvas;
+    --muted-foreground: CanvasText;
+    --sidebar: Canvas;
+    --sidebar-foreground: CanvasText;
+  }
+
+  /* Force visible borders on all interactive elements */
+  button, [role="button"], a, input, select, textarea, [tabindex] {
+    border: 1px solid CanvasText !important;
+  }
+
+  /* Ensure icons are visible */
+  svg {
+    fill: CanvasText;
+    color: CanvasText;
+  }
+
+  /* Selection always visible */
+  ::selection {
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  /* Focus always has a visible outline */
+  *:focus-visible {
+    outline: 2px solid LinkText !important;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: oklch(0.4 0.03 260);
+    --ring: oklch(0.35 0.15 262);
+    --muted: oklch(0.93 0.005 260);
+    --muted-foreground: oklch(0.35 0.03 260);
+  }
+  .dark {
+    --border: oklch(0.6 0.03 260);
+    --ring: oklch(0.7 0.15 262);
+    --muted: oklch(0.28 0.02 260);
+    --muted-foreground: oklch(0.85 0.02 260);
+  }
+}
+
+/* ── Focus visible — keyboard-only focus ring ───────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Screen reader live region ──────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

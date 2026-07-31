@@ -588,17 +588,18 @@ function MarkDeliveredDialog({ shop, onClose, onSaved }: { shop: ShopOrder; onCl
                 <div className="text-xs text-muted-foreground">Ordered: {num(item.quantity, 1)}</div>
               </div>
               <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" className="size-7" onClick={() => setQty(item.id, qtys[item.id] - 1)}>
-                  <Minus className="size-3" />
+                <Button variant="outline" size="icon" className="size-7" onClick={() => setQty(item.id, qtys[item.id] - 1)} aria-label={`Decrease ${item.product_name}`}>
+                  <Minus className="size-3" aria-hidden />
                 </Button>
                 <Input
                   type="number"
                   value={qtys[item.id]}
                   onChange={(e) => setQty(item.id, Number(e.target.value))}
                   className="h-7 w-14 text-center font-mono"
+                  aria-label={`Quantity for ${item.product_name}`}
                 />
-                <Button variant="outline" size="icon" className="size-7" onClick={() => setQty(item.id, qtys[item.id] + 1)}>
-                  <Plus className="size-3" />
+                <Button variant="outline" size="icon" className="size-7" onClick={() => setQty(item.id, qtys[item.id] + 1)} aria-label={`Increase ${item.product_name}`}>
+                  <Plus className="size-3" aria-hidden />
                 </Button>
               </div>
             </div>

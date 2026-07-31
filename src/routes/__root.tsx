@@ -17,6 +17,7 @@ import { SentryErrorBoundary } from "@/components/sentry-error-boundary";
 import { initSentryClient } from "@/lib/sentry-client";
 import { ThemeProvider } from "@/lib/theme";
 import { SkipNav } from "@/components/skip-nav";
+import { A11yProvider } from "@/components/a11y-live-region";
 
 // Initialize Sentry client as early as possible
 initSentryClient();
@@ -187,12 +188,14 @@ function RootComponent() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="dairyflow-theme">
       <SkipNav />
-      <QueryClientProvider client={queryClient}>
-        <SentryErrorBoundary route="root">
-          <Outlet />
-        </SentryErrorBoundary>
-        <Toaster position="top-right" richColors />
-      </QueryClientProvider>
+      <A11yProvider>
+        <QueryClientProvider client={queryClient}>
+          <SentryErrorBoundary route="root">
+            <Outlet />
+          </SentryErrorBoundary>
+          <Toaster position="top-right" richColors />
+        </QueryClientProvider>
+      </A11yProvider>
     </ThemeProvider>
   );
 }

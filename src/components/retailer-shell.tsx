@@ -90,7 +90,7 @@ export function RetailerShell({ children }: { children: ReactNode }) {
               </div>
             </div>
           )}
-          <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
+          <Button variant="ghost" size="icon" onClick={signOut} title="Sign out" aria-label="Sign out">
             <LogOut className="size-4" />
           </Button>
         </div>

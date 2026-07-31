@@ -184,8 +184,9 @@ export function ReviseInvoiceDialog({
                               size="icon"
                               className="size-6"
                               onClick={() => updateItem(idx, "revised_qty", Math.max(0, item.revised_qty - 1))}
+                              aria-label={`Decrease ${item.product_name} quantity`}
                             >
-                              <Minus className="size-3" />
+                              <Minus className="size-3" aria-hidden />
                             </Button>
                             <Input
                               type="number"
@@ -193,14 +194,16 @@ export function ReviseInvoiceDialog({
                               value={item.revised_qty}
                               onChange={(e) => updateItem(idx, "revised_qty", e.target.value)}
                               className="h-7 w-16 text-center font-mono"
+                              aria-label={`Revised quantity for ${item.product_name}`}
                             />
                             <Button
                               variant="outline"
                               size="icon"
                               className="size-6"
                               onClick={() => updateItem(idx, "revised_qty", item.revised_qty + 1)}
+                              aria-label={`Increase ${item.product_name} quantity`}
                             >
-                              <Plus className="size-3" />
+                              <Plus className="size-3" aria-hidden />
                             </Button>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1 text-right">

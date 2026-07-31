@@ -140,7 +140,7 @@ function Customers() {
                 <ReminderActions customer={c} />
                 <CustomerNotificationsButton customer={c} />
                 <Link to="/customer-ledger/$id" params={{ id: c.id }}>
-                  <Button size="icon" variant="ghost" className="size-8" title="View ledger / passbook">
+                  <Button size="icon" variant="ghost" className="size-8" aria-label="View ledger / passbook" title="View ledger / passbook">
                     <BookOpen className="size-4" />
                   </Button>
                 </Link>
@@ -185,7 +185,7 @@ function Customers() {
                   <td className="px-6 py-3 text-right">
                     <div className="flex items-center gap-2 justify-end">
                       <Link to="/customer-ledger/$id" params={{ id: c.id }}>
-                        <Button size="icon" variant="ghost" className="size-8" title="View ledger / passbook">
+                        <Button size="icon" variant="ghost" className="size-8" aria-label="View ledger / passbook" title="View ledger / passbook">
                           <BookOpen className="size-4" />
                         </Button>
                       </Link>
@@ -245,9 +245,10 @@ function ReminderActions({ customer }: { customer: any }) {
       className="size-8"
       disabled={!enabled || disabled}
       title={disabled ? "No dues" : label}
+      aria-label={disabled ? `No dues for ${label}` : label}
       onClick={disabled ? undefined : () => { if (enabled) toast.success(`${label} opened`); }}
     >
-      {enabled ? <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"><Icon className="size-4" /></a> : <span><Icon className="size-4" /></span>}
+      {enabled ? <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"><Icon className="size-4" aria-hidden /></a> : <span><Icon className="size-4" aria-hidden /></span>}
     </Button>
   );
 
@@ -267,7 +268,7 @@ function EditCustomerButton({ customer }: { customer: any }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="size-8" title="Edit customer">
+        <Button size="icon" variant="ghost" className="size-8" aria-label="Edit customer" title="Edit customer">
           <Pencil className="size-4" />
         </Button>
       </DialogTrigger>
@@ -423,7 +424,7 @@ function CustomerNotificationsButton({ customer }: { customer: any }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="size-8" title="Notification history">
+        <Button size="icon" variant="ghost" className="size-8" aria-label="Notification history" title="Notification history">
           <Bell className="size-4" />
         </Button>
       </DialogTrigger>

@@ -402,7 +402,7 @@ function ChallanOcr() {
                       <td className="px-3 py-2"><Input type="number" className="h-8 text-right" value={l.rate} onChange={(e) => setLine(i, { ...l, rate: Number(e.target.value) })} /></td>
                       <td className="px-3 py-2"><Input type="number" className="h-8 text-right" value={l.gst_rate} onChange={(e) => setLine(i, { ...l, gst_rate: Number(e.target.value) })} /></td>
                       <td className="px-3 py-2 text-right font-mono">{inr(l.quantity * l.rate * (1 + l.gst_rate / 100))}</td>
-                      <td className="px-3 py-2"><Button variant="ghost" size="icon" onClick={() => rmLine(i)}><Trash2 className="size-3.5" /></Button></td>
+                      <td className="px-3 py-2"><Button variant="ghost" size="icon" onClick={() => rmLine(i)} aria-label="Remove line item"><Trash2 className="size-3.5" /></Button></td>
                     </tr>
                   ))}
                 </tbody>

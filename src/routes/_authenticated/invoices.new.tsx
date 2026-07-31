@@ -621,16 +621,12 @@ function NewInvoice() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="size-8 rounded-r-none"
-                              onClick={() =>
-                                updateLine(i, { quantity: Math.max(0, l.quantity - 1) })
-                              }
-                            >
-                              <Minus className="size-3" />
+                              aria-label="Decrease quantity">
+                              <Minus className="size-3" aria-hidden />
                             </Button>
                             <Input
                               type="number"
-                              value={l.quantity}
+                              aria-label="Quantity" value={l.quantity}
                               onChange={(e) => updateLine(i, { quantity: Number(e.target.value) })}
                               className="h-8 w-14 border-0 text-center px-1 focus-visible:ring-0"
                             />
@@ -640,8 +636,9 @@ function NewInvoice() {
                               size="icon"
                               className="size-8 rounded-l-none"
                               onClick={() => updateLine(i, { quantity: l.quantity + 1 })}
+                              aria-label="Increase quantity"
                             >
-                              <Plus className="size-3" />
+                              <Plus className="size-3" aria-hidden />
                             </Button>
                           </div>
                           <span className="text-xs text-muted-foreground">×</span>
@@ -712,16 +709,12 @@ function NewInvoice() {
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="size-7 rounded-r-none"
-                                  onClick={() =>
-                                    updateLine(i, { quantity: Math.max(0, l.quantity - 1) })
-                                  }
-                                >
-                                  <Minus className="size-3" />
+                                  aria-label="Decrease quantity">
+                                  <Minus className="size-3" aria-hidden />
                                 </Button>
                                 <Input
                                   type="number"
-                                  value={l.quantity}
+                                  aria-label="Quantity" value={l.quantity}
                                   onChange={(e) =>
                                     updateLine(i, { quantity: Number(e.target.value) })
                                   }
@@ -733,8 +726,9 @@ function NewInvoice() {
                                   size="icon"
                                   className="size-7 rounded-l-none"
                                   onClick={() => updateLine(i, { quantity: l.quantity + 1 })}
+                                  aria-label="Increase quantity"
                                 >
-                                  <Plus className="size-3" />
+                                  <Plus className="size-3" aria-hidden />
                                 </Button>
                               </div>
                             </td>
@@ -770,7 +764,7 @@ function NewInvoice() {
                               {inr(amount)}
                             </td>
                             <td className="px-3 py-2">
-                              <Button variant="ghost" size="icon" onClick={() => rmLine(i)}>
+                              <Button variant="ghost" size="icon" onClick={() => rmLine(i)} aria-label="Remove line item">
                                 <Trash2 className="size-3.5 text-destructive" />
                               </Button>
                             </td>

@@ -64,7 +64,7 @@ export function QuickStockAdjust({
       toast.warning(`Stock updated but movement log failed: ${moveErr.message}`);
     } else {
       toast.success(
-        `${direction === "in" ? "+" : "−"}${qty} ${unit} · New stock: ${newStock}`
+        `${direction === "in" ? "+" : "<span aria-hidden>−</span>"}${qty} ${unit} · New stock: ${newStock}`
       );
     }
 
@@ -165,7 +165,7 @@ export function QuickStockAdjust({
             disabled={saving || !quantity || Number(quantity) <= 0}
             className={direction === "in" ? "bg-success hover:bg-success/90" : "bg-destructive hover:bg-destructive/90"}
           >
-            {saving ? "Saving…" : direction === "in" ? `+${quantity || 0} ${unit}` : `−${quantity || 0} ${unit}`}
+            {saving ? "Saving…" : direction === "in" ? `+${quantity || 0} ${unit}` : `<span aria-hidden>−</span>${quantity || 0} ${unit}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -193,19 +193,19 @@ export function StockAdjustButtons({
           variant="ghost"
           size="icon"
           className="size-6 text-destructive hover:bg-destructive/10"
-          title="Reduce stock"
+          aria-label="Reduce stock" title="Reduce stock"
           onClick={() => setOpen(true)}
         >
-          −
+          <span aria-hidden>−</span>
         </Button>
         <Button
           variant="ghost"
           size="icon"
           className="size-6 text-success hover:bg-success/10"
-          title="Add stock"
+          aria-label="Add stock" title="Add stock"
           onClick={() => setOpen(true)}
         >
-          +
+          <span aria-hidden>+</span>
         </Button>
       </div>
       <QuickStockAdjust
