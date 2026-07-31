@@ -31,12 +31,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { ThemeMenuItems } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -285,6 +289,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       <DropdownMenuContent align="end" side="top" className="w-52">
         <DropdownMenuLabel>Account</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <span>Appearance</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-40">
+            <ThemeMenuItems onDismiss={() => {}} />
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuItem asChild>
           <Link to="/settings">Settings</Link>
         </DropdownMenuItem>
@@ -366,7 +378,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 min-w-0 pb-16 lg:pb-0">{children}</main>
+        <main id="main-content" className="flex-1 min-w-0 pb-16 lg:pb-0">{children}</main>
 
         {/* Global search command palette */}
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />

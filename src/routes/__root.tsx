@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { SentryErrorBoundary } from "@/components/sentry-error-boundary";
 import { initSentryClient } from "@/lib/sentry-client";
+import { ThemeProvider } from "@/lib/theme";
+import { SkipNav } from "@/components/skip-nav";
 
 // Initialize Sentry client as early as possible
 initSentryClient();
@@ -103,6 +105,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap",
       },
     ],
+    scripts: [
+      {
+        // Inline blocking script: apply <html class="dark"> BEFORE any paint
+        // to prevent flash of wrong theme on refresh.
+        type: "text/javascript",
+        innerHTML: `
+          (function() {
+            var STORAGE_KEY = "dairyflow-theme";
+            var stored = localStorage.getItem(STORAGE_KEY);
+            var theme = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+            var resolved = theme === "system"
+              ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+              : theme;
+            if (resolved === "dark") document.documentElement.classList.add("dark");
+            else document.documentElement.classList.remove("dark");
+          })();
+        `,
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -164,11 +185,14 @@ function RootComponent() {
   }, [router, queryClient]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SentryErrorBoundary route="root">
-        <Outlet />
-      </SentryErrorBoundary>
-      <Toaster position="top-right" richColors />
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="system" storageKey="dairyflow-theme">
+      <SkipNav />
+      <QueryClientProvider client={queryClient}>
+        <SentryErrorBoundary route="root">
+          <Outlet />
+        </SentryErrorBoundary>
+        <Toaster position="top-right" richColors />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
