@@ -19,6 +19,16 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const DEV_PASSWORD = "Demo@1234";
+const DEV_ACCOUNTS: { label: string; email: string }[] = [
+  { label: "Admin", email: "admin@dairyflow.dev" },
+  { label: "Manager", email: "manager@dairyflow.dev" },
+  { label: "Salesperson", email: "sales@dairyflow.dev" },
+  { label: "Driver", email: "driver@dairyflow.dev" },
+  { label: "Helper", email: "helper@dairyflow.dev" },
+  { label: "Retailer", email: "retailer@dairyflow.dev" },
+];
+
 function safeNext(next: string | undefined): string | null {
   if (!next) return null;
   // Only allow same-origin relative paths.
