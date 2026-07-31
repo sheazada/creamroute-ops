@@ -61,21 +61,21 @@ export type Database = {
           description: string | null
           id: string
           key: string
-          updated_at: string
+          updated_at: string | null
           value: string
         }
         Insert: {
           description?: string | null
           id?: string
           key: string
-          updated_at?: string
+          updated_at?: string | null
           value: string
         }
         Update: {
           description?: string | null
           id?: string
           key?: string
-          updated_at?: string
+          updated_at?: string | null
           value?: string
         }
         Relationships: []
@@ -1661,36 +1661,6 @@ export type Database = {
         }
         Relationships: []
       }
-      push_subscriptions: {
-        Row: {
-          auth: string
-          created_at: string
-          endpoint: string
-          id: string
-          p256dh: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          auth: string
-          created_at?: string
-          endpoint: string
-          id?: string
-          p256dh: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          auth?: string
-          created_at?: string
-          endpoint?: string
-          id?: string
-          p256dh?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       purchase_items: {
         Row: {
           amount: number
@@ -2652,6 +2622,7 @@ export type Database = {
         Returns: string
       }
       generate_recon_no: { Args: never; Returns: string }
+      get_app_setting: { Args: { _key: string }; Returns: string }
       get_crate_balance_as_of: {
         Args: { p_as_of_date?: string; p_crate_type_id?: string }
         Returns: {
@@ -2664,18 +2635,6 @@ export type Database = {
         }[]
       }
       get_customer_by_user_email: { Args: { _email: string }; Returns: string }
-      get_app_setting: { Args: { _key: string }; Returns: string }
-      get_unread_notification_count: { Args: { _user_id: string }; Returns: number }
-      send_notification: {
-        Args: {
-          _body: string
-          _data?: Json
-          _title: string
-          _type: string
-          _user_id: string
-        }
-        Returns: string
-      }
       get_near_expiry_stock: {
         Args: { _days?: number }
         Returns: {
@@ -2806,6 +2765,16 @@ export type Database = {
           _revision_reason: string
         }
         Returns: Json
+      }
+      send_notification: {
+        Args: {
+          _body: string
+          _data?: Json
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
