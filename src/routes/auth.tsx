@@ -99,6 +99,18 @@ function AuthPage() {
     return data;
   };
 
+  const quickLogin = async (devEmail: string) => {
+    setLoading(true);
+    try {
+      await doSignIn(devEmail, DEV_PASSWORD);
+      toast.success(`Signed in as ${devEmail}`);
+      goPostAuth();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Dev login failed. Create this account first.");
+    }
+    setLoading(false);
+  };
+
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
