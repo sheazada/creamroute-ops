@@ -56,6 +56,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       collection_allocations: {
         Row: {
           allocated_amount: number
@@ -2598,6 +2622,7 @@ export type Database = {
         Returns: string
       }
       generate_recon_no: { Args: never; Returns: string }
+      get_app_setting: { Args: { _key: string }; Returns: string }
       get_crate_balance_as_of: {
         Args: { p_as_of_date?: string; p_crate_type_id?: string }
         Returns: {
@@ -2740,6 +2765,16 @@ export type Database = {
           _revision_reason: string
         }
         Returns: Json
+      }
+      send_notification: {
+        Args: {
+          _body: string
+          _data?: Json
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
