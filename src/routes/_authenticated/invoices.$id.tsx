@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { amountInWords } from "@/lib/amount-in-words";
 import { getBusiness, qrImage, upiIntent } from "@/lib/business";
-import { buildInvoicePdf } from "@/lib/invoice-pdf";
+import { buildInvoicePdf, prefetchInvoicePdf } from "@/lib/invoice-pdf";
 
 export const Route = createFileRoute("/_authenticated/invoices/$id")({
   component: InvoiceView,
@@ -93,6 +93,11 @@ function InvoiceView() {
       );
     }
   }, [data?.items, editing]);
+
+  // Warm up PDF library so first download is instant (non-blocking)
+  useEffect(() => {
+    prefetchInvoicePdf();
+  }, []);
 
   if (!data?.invoice)
     return (
@@ -228,9 +233,9 @@ function InvoiceView() {
     setTimeout(() => document.body.classList.remove("print-thermal"), 500);
   };
 
-  const downloadPdf = () => {
+  const downloadPdf = async () => {
     try {
-      const blob = buildInvoicePdf(inv, data.items);
+      const blob = await buildInvoicePdf(inv, data.items);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

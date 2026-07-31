@@ -94,7 +94,7 @@ export function InvoiceShareMenu({
 
   const buildPdfFile = async (): Promise<File> => {
     const rows = items ?? (itemsLoader ? await itemsLoader() : []);
-    const blob = buildInvoicePdf(invoice, rows);
+    const blob = await buildInvoicePdf(invoice, rows);
     return new File([blob], `Invoice-${invoice.invoice_no}.pdf`, { type: "application/pdf" });
   };
 
@@ -179,7 +179,7 @@ export function InvoiceShareMenu({
     setBusy(true);
     try {
       const rows = items ?? (itemsLoader ? await itemsLoader() : []);
-      const blob = buildInvoicePdf(invoice, rows);
+      const blob = await buildInvoicePdf(invoice, rows);
       const u = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = u;

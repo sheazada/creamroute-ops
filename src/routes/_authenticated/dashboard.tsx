@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageContainer, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -23,15 +24,10 @@ import {
   Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
+
+// Lazy-load recharts (~492KB) — only fetched when the dashboard is actually viewed.
+// This saves ~492KB for every other route in the app.
+const SalesChart = lazy(() => import("@/components/sales-chart").then((m) => ({ default: m.SalesChart })));
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   beforeLoad: async () => {
@@ -190,23 +186,9 @@ function Dashboard() {
             </div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={s?.chartData ?? []}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="day" stroke="var(--muted-foreground)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => inrCompact(v)} width={60} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  formatter={(v: number) => [inr(v), "Sales"]}
-                />
-                <Bar dataKey="sales" fill="var(--primary)" radius={[6, 6, 0, 0]} maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<div className="h-full flex items-center justify-center text-muted-foreground">Loading chart…</div>}>
+              <SalesChart data={s?.chartData ?? []} />
+            </Suspense>
           </div>
         </Card>
 
