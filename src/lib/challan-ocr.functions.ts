@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole, SALES_ROLES } from "@/lib/authz";
 import { z } from "zod";
 
 const InputSchema = z.object({
@@ -63,7 +64,10 @@ Rules:
 export const extractChallan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
-  .handler(async ({ data }): Promise<ChallanExtraction> => {
+  .handler(async ({ data, context }): Promise<ChallanExtraction> => {
+    // Paid AI endpoint — staff only, never any signed-in account.
+    await requireRole(context.supabase, context.userId, SALES_ROLES);
+
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
