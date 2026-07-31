@@ -21,12 +21,12 @@ export const Route = createFileRoute("/auth")({
 
 const DEV_PASSWORD = "Demo@1234";
 const DEV_ACCOUNTS: { label: string; email: string }[] = [
-  { label: "Admin", email: "admin@dairyflow.dev" },
-  { label: "Manager", email: "manager@dairyflow.dev" },
-  { label: "Salesperson", email: "sales@dairyflow.dev" },
-  { label: "Driver", email: "driver@dairyflow.dev" },
-  { label: "Helper", email: "helper@dairyflow.dev" },
-  { label: "Retailer", email: "retailer@dairyflow.dev" },
+  { label: "Admin", email: "admin@demo.dairyflow.app" },
+  { label: "Manager", email: "manager@demo.dairyflow.app" },
+  { label: "Salesperson", email: "sales@demo.dairyflow.app" },
+  { label: "Driver", email: "driver@demo.dairyflow.app" },
+  { label: "Helper", email: "helper@demo.dairyflow.app" },
+  { label: "Retailer", email: "retailer@demo.dairyflow.app" },
 ];
 
 function safeNext(next: string | undefined): string | null {
