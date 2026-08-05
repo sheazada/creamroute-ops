@@ -91,10 +91,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "DairyFlow Pro — Distribution ERP" },
       {
         property: "og:description",
-        content: "Run your dairy distribution business end-to-end.",
+        content: "Modern ERP for dairy distributors — customers, inventory, GST invoicing, payments, deliveries and reports.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "DairyFlow Pro — Distribution ERP" },
+      { name: "twitter:description", content: "Modern ERP for dairy distributors — customers, inventory, GST invoicing, payments, deliveries and reports." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/020ad1fb-b87f-4f9f-975a-691f7d0ad2a8" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/020ad1fb-b87f-4f9f-975a-691f7d0ad2a8" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
