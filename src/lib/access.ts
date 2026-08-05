@@ -116,22 +116,40 @@ export function roleDescription(
   }
 }
 
+/** Default permissions per role (fallback view; DB is the source of truth). */
+export const DEFAULT_ROLE_PERMISSIONS: Record<StaffRole, string[]> = {
+  admin: [
+    "view_reports", "view_orders", "view_invoices", "view_payments",
+    "reconcile_payments", "view_deliveries", "manage_deliveries",
+    "view_products", "view_inventory", "view_customers", "view_ledger",
+    "view_audit_logs", "manage_roles", "manage_settings",
+  ],
+  manager: [
+    "view_reports", "view_orders", "view_invoices", "view_payments",
+    "reconcile_payments", "view_deliveries", "manage_deliveries",
+    "view_products", "view_inventory", "view_customers", "view_ledger",
+  ],
+  salesperson: [
+    "view_orders", "view_invoices", "view_customers", "view_products",
+    "view_ledger",
+  ],
+  driver: ["view_deliveries"],
+  helper: ["view_deliveries"],
+};
+
 /** Inverse map: role -> list of route prefixes they can access. */
 export const ROLE_ACCESS: Record<StaffRole | "retailer" | "retailer_user", string[]> =
   (() => {
     const result: Record<string, string[]> = {
-      admin: [],
-      manager: [],
-      salesperson: [],
-      driver: [],
-      helper: [],
       retailer: ["/retailer"],
       retailer_user: ["/retailer"],
     };
-    for (const entry of ROUTE_ACCESS) {
-      for (const role of entry.roles) {
-        result[role].push(entry.prefix);
-      }
+    for (const role of ALL) {
+      const perms = DEFAULT_ROLE_PERMISSIONS[role];
+      result[role] = ROUTE_ACCESS.filter((entry) =>
+        entry.permissions.some((p) => perms.includes(p))
+      ).map((entry) => entry.prefix);
     }
     return result as typeof result;
   })();
+
