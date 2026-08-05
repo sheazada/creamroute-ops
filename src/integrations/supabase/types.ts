@@ -2642,7 +2642,16 @@ export type Database = {
       can_manage_finance: { Args: { _uid: string }; Returns: boolean }
       can_manage_sales: { Args: { _uid: string }; Returns: boolean }
       get_account_status: { Args: { _user_id: string }; Returns: string }
+      get_permission_id: { Args: { _name: string }; Returns: string }
       get_retailer_code: { Args: { _user_id: string }; Returns: string }
+      get_user_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          permission_name: string
+          permission_label: string
+          category: string
+        }[]
+      }
       is_account_active: { Args: { _user_id: string }; Returns: boolean }
       create_demand_consolidation: {
         Args: { p_delivery_cycle_id: string }
@@ -2723,6 +2732,7 @@ export type Database = {
         Args: { _invoice_id: string; _template_id: string }
         Returns: boolean
       }
+      has_permission: { Args: { _user_id: string; _permission_name: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2730,6 +2740,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      role_has_permission: { Args: { _role: string; _permission_name: string }; Returns: boolean }
       is_internal_staff: { Args: { _uid: string }; Returns: boolean }
       is_staff: { Args: { _uid: string }; Returns: boolean }
       link_customer_to_user: {
