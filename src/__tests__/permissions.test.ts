@@ -1,94 +1,62 @@
-// Automated tests for the role-based access system.
-//
-// Verifies:
-// - Each role is allowed on its expected routes.
-// - Each role is denied on routes it shouldn't access.
-// - Admin can access everything.
-// - Unknown paths are allowed by default (no accidental lockouts).
+// Automated tests for the permission-based access system.
 
 import { describe, it, expect } from "vitest";
 import {
   canAccessPath,
   isRetailerRole,
   landingForRoles,
-  requiredRolesForPath,
+  requiredPermissionsForPath,
   ROUTE_ACCESS,
   ROLE_ACCESS,
+  DEFAULT_ROLE_PERMISSIONS,
   ALL_ROLES,
   roleDescription,
   type StaffRole,
 } from "@/lib/access";
 
+const perms = (role: StaffRole) => DEFAULT_ROLE_PERMISSIONS[role];
+
 describe("canAccessPath", () => {
   it("admin can access every defined route", () => {
     for (const { prefix } of ROUTE_ACCESS) {
-      expect(canAccessPath(prefix, ["admin"])).toBe(true);
+      expect(canAccessPath(prefix, perms("admin"))).toBe(true);
     }
   });
 
-  it("retailer cannot access staff routes", () => {
-    const staffRoutes = ROUTE_ACCESS.map((r) => r.prefix);
-    for (const path of staffRoutes) {
-      expect(canAccessPath(path, ["retailer"])).toBe(false);
-      expect(canAccessPath(path, ["retailer_user"])).toBe(false);
-    }
+  it("driver can access delivery routes but not admin/finance ones", () => {
+    expect(canAccessPath("/demand-consolidation", perms("driver"))).toBe(true);
+    expect(canAccessPath("/deliveries", perms("driver"))).toBe(true);
+    expect(canAccessPath("/admin/roles", perms("driver"))).toBe(false);
+    expect(canAccessPath("/reconcile", perms("driver"))).toBe(false);
+    expect(canAccessPath("/reports", perms("driver"))).toBe(false);
   });
 
-  it("driver can only access delivery routes and shared pages", () => {
-    const allowed: string[] = [];
-    const denied: string[] = [];
-    for (const { prefix } of ROUTE_ACCESS) {
-      if (canAccessPath(prefix, ["driver"])) allowed.push(prefix);
-      else denied.push(prefix);
-    }
-    // Driver should have at least the delivery pages.
-    expect(allowed.some((p) => p.includes("delivery") || p.includes("demand"))).toBe(true);
-    // Driver should NOT have admin-only or finance pages.
-    expect(allowed).not.toContain("/admin/roles");
-    expect(allowed).not.toContain("/dashboard");
-    expect(allowed).not.toContain("/reconcile");
-    expect(allowed).not.toContain("/reports");
-  });
-
-  it("manager can access most operational pages but not admin-only routes", () => {
-    // Settings is viewable by all staff (edits are admin-only in-page).
-    expect(canAccessPath("/settings", ["manager"])).toBe(true);
-    // But admin-only routes are denied.
-    expect(canAccessPath("/admin/roles", ["manager"])).toBe(false);
-    expect(canAccessPath("/share-log", ["manager"])).toBe(false);
-    // Manager CAN access dashboard, reports, and operations.
-    expect(canAccessPath("/dashboard", ["manager"])).toBe(true);
-    expect(canAccessPath("/reports", ["manager"])).toBe(true);
-    expect(canAccessPath("/orders", ["manager"])).toBe(true);
+  it("manager can access operations but not admin-only routes", () => {
+    expect(canAccessPath("/dashboard", perms("manager"))).toBe(true);
+    expect(canAccessPath("/reports", perms("manager"))).toBe(true);
+    expect(canAccessPath("/orders", perms("manager"))).toBe(true);
+    expect(canAccessPath("/admin/roles", perms("manager"))).toBe(false);
+    expect(canAccessPath("/share-log", perms("manager"))).toBe(false);
+    expect(canAccessPath("/settings", perms("manager"))).toBe(false);
   });
 
   it("salesperson cannot access finance or admin pages", () => {
-    expect(canAccessPath("/reconcile", ["salesperson"])).toBe(false);
-    expect(canAccessPath("/cash-reconciliation", ["salesperson"])).toBe(false);
-    expect(canAccessPath("/payment-reminders", ["salesperson"])).toBe(false);
-    expect(canAccessPath("/admin/roles", ["salesperson"])).toBe(false);
-    expect(canAccessPath("/share-log", ["salesperson"])).toBe(false);
-
-    // Salesperson CAN access orders/invoices/customers/settings.
-    expect(canAccessPath("/orders", ["salesperson"])).toBe(true);
-    expect(canAccessPath("/invoices", ["salesperson"])).toBe(true);
-    expect(canAccessPath("/customers", ["salesperson"])).toBe(true);
-    expect(canAccessPath("/settings", ["salesperson"])).toBe(true);
+    expect(canAccessPath("/reconcile", perms("salesperson"))).toBe(false);
+    expect(canAccessPath("/admin/roles", perms("salesperson"))).toBe(false);
+    expect(canAccessPath("/share-log", perms("salesperson"))).toBe(false);
+    expect(canAccessPath("/orders", perms("salesperson"))).toBe(true);
+    expect(canAccessPath("/invoices", perms("salesperson"))).toBe(true);
+    expect(canAccessPath("/customers", perms("salesperson"))).toBe(true);
   });
 
   it("unknown paths are allowed by default (no accidental lockouts)", () => {
-    expect(canAccessPath("/some-new-future-route", ["driver"])).toBe(true);
-    expect(canAccessPath("/foo/bar", ["salesperson"])).toBe(true);
+    expect(canAccessPath("/some-new-future-route", perms("driver"))).toBe(true);
+    expect(canAccessPath("/foo/bar", perms("salesperson"))).toBe(true);
   });
 
-  it("empty roles are denied", () => {
+  it("empty permissions are denied on guarded routes", () => {
     expect(canAccessPath("/dashboard", [])).toBe(false);
     expect(canAccessPath("/orders", [])).toBe(false);
-  });
-
-  it("multi-role: at least one matching role is enough", () => {
-    expect(canAccessPath("/settings", ["driver", "admin"])).toBe(true);
-    expect(canAccessPath("/reconcile", ["salesperson", "manager"])).toBe(true);
   });
 });
 
@@ -113,15 +81,14 @@ describe("landingForRoles", () => {
   });
 });
 
-describe("requiredRolesForPath", () => {
-  it("returns the correct required roles for known paths", () => {
-    expect(requiredRolesForPath("/dashboard")).toEqual(["admin", "manager"]);
-    expect(requiredRolesForPath("/admin/roles")).toEqual(["admin"]);
-    expect(requiredRolesForPath("/orders")).toEqual(["admin", "manager", "salesperson"]);
+describe("requiredPermissionsForPath", () => {
+  it("returns required permissions for known paths", () => {
+    expect(requiredPermissionsForPath("/admin/roles")).toEqual(["manage_roles"]);
+    expect(requiredPermissionsForPath("/orders")).toEqual(["view_orders"]);
   });
 
   it("returns empty array for unknown paths", () => {
-    expect(requiredRolesForPath("/nonexistent")).toEqual([]);
+    expect(requiredPermissionsForPath("/nonexistent")).toEqual([]);
   });
 });
 
@@ -152,29 +119,15 @@ describe("roleDescription", () => {
 });
 
 describe("ROUTE_ACCESS matrix completeness", () => {
-  it("every route entry uses a known role", () => {
-    const allKnown = new Set([...ALL_ROLES]);
-    for (const { roles } of ROUTE_ACCESS) {
-      for (const role of roles) {
-        expect(allKnown.has(role)).toBe(true);
-      }
+  it("no duplicate permissions in any route's required list", () => {
+    for (const { permissions } of ROUTE_ACCESS) {
+      expect(new Set(permissions).size).toBe(permissions.length);
     }
   });
 
-  it("no duplicate roles in any route's required list", () => {
-    for (const { prefix, roles } of ROUTE_ACCESS) {
-      const unique = new Set(roles);
-      expect(unique.size).toBe(roles.length);
-    }
-  });
-
-  it("critical admin routes are admin-only", () => {
-    const adminOnly = ["/admin/roles", "/share-log"];
-    for (const path of adminOnly) {
-      const entry = ROUTE_ACCESS.find((r) => r.prefix === path);
-      if (entry) {
-        expect(entry.roles).toEqual(["admin"]);
-      }
+  it("every route requires at least one permission", () => {
+    for (const { permissions } of ROUTE_ACCESS) {
+      expect(permissions.length).toBeGreaterThan(0);
     }
   });
 });

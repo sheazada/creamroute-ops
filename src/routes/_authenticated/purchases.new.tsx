@@ -76,7 +76,7 @@ function NewPurchase() {
         }));
 
       if (stockUpdates.length > 0) {
-        await supabase.from("products").upsert(stockUpdates);
+        await supabase.from("products").upsert(stockUpdates as never);
       }
       if (movements.length > 0) {
         await supabase.from("inventory_movements").insert(movements);
