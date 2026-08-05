@@ -21,7 +21,18 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth", search: { next: undefined } });
 
-    // 2. Resolve roles.
+    // 2. Check account status (blocks inactive/suspended/blocked accounts)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("account_status")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if ((profile?.account_status ?? "active") !== "active") {
+      await supabase.auth.signOut();
+      throw redirect({ to: "/auth" });
+    }
+
+    // 3. Resolve roles.
     const { data: roleRows } = await supabase
       .from("user_roles")
       .select("role")

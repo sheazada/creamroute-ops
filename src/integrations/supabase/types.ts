@@ -237,6 +237,7 @@ export type Database = {
           assigned_route_id: string | null
           created_at: string
           credit_limit: number
+          distributor_id: string | null
           email: string | null
           gstin: string | null
           id: string
@@ -262,6 +263,7 @@ export type Database = {
           assigned_route_id?: string | null
           created_at?: string
           credit_limit?: number
+          distributor_id?: string | null
           email?: string | null
           gstin?: string | null
           id?: string
@@ -287,6 +289,7 @@ export type Database = {
           assigned_route_id?: string | null
           created_at?: string
           credit_limit?: number
+          distributor_id?: string | null
           email?: string | null
           gstin?: string | null
           id?: string
@@ -409,6 +412,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      distributors: {
+        Row: {
+          address: string | null
+          business_name: string
+          created_at: string
+          email: string | null
+          fssai: string | null
+          gstin: string | null
+          id: string
+          legal_name: string | null
+          mobile: string | null
+          pan: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_name: string
+          created_at?: string
+          email?: string | null
+          fssai?: string | null
+          gstin?: string | null
+          id?: string
+          legal_name?: string | null
+          mobile?: string | null
+          pan?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_name?: string
+          created_at?: string
+          email?: string | null
+          fssai?: string | null
+          gstin?: string | null
+          id?: string
+          legal_name?: string | null
+          mobile?: string | null
+          pan?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       delivery_cycles: {
         Row: {
@@ -1636,7 +1684,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string
           created_at: string
+          distributor_id: string | null
           email: string | null
           full_name: string | null
           id: string
@@ -1644,7 +1694,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_status?: string
           created_at?: string
+          distributor_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -1652,7 +1704,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_status?: string
           created_at?: string
+          distributor_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -2587,6 +2641,9 @@ export type Database = {
       }
       can_manage_finance: { Args: { _uid: string }; Returns: boolean }
       can_manage_sales: { Args: { _uid: string }; Returns: boolean }
+      get_account_status: { Args: { _user_id: string }; Returns: string }
+      get_retailer_code: { Args: { _user_id: string }; Returns: string }
+      is_account_active: { Args: { _user_id: string }; Returns: boolean }
       create_demand_consolidation: {
         Args: { p_delivery_cycle_id: string }
         Returns: string

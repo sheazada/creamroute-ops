@@ -74,6 +74,28 @@ function AuthPage() {
       }).catch(() => {});
       throw error;
     }
+
+    // Check account status before allowing login
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("account_status, full_name")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    const status = profile?.account_status ?? "active";
+    if (status !== "active") {
+      // Sign out immediately
+      await supabase.auth.signOut();
+
+      const reasonMap: Record<string, string> = {
+        inactive: "This account is no longer active. Contact your administrator.",
+        suspended: "This account has been temporarily suspended. Contact your administrator.",
+        blocked: "This account has been blocked due to policy violations.",
+        pending: "This account is pending activation. Please verify your details first.",
+      };
+      throw new Error(reasonMap[status] ?? "This account cannot be accessed.");
+    }
+
     // Success — log with resolved roles.
     const roles = await (async () => {
       try {
@@ -94,6 +116,7 @@ function AuthPage() {
         userRoles: roles,
         requiredRoles: [],
         routePath: "/auth",
+        reason: null,
       },
     }).catch(() => {});
     return data;
