@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import {
   ALL_ROLES,
   roleDescription,
-  ROUTE_ACCESS,
+  ROLE_ACCESS,
   type StaffRole,
 } from "@/lib/access";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -250,10 +250,9 @@ function RolesManagement() {
         <TabsContent value="roles" className="mt-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {ALL_ROLES.map((role) => {
-              // ROUTE_ACCESS is an array of { prefix, roles } — filter by role membership.
-              const allowedRoutes = ROUTE_ACCESS.filter((entry) =>
-                entry.roles.includes(role),
-              ).map((entry) => entry.prefix);
+              // ROLE_ACCESS maps a role to its allowed route prefixes.
+              const allowedRoutes = ROLE_ACCESS[role] ?? [];
+
               return (
                 <Card key={role} className="p-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -272,7 +271,7 @@ function RolesManagement() {
                         No routes assigned
                       </span>
                     )}
-                    {allowedRoutes.map((path) => (
+                    {allowedRoutes.map((path: string) => (
                       <Badge key={path} variant="outline" className="text-[10px] font-mono">
                         {path}
                       </Badge>

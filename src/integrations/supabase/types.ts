@@ -16,10 +16,17 @@ export type Database = {
     Tables: {
       access_audit_logs: {
         Row: {
+          browser: string | null
           created_at: string
+          device_model: string | null
+          device_type: string | null
           event_type: string
+          failure_reason: string | null
           id: string
           ip_address: string | null
+          is_new_device: boolean | null
+          login_status: string | null
+          os: string | null
           reason: string | null
           required_roles: string[] | null
           route_path: string | null
@@ -29,10 +36,17 @@ export type Database = {
           user_roles: string[] | null
         }
         Insert: {
+          browser?: string | null
           created_at?: string
+          device_model?: string | null
+          device_type?: string | null
           event_type: string
+          failure_reason?: string | null
           id?: string
           ip_address?: string | null
+          is_new_device?: boolean | null
+          login_status?: string | null
+          os?: string | null
           reason?: string | null
           required_roles?: string[] | null
           route_path?: string | null
@@ -42,10 +56,17 @@ export type Database = {
           user_roles?: string[] | null
         }
         Update: {
+          browser?: string | null
           created_at?: string
+          device_model?: string | null
+          device_type?: string | null
           event_type?: string
+          failure_reason?: string | null
           id?: string
           ip_address?: string | null
+          is_new_device?: boolean | null
+          login_status?: string | null
+          os?: string | null
           reason?: string | null
           required_roles?: string[] | null
           route_path?: string | null
@@ -413,51 +434,6 @@ export type Database = {
           },
         ]
       }
-      distributors: {
-        Row: {
-          address: string | null
-          business_name: string
-          created_at: string
-          email: string | null
-          fssai: string | null
-          gstin: string | null
-          id: string
-          legal_name: string | null
-          mobile: string | null
-          pan: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          business_name: string
-          created_at?: string
-          email?: string | null
-          fssai?: string | null
-          gstin?: string | null
-          id?: string
-          legal_name?: string | null
-          mobile?: string | null
-          pan?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          business_name?: string
-          created_at?: string
-          email?: string | null
-          fssai?: string | null
-          gstin?: string | null
-          id?: string
-          legal_name?: string | null
-          mobile?: string | null
-          pan?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       delivery_cycles: {
         Row: {
           created_at: string
@@ -725,6 +701,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      distributors: {
+        Row: {
+          address: string | null
+          business_name: string
+          created_at: string
+          email: string | null
+          fssai: string | null
+          gstin: string | null
+          id: string
+          legal_name: string | null
+          mobile: string | null
+          pan: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_name: string
+          created_at?: string
+          email?: string | null
+          fssai?: string | null
+          gstin?: string | null
+          id?: string
+          legal_name?: string | null
+          mobile?: string | null
+          pan?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_name?: string
+          created_at?: string
+          email?: string | null
+          fssai?: string | null
+          gstin?: string | null
+          id?: string
+          legal_name?: string | null
+          mobile?: string | null
+          pan?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       driver_collections: {
         Row: {
@@ -1549,6 +1570,33 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          name: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          name?: string
+        }
+        Relationships: []
+      }
       product_batches: {
         Row: {
           available_qty: number | null
@@ -2021,6 +2069,35 @@ export type Database = {
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
             referencedColumns: ["id"]
           },
         ]
@@ -2688,6 +2765,7 @@ export type Database = {
         Returns: string
       }
       generate_recon_no: { Args: never; Returns: string }
+      get_account_status: { Args: { _user_id: string }; Returns: string }
       get_app_setting: { Args: { _key: string }; Returns: string }
       get_crate_balance_as_of: {
         Args: { p_as_of_date?: string; p_crate_type_id?: string }
@@ -2712,6 +2790,7 @@ export type Database = {
         }[]
       }
       get_next_revision_no: { Args: { _invoice_id: string }; Returns: number }
+      get_retailer_code: { Args: { _user_id: string }; Returns: string }
       get_stock_valuation: {
         Args: never
         Returns: {
@@ -2728,6 +2807,17 @@ export type Database = {
         Args: { _user_id: string }
         Returns: number
       }
+      get_user_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          category: string
+          permission_name: string
+        }[]
+      }
+      has_permission: {
+        Args: { _permission_name: string; _user_id: string }
+        Returns: boolean
+      }
       has_reminder_been_sent: {
         Args: { _invoice_id: string; _template_id: string }
         Returns: boolean
@@ -2741,6 +2831,8 @@ export type Database = {
         Returns: boolean
       }
       role_has_permission: { Args: { _role: string; _permission_name: string }; Returns: boolean }
+      is_account_active: { Args: { _user_id: string }; Returns: boolean }
+      has_permission: { Args: { _user_id: string; _permission_name: string }; Returns: boolean }
       is_internal_staff: { Args: { _uid: string }; Returns: boolean }
       is_staff: { Args: { _uid: string }; Returns: boolean }
       link_customer_to_user: {

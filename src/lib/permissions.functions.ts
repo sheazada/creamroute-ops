@@ -21,7 +21,11 @@ export const getUserPermissions = createServerFn({ method: "GET" })
       return { permissions: [] };
     }
 
-    return { permissions: (permissions ?? []) as Permission[] };
+    return {
+      permissions: ((permissions ?? []) as { permission_name: string; category: string }[]).map(
+        (p) => p.permission_name
+      ),
+    };
   });
 
 /**
@@ -76,7 +80,7 @@ export const getRolePermissions = createServerFn({ method: "POST" })
     const { data: rolePerms, error } = await supabaseAdmin
       .from("role_permissions")
       .select("id, role, permission_id, permissions:permission_id(id, name, label, description, category)")
-      .eq("role", data.role);
+      .eq("role", data.role as never);
 
     if (error) {
       console.error("[Permissions] Failed to get role permissions:", error);
@@ -122,7 +126,7 @@ export const updateRolePermissions = createServerFn({ method: "POST" })
     const { error: deleteError } = await supabaseAdmin
       .from("role_permissions")
       .delete()
-      .eq("role", data.role);
+      .eq("role", data.role as never);
 
     if (deleteError) {
       console.error("[Permissions] Failed to delete old permissions:", deleteError);
@@ -137,7 +141,7 @@ export const updateRolePermissions = createServerFn({ method: "POST" })
           data.permissionIds.map((permissionId) => ({
             role: data.role,
             permission_id: permissionId
-          }))
+          })) as never
         );
 
       if (insertError) {
