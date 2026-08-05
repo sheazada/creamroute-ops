@@ -113,25 +113,38 @@ function InvoiceView() {
   const saveEdits = async () => {
     setSaving(true);
     try {
-      for (const row of draft) {
-        if (row._deleted) {
-          await supabase.from("invoice_items").delete().eq("id", row.id);
-          continue;
-        }
+      // Batch delete deleted items (instead of N+1)
+      const deletedItems = draft.filter((r) => r._deleted);
+      if (deletedItems.length > 0) {
+        const deletedIds = deletedItems.map((r) => r.id);
+        await supabase.from("invoice_items").delete().in("id", deletedIds);
+      }
+
+      // Batch update modified items
+      const updatedItems = draft.filter((r) => !r._deleted);
+      const itemUpdates = updatedItems.map((row) => {
         const taxable = row.quantity * row.rate - row.discount;
         const tax_amount = (taxable * row.gst_rate) / 100;
-        await supabase
-          .from("invoice_items")
-          .update({
-            quantity: row.quantity,
-            rate: row.rate,
-            discount: row.discount,
-            taxable,
-            tax_amount,
-            amount: taxable + tax_amount,
-          })
-          .eq("id", row.id);
+        return {
+          id: row.id,
+          quantity: row.quantity,
+          rate: row.rate,
+          discount: row.discount,
+          taxable,
+          tax_amount,
+          amount: taxable + tax_amount,
+        };
+      });
 
+      if (itemUpdates.length > 0) {
+        await supabase.from("invoice_items").upsert(itemUpdates);
+      }
+
+      // Handle stock adjustments for changed quantities
+      const stockMovements: any[] = [];
+      const productUpdates: any[] = [];
+
+      for (const row of updatedItems) {
         const original = (data.items ?? []).find((it: any) => it.id === row.id);
         if (original && row.product_id) {
           const delta = row.quantity - Number(original.quantity);
@@ -142,11 +155,10 @@ function InvoiceView() {
               .eq("id", row.product_id)
               .single();
             if (p) {
-              await supabase
-                .from("products")
-                .update({ current_stock: Number(p.current_stock) - delta })
-                .eq("id", row.product_id);
-              await supabase.from("inventory_movements").insert({
+              const newStock = Number(p.current_stock) - delta;
+              productUpdates.push({ id: row.product_id, current_stock: newStock });
+
+              stockMovements.push({
                 product_id: row.product_id,
                 movement_type: delta > 0 ? "out" : "in",
                 quantity: Math.abs(delta),
@@ -158,6 +170,17 @@ function InvoiceView() {
           }
         }
       }
+
+      // Batch product updates
+      if (productUpdates.length > 0) {
+        await supabase.from("products").upsert(productUpdates);
+      }
+
+      // Batch inventory movements
+      if (stockMovements.length > 0) {
+        await supabase.from("inventory_movements").insert(stockMovements);
+      }
+
       toast.success("Invoice updated — balances recalculated");
       setEditing(false);
       await qc.invalidateQueries({ queryKey: ["invoice", id] });
@@ -172,6 +195,10 @@ function InvoiceView() {
 
   const voidInvoice = async () => {
     try {
+      // Batch stock restoration (instead of N+1)
+      const stockMovements: any[] = [];
+      const productUpdates: any[] = [];
+
       for (const it of data.items) {
         if (!it.product_id) continue;
         const { data: p } = await supabase
@@ -180,11 +207,10 @@ function InvoiceView() {
           .eq("id", it.product_id)
           .single();
         if (p) {
-          await supabase
-            .from("products")
-            .update({ current_stock: Number(p.current_stock) + Number(it.quantity) })
-            .eq("id", it.product_id);
-          await supabase.from("inventory_movements").insert({
+          const newStock = Number(p.current_stock) + Number(it.quantity);
+          productUpdates.push({ id: it.product_id, current_stock: newStock });
+
+          stockMovements.push({
             product_id: it.product_id,
             movement_type: "in",
             quantity: Number(it.quantity),
@@ -194,6 +220,17 @@ function InvoiceView() {
           });
         }
       }
+
+      // Batch product updates
+      if (productUpdates.length > 0) {
+        await supabase.from("products").upsert(productUpdates);
+      }
+
+      // Batch inventory movements
+      if (stockMovements.length > 0) {
+        await supabase.from("inventory_movements").insert(stockMovements);
+      }
+
       const { error } = await supabase
         .from("invoices")
         .update({ status: "void" })
