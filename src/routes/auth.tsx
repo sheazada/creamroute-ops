@@ -56,49 +56,97 @@ function LoginPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          email: data.email,
-          mobile: data.mobile,
-          password: data.password,
-          ip_address: "client-side",
-          user_agent: navigator.userAgent,
-        }),
-      });
+      // Find user by email or mobile
+      let query = supabase.from("users").select("*");
+      
+      if (data.email) {
+        query = query.eq("email", data.email);
+      } else if (data.mobile) {
+        query = query.eq("mobile", data.mobile);
+      }
 
-      const result = await response.json();
+      const { data: users, error: queryError } = await query.single();
 
-      if (!response.ok) {
-        setError(result.error || "Login failed");
-        toast.error(result.error || "Login failed");
+      if (queryError || !users) {
+        setError("Invalid credentials");
+        toast.error("Invalid credentials");
+        setIsLoading(false);
         return;
       }
 
-      // Store user data in localStorage
-      localStorage.setItem("creamroute_user", JSON.stringify(result.user));
-      localStorage.setItem("creamroute_distributor", JSON.stringify(result.distributor));
-      localStorage.setItem("creamroute_permissions", JSON.stringify(result.user.permissions));
+      const user = users;
 
-      toast.success(`Welcome back, ${result.user.full_name}!`);
+      // Check account status
+      if (user.status !== "active") {
+        const messages: Record<string, string> = {
+          pending_verification: "Please verify your email first",
+          inactive: "Your account is inactive. Contact your administrator.",
+          suspended: "Your account is suspended.",
+          blocked: "Your account is blocked.",
+        };
+        setError(messages[user.status] ?? "Account is not active");
+        toast.error(messages[user.status] ?? "Account is not active");
+        setIsLoading(false);
+        return;
+      }
+
+      // Sign in via Supabase Auth
+      // We use the email as the auth identifier with a known password pattern
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email || `${user.id}@creamroute.local`,
+        password: data.password,
+      });
+
+      if (authError) {
+        setError("Invalid credentials");
+        toast.error("Invalid credentials");
+        setIsLoading(false);
+        return;
+      }
+
+      // Get user permissions
+      const { data: permissionsData } = await supabase.rpc("get_user_permissions", {
+        _user_id: user.id,
+      });
+
+      const userPermissions = (permissionsData ?? []).map((p: any) => ({
+        name: p.permission_name,
+        label: p.permission_label,
+        category: p.category,
+      }));
+
+      // Store user data
+      localStorage.setItem("creamroute_user", JSON.stringify({
+        ...user,
+        id: authData.user?.id ?? user.id,
+        permissions: userPermissions,
+      }));
+
+      // Get distributor
+      const { data: distributor } = await supabase
+        .from("distributors")
+        .select("*")
+        .eq("id", user.distributor_id)
+        .single();
+
+      if (distributor) {
+        localStorage.setItem("creamroute_distributor", JSON.stringify(distributor));
+      }
+
+      toast.success(`Welcome back, ${user.full_name}!`);
 
       // Navigate to role-based dashboard
       const roleDashboards: Record<string, string> = {
         distributor: "/dashboard",
         manager: "/dashboard",
-        accountant: "/ledger",
+        accountant: "/dashboard",
         warehouse: "/inventory",
         salesman: "/orders",
         delivery_boy: "/deliveries",
         retailer: "/retailer/orders",
       };
 
-      const dashboard = roleDashboards[result.user.role] || "/dashboard";
+      const dashboard = roleDashboards[user.role] || "/dashboard";
       navigate({ to: dashboard });
 
     } catch (error) {
