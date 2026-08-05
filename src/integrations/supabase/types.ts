@@ -1570,6 +1570,33 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          name: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          name?: string
+        }
+        Relationships: []
+      }
       product_batches: {
         Row: {
           available_qty: number | null
@@ -2042,6 +2069,35 @@ export type Database = {
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
             referencedColumns: ["id"]
           },
         ]
@@ -2738,6 +2794,17 @@ export type Database = {
       get_unread_notification_count: {
         Args: { _user_id: string }
         Returns: number
+      }
+      get_user_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          category: string
+          permission_name: string
+        }[]
+      }
+      has_permission: {
+        Args: { _permission_name: string; _user_id: string }
+        Returns: boolean
       }
       has_reminder_been_sent: {
         Args: { _invoice_id: string; _template_id: string }
