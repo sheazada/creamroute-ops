@@ -98,20 +98,22 @@ export function ReviseInvoiceDialog({
         amount: i.revised_amount,
       }));
 
-    const { data, error } = await supabase.rpc("revise_invoice", {
-      _invoice_id: invoiceId,
-      _revision_reason: reason.trim(),
-      _revised_items: revisedItemsPayload,
-      _revised_by: userRes.user.id,
-    });
+    let result: { revised_invoice_no?: string };
+    try {
+      result = await callReviseInvoice({
+        data: {
+          invoiceId,
+          reason: reason.trim(),
+          items: revisedItemsPayload,
+        },
+      });
+    } catch (err) {
+      setSaving(false);
+      return toast.error((err as Error)?.message ?? "Could not revise this invoice.");
+    }
 
     setSaving(false);
 
-    if (error) {
-      return toast.error(error.message);
-    }
-
-    const result = (data ?? {}) as { revised_invoice_no?: string };
     toast.success(`Invoice revised! New invoice: ${result.revised_invoice_no ?? ""}`);
     qc.invalidateQueries({ queryKey: ["invoices"] });
     qc.invalidateQueries({ queryKey: ["invoice", invoiceId] });
