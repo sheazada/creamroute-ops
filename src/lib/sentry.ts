@@ -1,7 +1,47 @@
-// Shared Sentry configuration — used by both client and server initializers.
-// Severity levels, alert routing, and tagging helpers live here.
+// Shared Sentry helpers — used by both client and server code.
+//
+// IMPORTANT: this module must NOT statically import any @sentry/* package.
+// Doing so pulls the whole SDK into the app entry chunk, where the production
+// bundler's circular chunk-init ordering can throw
+// `init_multiplexed is not defined` before React ever mounts (blank page).
+// Everything here therefore resolves the SDK through a lazy dynamic import
+// and degrades to a no-op until it has loaded.
 
-import * as Sentry from "@sentry/core";
+type SentryModule = typeof import("@sentry/core");
+
+let sentryModule: SentryModule | undefined;
+let sentryPromise: Promise<SentryModule | undefined> | undefined;
+
+function loadSentry(): Promise<SentryModule | undefined> {
+  if (!sentryPromise) {
+    sentryPromise = import("@sentry/core")
+      .then((mod) => {
+        sentryModule = mod;
+        return mod;
+      })
+      .catch(() => undefined);
+  }
+  return sentryPromise;
+}
+
+function withSentry(fn: (sentry: SentryModule) => void): void {
+  if (sentryModule) {
+    try {
+      fn(sentryModule);
+    } catch {
+      // never let telemetry break the app
+    }
+    return;
+  }
+  void loadSentry().then((mod) => {
+    if (!mod) return;
+    try {
+      fn(mod);
+    } catch {
+      // ignore
+    }
+  });
+}
 
 // Severity levels aligned with Sentry's severity
 export type ErrorSeverity = "fatal" | "error" | "warning" | "info" | "debug";
@@ -25,17 +65,20 @@ export function reportError(
     fingerprint?: string[];
   } = {},
 ): string | undefined {
-  const eventId = Sentry.captureException(error, {
-    level: context.severity ?? "error",
-    tags: {
-      ...context.tags,
-      handled: String(context.handled ?? true),
-    },
-    extra: {
-      ...context.extras,
-      message: context.message,
-    },
-    fingerprint: context.fingerprint,
+  let eventId: string | undefined;
+  withSentry((Sentry) => {
+    eventId = Sentry.captureException(error, {
+      level: context.severity ?? "error",
+      tags: {
+        ...context.tags,
+        handled: String(context.handled ?? true),
+      },
+      extra: {
+        ...context.extras,
+        message: context.message,
+      },
+      fingerprint: context.fingerprint,
+    });
   });
   return eventId;
 }
@@ -48,11 +91,15 @@ export function reportMessage(
     extras?: Record<string, unknown>;
   } = {},
 ): string | undefined {
-  return Sentry.captureMessage(message, {
-    level: options.severity ?? "info",
-    tags: options.tags,
-    extra: options.extras,
+  let eventId: string | undefined;
+  withSentry((Sentry) => {
+    eventId = Sentry.captureMessage(message, {
+      level: options.severity ?? "info",
+      tags: options.tags,
+      extra: options.extras,
+    });
   });
+  return eventId;
 }
 
 export function addBreadcrumb(
@@ -63,12 +110,14 @@ export function addBreadcrumb(
     data?: Record<string, unknown>;
   } = {},
 ): void {
-  Sentry.addBreadcrumb({
-    category,
-    message,
-    level: options.level ?? "info",
-    data: options.data,
-    timestamp: Date.now() / 1000,
+  withSentry((Sentry) => {
+    Sentry.addBreadcrumb({
+      category,
+      message,
+      level: options.level ?? "info",
+      data: options.data,
+      timestamp: Date.now() / 1000,
+    });
   });
 }
 
@@ -78,27 +127,28 @@ export function setUserContext(user: {
   role?: string;
   tenant?: string;
 }): void {
-  Sentry.setUser({
-    id: user.id,
-    email: user.email,
-    username: user.role,
+  withSentry((Sentry) => {
+    Sentry.setUser({
+      id: user.id,
+      email: user.email,
+      username: user.role,
+    });
+    if (user.role) Sentry.setTag("user.role", user.role);
+    if (user.tenant) Sentry.setTag("tenant", user.tenant);
   });
-  if (user.role) {
-    Sentry.setTag("user.role", user.role);
-  }
-  if (user.tenant) {
-    Sentry.setTag("tenant", user.tenant);
-  }
 }
 
 export function clearUserContext(): void {
-  Sentry.setUser(null);
-  // Sentry doesn't expose removeTag directly on core — just set empty
-  Sentry.setTag("user.role", "");
-  Sentry.setTag("tenant", "");
+  withSentry((Sentry) => {
+    Sentry.setUser(null);
+    Sentry.setTag("user.role", "");
+    Sentry.setTag("tenant", "");
+  });
 }
 
 export function setRouteContext(route: string): void {
-  Sentry.setTag("route", route);
+  withSentry((Sentry) => {
+    Sentry.setTag("route", route);
+  });
   addBreadcrumb("navigation", `Navigated to ${route}`);
 }
