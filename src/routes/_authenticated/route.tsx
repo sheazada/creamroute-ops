@@ -17,55 +17,50 @@ import { logAccessEvent } from "@/lib/audit.server";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    // 1. Authenticate
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth", search: { next: undefined } });
+    // 1. Check if user is logged in (using localStorage for now)
+    const userStr = localStorage.getItem("creamroute_user");
+    const distributorStr = localStorage.getItem("creamroute_distributor");
 
-    // 2. Check account status (blocks inactive/suspended/blocked accounts)
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("account_status")
-      .eq("id", data.user.id)
-      .maybeSingle();
-    if ((profile?.account_status ?? "active") !== "active") {
-      await supabase.auth.signOut();
+    if (!userStr || !distributorStr) {
       throw redirect({ to: "/auth" });
     }
 
-    // 3. Resolve roles.
-    const { data: roleRows } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.user.id);
-    const roles = (roleRows ?? []).map((r) => r.role as string);
+    const user = JSON.parse(userStr);
+    const distributor = JSON.parse(distributorStr);
+    const permissions = JSON.parse(localStorage.getItem("creamroute_permissions") || "[]");
 
-    // 4. Get user permissions
-    const { data: permissionRows } = await supabase.rpc("get_user_permissions", {
-      _user_id: data.user.id,
-    });
-    const userPermissions = (permissionRows ?? []).map((p: any) => p.permission_name);
+    // 2. Check account status
+    if (user.status !== "active") {
+      localStorage.removeItem("creamroute_user");
+      localStorage.removeItem("creamroute_distributor");
+      localStorage.removeItem("creamroute_permissions");
+      throw redirect({ to: "/auth" });
+    }
 
-    // 5. Retailers never belong in the staff app.
+    // 3. Resolve roles (for backward compatibility)
+    const roles = [user.role];
+
+    // 4. Retailers never belong in the staff app.
     if (isRetailerRole(roles)) throw redirect({ to: "/retailer" });
 
     const landing = landingForRoles(roles);
     if (landing === "/auth") throw redirect({ to: "/auth", search: { next: undefined } });
 
-    // 6. Permission check.
+    // 5. Permission check.
     const path = location.pathname;
-    const allowed = canAccessPath(path, userPermissions);
+    const allowed = canAccessPath(path, permissions.map((p: any) => p.name));
     const required = requiredPermissionsForPath(path);
 
     if (!allowed) {
       logAccessEvent({
         data: {
           eventType: "access_denied",
-          userId: data.user.id,
-          userEmail: data.user.email ?? null,
+          userId: user.id,
+          userEmail: user.email ?? null,
           userRoles: roles,
           requiredRoles: required,
           routePath: path,
-          reason: `User permissions [${userPermissions.join(",")}] missing required [${required.join(",")}]`,
+          reason: `User permissions [${permissions.map((p: any) => p.name).join(",")}] missing required [${required.join(",")}]`,
         },
       }).catch((err) => console.warn("[audit] logAccessEvent failed:", err));
 
@@ -76,7 +71,7 @@ export const Route = createFileRoute("/_authenticated")({
       });
     }
 
-    return { user: data.user, roles, permissions: userPermissions };
+    return { user, distributor, roles, permissions };
   },
   errorComponent: ({ error }) => {
     if (error instanceof AccessDeniedError) {
