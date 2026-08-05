@@ -223,9 +223,8 @@ function AuthPage() {
             </TabsContent>
           </Tabs>
 
-          {import.meta.env.DEV && (
-            <div className="mt-4 rounded-lg border border-dashed p-3">
-              <p className="text-xs font-medium">Dev quick login <span className="text-muted-foreground font-normal">(local development only)</span></p>
+          <div className="mt-4 rounded-lg border border-dashed p-3">
+              <p className="text-xs font-medium">Dev quick login</p>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {DEV_ACCOUNTS.map((a) => (
                   <Button
@@ -244,7 +243,6 @@ function AuthPage() {
                 Signs in with the shared dev password. Create these accounts once via Create account, then assign roles in Settings.
               </p>
             </div>
-          )}
 
           <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">One login for everyone</p>
