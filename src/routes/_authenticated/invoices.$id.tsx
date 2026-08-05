@@ -136,9 +136,11 @@ function InvoiceView() {
         };
       });
 
-      if (itemUpdates.length > 0) {
-        await supabase.from("invoice_items").upsert(itemUpdates);
+      for (const upd of itemUpdates) {
+        const { id, ...fields } = upd;
+        await supabase.from("invoice_items").update(fields).eq("id", id);
       }
+
 
       // Handle stock adjustments for changed quantities
       const stockMovements: any[] = [];
