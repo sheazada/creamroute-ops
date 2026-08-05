@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import {
   ALL_ROLES,
   roleDescription,
-  ROUTE_ACCESS,
+  ROLE_ACCESS,
   type StaffRole,
 } from "@/lib/access";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -271,7 +271,7 @@ function RolesManagement() {
                         No routes assigned
                       </span>
                     )}
-                    {allowedRoutes.map((path) => (
+                    {allowedRoutes.map((path: string) => (
                       <Badge key={path} variant="outline" className="text-[10px] font-mono">
                         {path}
                       </Badge>
