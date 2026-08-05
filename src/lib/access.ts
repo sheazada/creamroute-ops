@@ -1,3 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
+import { getUserPermissions } from "@/lib/permissions.functions";
+import { useServerFn } from "@tanstack/react-start";
+
 export type StaffRole = "admin" | "manager" | "salesperson" | "driver" | "helper";
 export type AppRole = StaffRole | "retailer" | "retailer_user";
 
@@ -8,34 +12,35 @@ const SALES: StaffRole[] = ["admin", "manager", "salesperson"];
 /** All staff roles, exported for UI iteration (role selector, etc.). */
 export const ALL_ROLES: StaffRole[] = ALL;
 
-/** Path prefix -> roles allowed. Longest matching prefix wins. */
-export const ROUTE_ACCESS: { prefix: string; roles: StaffRole[] }[] = [
-  { prefix: "/dashboard", roles: FIN },
-  { prefix: "/orders", roles: SALES },
-  { prefix: "/demand-consolidation", roles: ALL },
-  { prefix: "/delivery-demand", roles: ALL },
-  { prefix: "/invoices", roles: SALES },
-  { prefix: "/payments", roles: SALES },
-  { prefix: "/cash-reconciliation", roles: FIN },
-  { prefix: "/reconcile", roles: FIN },
-  { prefix: "/deliveries", roles: ALL },
-  { prefix: "/delivery-status", roles: FIN },
-  { prefix: "/route-optimization", roles: FIN },
-  { prefix: "/routes", roles: FIN },
-  { prefix: "/products", roles: SALES },
-  { prefix: "/inventory", roles: FIN },
-  { prefix: "/customers", roles: SALES },
-  { prefix: "/customer-ledger", roles: FIN },
-  { prefix: "/suppliers", roles: FIN },
-  { prefix: "/purchases", roles: FIN },
-  { prefix: "/crates", roles: ["admin", "manager", "driver", "helper"] },
-  { prefix: "/claims", roles: FIN },
-  { prefix: "/reports", roles: FIN },
-  { prefix: "/payment-reminders", roles: FIN },
-  { prefix: "/notifications", roles: FIN },
-  { prefix: "/share-log", roles: ["admin"] },
-  { prefix: "/admin/roles", roles: ["admin"] },
-  { prefix: "/settings", roles: ALL }, // employees can view summaries; edits are admin-only in-page
+/** Path prefix -> permissions required. Longest matching prefix wins. */
+export const ROUTE_ACCESS: { prefix: string; permissions: string[] }[] = [
+  { prefix: "/dashboard", permissions: ["view_reports", "view_orders"] },
+  { prefix: "/orders", permissions: ["view_orders"] },
+  { prefix: "/demand-consolidation", permissions: ["view_deliveries"] },
+  { prefix: "/delivery-demand", permissions: ["view_deliveries"] },
+  { prefix: "/invoices", permissions: ["view_invoices"] },
+  { prefix: "/payments", permissions: ["view_payments"] },
+  { prefix: "/cash-reconciliation", permissions: ["reconcile_payments"] },
+  { prefix: "/reconcile", permissions: ["reconcile_payments"] },
+  { prefix: "/deliveries", permissions: ["view_deliveries"] },
+  { prefix: "/delivery-status", permissions: ["view_deliveries"] },
+  { prefix: "/route-optimization", permissions: ["manage_deliveries"] },
+  { prefix: "/routes", permissions: ["manage_deliveries"] },
+  { prefix: "/products", permissions: ["view_products"] },
+  { prefix: "/inventory", permissions: ["view_inventory"] },
+  { prefix: "/customers", permissions: ["view_customers"] },
+  { prefix: "/customer-ledger", permissions: ["view_ledger"] },
+  { prefix: "/suppliers", permissions: ["view_products"] },
+  { prefix: "/purchases", permissions: ["view_products"] },
+  { prefix: "/crates", permissions: ["view_inventory"] },
+  { prefix: "/claims", permissions: ["view_reports"] },
+  { prefix: "/reports", permissions: ["view_reports"] },
+  { prefix: "/payment-reminders", permissions: ["view_payments"] },
+  { prefix: "/notifications", permissions: ["view_reports"] },
+  { prefix: "/share-log", permissions: ["view_audit_logs"] },
+  { prefix: "/admin/roles", permissions: ["manage_roles"] },
+  { prefix: "/admin/permissions", permissions: ["manage_roles"] },
+  { prefix: "/settings", permissions: ["manage_settings"] },
 ];
 
 export function isRetailerRole(roles: string[]) {
@@ -56,22 +61,35 @@ export function landingForRoles(roles: string[]): string {
   return "/auth";
 }
 
-export function canAccessPath(pathname: string, roles: string[]): boolean {
-  const role = primaryStaffRole(roles);
-  if (!role) return false;
-  const match = ROUTE_ACCESS.filter((r) => pathname === r.prefix || pathname.startsWith(r.prefix + "/")).sort(
-    (a, b) => b.prefix.length - a.prefix.length,
-  )[0];
+/**
+ * Check if user has all required permissions for a path
+ * Returns true if user has at least one of the required permissions
+ */
+export function canAccessPath(
+  pathname: string,
+  userPermissions: string[]
+): boolean {
+  // Find matching route access rule (longest prefix first)
+  const match = ROUTE_ACCESS.filter(
+    (r) => pathname === r.prefix || pathname.startsWith(r.prefix + "/")
+  ).sort((a, b) => b.prefix.length - a.prefix.length)[0];
+
+  // If no rule found, allow access (default open)
   if (!match) return true;
-  return match.roles.includes(role);
+
+  // Check if user has at least one required permission
+  return match.permissions.some((perm) => userPermissions.includes(perm));
 }
 
-/** Return the list of roles required to access a path. Empty array = unrestricted. */
-export function requiredRolesForPath(pathname: string): StaffRole[] {
-  const match = ROUTE_ACCESS.filter((r) => pathname === r.prefix || pathname.startsWith(r.prefix + "/")).sort(
-    (a, b) => b.prefix.length - a.prefix.length,
-  )[0];
-  return match?.roles ?? [];
+/**
+ * Get list of permissions required for a path
+ */
+export function requiredPermissionsForPath(pathname: string): string[] {
+  const match = ROUTE_ACCESS.filter(
+    (r) => pathname === r.prefix || pathname.startsWith(r.prefix + "/")
+  ).sort((a, b) => b.prefix.length - a.prefix.length)[0];
+
+  return match?.permissions ?? [];
 }
 
 export function roleLabel(role: string): string {
@@ -79,11 +97,11 @@ export function roleLabel(role: string): string {
 }
 
 export function roleDescription(
-  role: StaffRole | "retailer" | "retailer_user",
+  role: StaffRole | "retailer" | "retailer_user"
 ): string {
   switch (role) {
     case "admin":
-      return "Full system access. Manages users, roles, and settings.";
+      return "Full system access. Manages users, roles, and permissions.";
     case "manager":
       return "Operational control. Orders, deliveries, finance, reports.";
     case "salesperson":

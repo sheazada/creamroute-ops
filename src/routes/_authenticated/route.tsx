@@ -9,7 +9,7 @@ import {
   canAccessPath,
   isRetailerRole,
   landingForRoles,
-  requiredRolesForPath,
+  requiredPermissionsForPath,
   type StaffRole,
 } from "@/lib/access";
 import { logAccessEvent } from "@/lib/audit.server";
@@ -39,16 +39,22 @@ export const Route = createFileRoute("/_authenticated")({
       .eq("user_id", data.user.id);
     const roles = (roleRows ?? []).map((r) => r.role as string);
 
-    // 3. Retailers never belong in the staff app.
+    // 4. Get user permissions
+    const { data: permissionRows } = await supabase.rpc("get_user_permissions", {
+      _user_id: data.user.id,
+    });
+    const userPermissions = (permissionRows ?? []).map((p: any) => p.permission_name);
+
+    // 5. Retailers never belong in the staff app.
     if (isRetailerRole(roles)) throw redirect({ to: "/retailer" });
 
     const landing = landingForRoles(roles);
     if (landing === "/auth") throw redirect({ to: "/auth", search: { next: undefined } });
 
-    // 4. Permission check.
+    // 6. Permission check.
     const path = location.pathname;
-    const allowed = canAccessPath(path, roles);
-    const required = requiredRolesForPath(path);
+    const allowed = canAccessPath(path, userPermissions);
+    const required = requiredPermissionsForPath(path);
 
     if (!allowed) {
       logAccessEvent({
@@ -59,7 +65,7 @@ export const Route = createFileRoute("/_authenticated")({
           userRoles: roles,
           requiredRoles: required,
           routePath: path,
-          reason: `User roles [${roles.join(",")}] missing required [${required.join(",")}]`,
+          reason: `User permissions [${userPermissions.join(",")}] missing required [${required.join(",")}]`,
         },
       }).catch((err) => console.warn("[audit] logAccessEvent failed:", err));
 
@@ -70,7 +76,7 @@ export const Route = createFileRoute("/_authenticated")({
       });
     }
 
-    return { user: data.user, roles };
+    return { user: data.user, roles, permissions: userPermissions };
   },
   errorComponent: ({ error }) => {
     if (error instanceof AccessDeniedError) {
