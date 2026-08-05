@@ -101,63 +101,6 @@ export type Database = {
         }
         Relationships: []
       }
-      audit_logs: {
-        Row: {
-          action: string
-          created_at: string | null
-          distributor_id: string
-          entity_id: string | null
-          entity_type: string | null
-          id: string
-          ip_address: string | null
-          new_value: Json | null
-          old_value: Json | null
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          distributor_id: string
-          entity_id?: string | null
-          entity_type?: string | null
-          id?: string
-          ip_address?: string | null
-          new_value?: Json | null
-          old_value?: Json | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          distributor_id?: string
-          entity_id?: string | null
-          entity_type?: string | null
-          id?: string
-          ip_address?: string | null
-          new_value?: Json | null
-          old_value?: Json | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audit_logs_distributor_id_fkey"
-            columns: ["distributor_id"]
-            isOneToOne: false
-            referencedRelation: "distributors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       collection_allocations: {
         Row: {
           allocated_amount: number
@@ -763,66 +706,42 @@ export type Database = {
         Row: {
           address: string | null
           business_name: string
-          city: string | null
           created_at: string
-          currency: string | null
           email: string | null
-          financial_year_start: string | null
           fssai: string | null
           gstin: string | null
           id: string
-          invoice_prefix: string | null
           legal_name: string | null
-          logo_url: string | null
           mobile: string | null
           pan: string | null
-          phone: string | null
-          pincode: string | null
-          state: string | null
           status: string
           updated_at: string
         }
         Insert: {
           address?: string | null
           business_name: string
-          city?: string | null
           created_at?: string
-          currency?: string | null
           email?: string | null
-          financial_year_start?: string | null
           fssai?: string | null
           gstin?: string | null
           id?: string
-          invoice_prefix?: string | null
           legal_name?: string | null
-          logo_url?: string | null
           mobile?: string | null
           pan?: string | null
-          phone?: string | null
-          pincode?: string | null
-          state?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           address?: string | null
           business_name?: string
-          city?: string | null
           created_at?: string
-          currency?: string | null
           email?: string | null
-          financial_year_start?: string | null
           fssai?: string | null
           gstin?: string | null
           id?: string
-          invoice_prefix?: string | null
           legal_name?: string | null
-          logo_url?: string | null
           mobile?: string | null
           pan?: string | null
-          phone?: string | null
-          pincode?: string | null
-          state?: string | null
           status?: string
           updated_at?: string
         }
@@ -931,41 +850,6 @@ export type Database = {
           run_id?: string | null
         }
         Relationships: []
-      }
-      email_verification_tokens: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          id: string
-          token: string
-          used_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          token: string
-          used_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          token?: string
-          used_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_verification_tokens_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       expense_categories: {
         Row: {
@@ -1404,66 +1288,6 @@ export type Database = {
           },
         ]
       }
-      login_history: {
-        Row: {
-          browser: string | null
-          device_type: string | null
-          distributor_id: string
-          failure_reason: string | null
-          id: string
-          ip_address: string | null
-          login_at: string
-          logout_at: string | null
-          os: string | null
-          status: string
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          browser?: string | null
-          device_type?: string | null
-          distributor_id: string
-          failure_reason?: string | null
-          id?: string
-          ip_address?: string | null
-          login_at?: string
-          logout_at?: string | null
-          os?: string | null
-          status?: string
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          browser?: string | null
-          device_type?: string | null
-          distributor_id?: string
-          failure_reason?: string | null
-          id?: string
-          ip_address?: string | null
-          login_at?: string
-          logout_at?: string | null
-          os?: string | null
-          status?: string
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "login_history_distributor_id_fkey"
-            columns: ["distributor_id"]
-            isOneToOne: false
-            referencedRelation: "distributors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "login_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notification_logs: {
         Row: {
           attempts: number
@@ -1688,41 +1512,6 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      password_reset_tokens: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          id: string
-          token: string
-          used_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          token: string
-          used_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          token?: string
-          used_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "password_reset_tokens_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2289,19 +2078,19 @@ export type Database = {
           created_at: string
           id: string
           permission_id: string
-          role: string
+          role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
           created_at?: string
           id?: string
           permission_id: string
-          role: string
+          role: Database["public"]["Enums"]["app_role"]
         }
         Update: {
           created_at?: string
           id?: string
           permission_id?: string
-          role?: string
+          role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: [
           {
@@ -2881,90 +2670,6 @@ export type Database = {
         }
         Relationships: []
       }
-      users: {
-        Row: {
-          branch_id: string | null
-          created_at: string | null
-          created_by: string | null
-          distributor_id: string
-          email: string | null
-          email_verified: boolean | null
-          employee_id: string | null
-          failed_login_attempts: number | null
-          full_name: string
-          id: string
-          last_login_at: string | null
-          last_login_ip: string | null
-          locked_until: string | null
-          mobile: string | null
-          mobile_verified: boolean | null
-          password_hash: string
-          retailer_id: string | null
-          role: string
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          branch_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          distributor_id: string
-          email?: string | null
-          email_verified?: boolean | null
-          employee_id?: string | null
-          failed_login_attempts?: number | null
-          full_name: string
-          id?: string
-          last_login_at?: string | null
-          last_login_ip?: string | null
-          locked_until?: string | null
-          mobile?: string | null
-          mobile_verified?: boolean | null
-          password_hash: string
-          retailer_id?: string | null
-          role: string
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          branch_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          distributor_id?: string
-          email?: string | null
-          email_verified?: boolean | null
-          employee_id?: string | null
-          failed_login_attempts?: number | null
-          full_name?: string
-          id?: string
-          last_login_at?: string | null
-          last_login_ip?: string | null
-          locked_until?: string | null
-          mobile?: string | null
-          mobile_verified?: boolean | null
-          password_hash?: string
-          retailer_id?: string | null
-          role?: string
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "users_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "users_distributor_id_fkey"
-            columns: ["distributor_id"]
-            isOneToOne: false
-            referencedRelation: "distributors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       warehouses: {
         Row: {
           created_at: string | null
@@ -3013,6 +2718,18 @@ export type Database = {
       }
       can_manage_finance: { Args: { _uid: string }; Returns: boolean }
       can_manage_sales: { Args: { _uid: string }; Returns: boolean }
+      get_account_status: { Args: { _user_id: string }; Returns: string }
+      get_permission_id: { Args: { _name: string }; Returns: string }
+      get_retailer_code: { Args: { _user_id: string }; Returns: string }
+      get_user_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          permission_name: string
+          permission_label: string
+          category: string
+        }[]
+      }
+      is_account_active: { Args: { _user_id: string }; Returns: boolean }
       create_demand_consolidation: {
         Args: { p_delivery_cycle_id: string }
         Returns: string
@@ -3073,7 +2790,6 @@ export type Database = {
         }[]
       }
       get_next_revision_no: { Args: { _invoice_id: string }; Returns: number }
-      get_permission_id: { Args: { _name: string }; Returns: string }
       get_retailer_code: { Args: { _user_id: string }; Returns: string }
       get_stock_valuation: {
         Args: never
@@ -3095,7 +2811,6 @@ export type Database = {
         Args: { _user_id: string }
         Returns: {
           category: string
-          permission_label: string
           permission_name: string
         }[]
       }
@@ -3107,6 +2822,7 @@ export type Database = {
         Args: { _invoice_id: string; _template_id: string }
         Returns: boolean
       }
+      has_permission: { Args: { _user_id: string; _permission_name: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3114,7 +2830,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      role_has_permission: { Args: { _role: string; _permission_name: string }; Returns: boolean }
       is_account_active: { Args: { _user_id: string }; Returns: boolean }
+      has_permission: { Args: { _user_id: string; _permission_name: string }; Returns: boolean }
       is_internal_staff: { Args: { _uid: string }; Returns: boolean }
       is_staff: { Args: { _uid: string }; Returns: boolean }
       link_customer_to_user: {
@@ -3207,10 +2925,6 @@ export type Database = {
           _revision_reason: string
         }
         Returns: Json
-      }
-      role_has_permission: {
-        Args: { _permission_name: string; _role: string }
-        Returns: boolean
       }
       send_notification: {
         Args: {
