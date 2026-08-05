@@ -43,6 +43,7 @@ export function ReviseInvoiceDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const callReviseInvoice = useServerFn(reviseInvoice);
   const [revisionItems, setRevisionItems] = useState<RevisionItem[]>(
     items.map((i) => ({
       product_id: i.product_id,
