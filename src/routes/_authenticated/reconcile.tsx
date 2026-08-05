@@ -380,17 +380,21 @@ function AllocateDialog({
         notes: appendNote(payment.reference, `Reconciled ${payment.payment_no}`),
       }).eq("id", payment.id);
       if (e1) throw e1;
-      for (const [invId, amt] of entries.slice(1)) {
-        const { error } = await supabase.from("payments").insert({
-          payment_no: genDocNo("RCP"),
-          customer_id: payment.customer_id,
-          invoice_id: invId,
-          amount: Number(amt),
-          mode: payment.mode,
-          payment_date: payment.payment_date,
-          reference: payment.reference,
-          notes: `Split from ${payment.payment_no}`,
-        });
+      
+      // Batch insert remaining splits (instead of N+1 loop)
+      const splitPayments = entries.slice(1).map(([invId, amt]) => ({
+        payment_no: genDocNo("RCP"),
+        customer_id: payment.customer_id,
+        invoice_id: invId,
+        amount: Number(amt),
+        mode: payment.mode,
+        payment_date: payment.payment_date,
+        reference: payment.reference,
+        notes: `Split from ${payment.payment_no}`,
+      }));
+      
+      if (splitPayments.length > 0) {
+        const { error } = await supabase.from("payments").insert(splitPayments);
         if (error) throw error;
       }
       if (remainder > 0.009) {

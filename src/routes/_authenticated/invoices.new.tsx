@@ -335,22 +335,30 @@ function NewInvoice() {
       });
       await supabase.from("invoice_items").insert(itemRows);
 
-      for (const l of lines) {
-        const p = (products ?? []).find((x) => x.id === l.product_id);
-        if (p) {
-          await supabase
-            .from("products")
-            .update({ current_stock: Number(p.current_stock) - l.quantity })
-            .eq("id", l.product_id);
-          await supabase.from("inventory_movements").insert({
-            product_id: l.product_id,
-            movement_type: "out",
-            quantity: l.quantity,
-            ref_type: "invoice",
-            ref_id: inv.id,
-            note: `Invoice ${invoice_no}`,
-          });
-        }
+      // Batch stock updates (instead of N+1 loop)
+      const stockUpdates = lines
+        .map((l) => {
+          const p = (products ?? []).find((x) => x.id === l.product_id);
+          return p ? { id: l.product_id, current_stock: Number(p.current_stock) - l.quantity } : null;
+        })
+        .filter((u): u is { id: string; current_stock: number } => u !== null);
+      
+      const movements = lines
+        .filter((l) => (products ?? []).some((x) => x.id === l.product_id))
+        .map((l) => ({
+          product_id: l.product_id,
+          movement_type: "out" as const,
+          quantity: l.quantity,
+          ref_type: "invoice" as const,
+          ref_id: inv.id,
+          note: `Invoice ${invoice_no}`,
+        }));
+
+      if (stockUpdates.length > 0) {
+        await supabase.from("products").upsert(stockUpdates);
+      }
+      if (movements.length > 0) {
+        await supabase.from("inventory_movements").insert(movements);
       }
 
       // Collect payment now (creates payment; triggers recalc balance + outstanding)
