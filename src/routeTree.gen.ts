@@ -9,7 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as RetailerRouteRouteImport } from './routes/retailer/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -53,14 +56,30 @@ import { Route as AuthenticatedOrdersNewRouteImport } from './routes/_authentica
 import { Route as AuthenticatedInvoicesNewRouteImport } from './routes/_authenticated/invoices.new'
 import { Route as AuthenticatedInvoicesIdRouteImport } from './routes/_authenticated/invoices.$id'
 import { Route as AuthenticatedCustomerLedgerIdRouteImport } from './routes/_authenticated/customer-ledger.$id'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin/roles'
 import { Route as AuthenticatedAdminPermissionsRouteImport } from './routes/_authenticated/admin/permissions'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -294,6 +313,11 @@ const AuthenticatedCustomerLedgerIdRoute =
     path: '/customer-ledger/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   id: '/admin/roles',
   path: '/admin/roles',
@@ -321,7 +345,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/retailer': typeof RetailerRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/mcp': typeof McpRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
@@ -355,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/permissions': typeof AuthenticatedAdminPermissionsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/customer-ledger/$id': typeof AuthenticatedCustomerLedgerIdRoute
   '/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/invoices/new': typeof AuthenticatedInvoicesNewRoute
@@ -369,7 +397,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/mcp': typeof McpRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
@@ -403,6 +434,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/permissions': typeof AuthenticatedAdminPermissionsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/customer-ledger/$id': typeof AuthenticatedCustomerLedgerIdRoute
   '/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/invoices/new': typeof AuthenticatedInvoicesNewRoute
@@ -420,7 +452,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/retailer': typeof RetailerRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/mcp': typeof McpRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/cash-reconciliation': typeof AuthenticatedCashReconciliationRoute
@@ -454,6 +489,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/permissions': typeof AuthenticatedAdminPermissionsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/customer-ledger/$id': typeof AuthenticatedCustomerLedgerIdRoute
   '/_authenticated/invoices/$id': typeof AuthenticatedInvoicesIdRoute
   '/_authenticated/invoices/new': typeof AuthenticatedInvoicesNewRoute
@@ -471,7 +507,10 @@ export interface FileRouteTypes {
     | '/'
     | '/retailer'
     | '/auth'
+    | '/forgot-password'
     | '/mcp'
+    | '/reset-password'
+    | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/cash-reconciliation'
@@ -505,6 +544,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/permissions'
     | '/admin/roles'
+    | '/admin/users'
     | '/customer-ledger/$id'
     | '/invoices/$id'
     | '/invoices/new'
@@ -519,7 +559,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/forgot-password'
     | '/mcp'
+    | '/reset-password'
+    | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/cash-reconciliation'
@@ -553,6 +596,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/permissions'
     | '/admin/roles'
+    | '/admin/users'
     | '/customer-ledger/$id'
     | '/invoices/$id'
     | '/invoices/new'
@@ -569,7 +613,10 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/retailer'
     | '/auth'
+    | '/forgot-password'
     | '/mcp'
+    | '/reset-password'
+    | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/cash-reconciliation'
@@ -603,6 +650,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/permissions'
     | '/_authenticated/admin/roles'
+    | '/_authenticated/admin/users'
     | '/_authenticated/customer-ledger/$id'
     | '/_authenticated/invoices/$id'
     | '/_authenticated/invoices/new'
@@ -620,7 +668,10 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   RetailerRouteRoute: typeof RetailerRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   McpRoute: typeof McpRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -629,11 +680,32 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mcp': {
       id: '/mcp'
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -937,6 +1009,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomerLedgerIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/roles': {
       id: '/_authenticated/admin/roles'
       path: '/admin/roles'
@@ -1007,6 +1086,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRouteWithChildren
   AuthenticatedAdminPermissionsRoute: typeof AuthenticatedAdminPermissionsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedCustomerLedgerIdRoute: typeof AuthenticatedCustomerLedgerIdRoute
   AuthenticatedInvoicesIdRoute: typeof AuthenticatedInvoicesIdRoute
   AuthenticatedInvoicesNewRoute: typeof AuthenticatedInvoicesNewRoute
@@ -1043,6 +1123,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRouteWithChildren,
   AuthenticatedAdminPermissionsRoute: AuthenticatedAdminPermissionsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedCustomerLedgerIdRoute: AuthenticatedCustomerLedgerIdRoute,
   AuthenticatedInvoicesIdRoute: AuthenticatedInvoicesIdRoute,
   AuthenticatedInvoicesNewRoute: AuthenticatedInvoicesNewRoute,
@@ -1082,7 +1163,10 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   RetailerRouteRoute: RetailerRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   McpRoute: McpRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
