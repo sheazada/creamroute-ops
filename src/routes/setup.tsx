@@ -98,7 +98,8 @@ function SetupPage() {
           role: "distributor",
           status: "active",
           email_verified: true,
-          distributor_id: (await supabase.from("distributors").select("id").limit(1).single()).data?.id,
+          distributor_id: distributorId,
+          password_hash: "supabase-managed",
         });
 
         // Ensure profile exists
