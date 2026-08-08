@@ -1,95 +1,95 @@
+# Migration Plan: Move from Lovable Cloud to your own Supabase
 
-# Pending Build Tracks
+## Recommended path (easiest)
 
-Below is everything you've asked for so far, split into **Done** (already shipped in earlier turns) and **Pending** (still to build). I'll keep this list as the working backlog and tick items off as we complete them.
+**Remix this Lovable project → create a new project with the same code → disable Lovable Cloud on the new project → connect your own Supabase project → export/import the database.**
 
-## Already done (for reference)
-- Core schema: customers, products, inventory, orders, invoices, payments, purchases, deliveries
-- RBAC: admin, manager, salesperson, driver, helper — with route guards, role-based landing, filtered nav
-- Mobile + desktop responsive shell (sidebar, drawer, bottom tabs)
-- Orders module + Add Sale flow
-- Daily Demand: Pickup Summary (Sudha totals) + Per-Shop view for drivers/helpers
-- Professional GST invoice: A4 PDF, thermal 80mm, WhatsApp share, UPI QR, amount-in-words
-- Business identity + bank/UPI in Settings, Team role management
-- Auto ledger: DB triggers recompute invoice totals and customer outstanding on create/edit/void
-- Delivery "Collect Cash" (cash/UPI/bank) with auto-ledger update
-- Customer ledger bar + dues filter + WhatsApp/SMS/Email/Call reminders
-- Dashboard "Add Sale" + "New Invoice" quick toggles
-- Dev quick-login panel for all 5 roles
-- Challan OCR upload → AI extract → review → create purchase + stock movement
-
-## Pending tracks
-
-### 1. Retailer customer portal (separate login)
-- Separate signup/login surface for retailers
-- Retailer sees: their orders, invoices (view + download PDF), payment history, current outstanding, statement
-- "Place order" form so retailers can self-submit orders (goes into your orders queue for approval)
-- WhatsApp/email invite flow so you can onboard existing retailers
-
-### 2. Deep reports + ledgers
-- Sales register, purchase register
-- Customer ledger (statement of account, date range, PDF/Excel export)
-- Supplier ledger
-- GSTR-1 style output (B2B, B2C, HSN summary)
-- P&L summary and expense tracking
-- Daily collection report (cash/UPI/bank split, per delivery staff)
-- Best-selling products, top customers, aging report (0–30, 30–60, 60–90, 90+)
-- Export to PDF and Excel across all reports
-
-### 3. Supplier management (Sudha + others)
-- Suppliers CRUD with GSTIN, contact, opening balance
-- Supplier ledger + outstanding
-- Record payments to supplier (against challan/purchase)
-- Link challan OCR purchases to supplier ledger automatically
-
-### 4. Route planning & delivery sheets
-- Assign retailers to routes and a route to a vehicle/driver-helper pair for a given day
-- Ordered delivery sheet per route (printable), with per-shop items, amount, and outstanding
-- Driver marks delivered / partially delivered / not delivered per stop
-- Partial delivery auto-edits the invoice (line-item adjustment) and re-syncs the ledger
-
-### 5. Payments enhancements
-- Payment allocation across multiple invoices (FIFO or manual pick)
-- Receipt voucher (printable/WhatsApp) on every payment
-- UPI intent deep-link + "mark as paid" webhook-free flow
-
-### 6. Dashboard depth (deferred earlier — pick up later)
-- Sales & collection trend charts
-- Today's snapshot: orders, dispatched, collected, pending
-- Top 10 customers by dues, top 10 SKUs by volume
-- Low-stock and expiry alerts
-
-### 7. Notifications & reminders (scheduled)
-- Nightly cron: dues reminder to shops crossing due date via WhatsApp/SMS/Email
-- Invoice send-on-create toggle (auto WhatsApp the PDF link)
-- Delivery ETA ping to retailer when driver marks "out for delivery"
-
-### 8. Inventory hygiene
-- Batch / expiry tracking (dairy is perishable — FIFO by expiry)
-- Stock adjustment voucher (damage, return-to-supplier, sample)
-- Retailer product return flow (credit note + ledger reversal)
-- Low-stock threshold + reorder suggestion into the pickup summary
-
-### 9. Data hygiene & ops
-- Audit log (who edited which invoice / voided / changed role)
-- Soft delete + restore for invoices, orders, customers
-- Bulk import (customers, products, opening balances) via CSV
-- Daily automatic backup export (JSON/CSV to storage)
-
-### 10. Retailer/portal comms polish
-- Branded invoice PDF (logo, signature image, seal)
-- Configurable invoice number series per financial year
-- e-Invoice / IRN placeholder fields (for future GSTN integration)
+This is the easiest route because it keeps your entire codebase intact while moving the backend (database, auth, storage) to a Supabase dashboard you fully control. You do not need to rewrite the app.
 
 ---
 
-## How I'd like to proceed
-There's a lot here, so I'd rather do 1–2 tracks per round, deeply, than sprinkle everything shallowly. My suggested next order (based on your business flow):
+## What this plan does not cover
 
-1. **Retailer customer portal** (unblocks self-service + reduces your calls)
-2. **Supplier management + link to Challan OCR** (closes the purchase side)
-3. **Route planning & delivery sheets** (biggest daily pain point)
-4. **Deep reports + ledgers** (needed for GST filing and dues control)
-5. Everything else after
+- This is not a one-click migration. Lovable Cloud and Supabase are separate backends; data must be exported and imported manually.
+- Auth users may need to be re-invited or reset passwords unless Supabase supports migrating auth identities from the Cloud export.
+- Storage files (invoice PDFs, POD photos, logos) must be moved separately.
 
-Tell me which track to build next (or reorder), and I'll come back with a focused plan just for that track.
+---
+
+## Step-by-step plan
+
+### Step 1 — Prepare your own Supabase project
+- Create a new Supabase project at supabase.com (or self-host if you prefer).
+- Keep the project URL, anon key, service role key, and database password ready.
+- Do not create any tables yet. We will recreate the schema from the Cloud export.
+
+### Step 2 — Remix the current Lovable project
+- In the current project, go to **Project name → Settings → Remix this project**.
+- This creates a new Lovable project with a copy of the codebase.
+- During setup, do **not** enable Lovable Cloud on the new project.
+- After creation, update the new project’s environment variables to point to your Supabase project:
+  - `VITE_SUPABASE_URL` / `SUPABASE_URL`
+  - `VITE_SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_PUBLISHABLE_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+
+### Step 3 — Export the database from Lovable Cloud
+- In the current project, go to **Cloud → Advanced settings → Export data** and request a full database export.
+- This gives you a PostgreSQL dump of the current database (schema + data).
+- If you only want specific tables, tell me which ones and I can export them as CSV/SQL instead.
+
+### Step 4 — Import the database into your Supabase project
+- Use the Supabase SQL editor or `psql` to run the exported dump.
+- Verify that all tables, RLS policies, triggers, and functions are present.
+- Confirm that `auth.users` and related auth data migrated correctly (Supabase may handle this, or you may need to re-create users).
+
+### Step 5 — Update integrations and secrets in the new project
+- Reconfigure any Cloud-only features you were using:
+  - Push notifications (VAPID keys)
+  - Email/SMS/WhatsApp providers
+  - Social OAuth providers (Google sign-in)
+  - Sentry, if enabled
+- Move these from the old project settings to the new project’s secrets/environment.
+
+### Step 6 — Move storage files
+- Download any files from the old project’s storage (invoice PDFs, POD photos, logos, challan images).
+- Upload them into your new Supabase storage bucket and update the file URLs in the database if the paths change.
+
+### Step 7 — Test the new project
+- Verify sign-in works for each role (admin, manager, salesperson, driver, helper, retailer).
+- Check that core flows work: orders, invoices, inventory, deliveries, payments, reports.
+- Run a full build to confirm no environment-specific errors.
+
+### Step 8 — Publish and switch over
+- Publish the new project to a custom domain or use the Lovable-provided URL.
+- Train users to use the new URL.
+- Keep the old project read-only for a short period, then disconnect it if you want to stop paying for Cloud on the old project.
+
+---
+
+## What files/code move automatically
+
+The entire codebase moves when you remix:
+- `src/` — all React components, routes, hooks, server functions
+- `supabase/` — edge functions and config (these will be re-deployed to your new Supabase project)
+- `public/` — static assets, PWA service worker
+- `package.json`, `vite.config.ts`, `tsconfig.json`, etc.
+
+The only things that do **not** move automatically are:
+- The database contents
+- Storage files
+- Project secrets and environment variables
+- Cloud-specific settings (VAPID, OAuth, email domains)
+
+---
+
+## Alternative paths
+
+1. **Disable Cloud only for future projects** — easiest, but does not move this project. Useful if you just want new projects to use Supabase directly.
+2. **Disconnect Cloud from this project** — destructive; deletes all data. Not recommended unless you are abandoning the app.
+3. **Stay on Lovable Cloud** — simplest if you just want the Supabase backend managed for you. You can still use the migration tool for schema changes and backend access through the Lovable backend UI.
+
+---
+
+## Next action
+
+Decide whether you want to proceed with the recommended remix path. If yes, we can start with Step 1 (create your Supabase project) and Step 2 (remix the project). If you want a simpler scope first, we can also export only the database schema or specific tables to begin with.
