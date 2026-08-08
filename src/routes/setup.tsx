@@ -20,6 +20,17 @@ function SetupPage() {
     setMessage("Creating admin user...");
 
     try {
+      // Get the first distributor to link the admin user
+      const { data: distributor } = await supabase
+        .from("distributors")
+        .select("id")
+        .limit(1)
+        .single();
+      const distributorId = distributor?.id;
+      if (!distributorId) {
+        throw new Error("No distributor found. Create a distributor first.");
+      }
+
       // Use Supabase's admin API to create the user properly
       const { data, error } = await supabase.auth.admin.createUser({
         email: "admin@creamroute.com",
@@ -53,7 +64,7 @@ function SetupPage() {
               role: "distributor",
               status: "active",
               email_verified: true,
-              distributor_id: (await supabase.from("distributors").select("id").limit(1).single()).data?.id,
+              distributor_id: distributorId,
             });
 
             // Ensure profile exists
