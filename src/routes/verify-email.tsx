@@ -70,7 +70,7 @@ function VerifyEmailPage() {
         .from("email_verification_tokens")
         .select("*, users:users(id, email, full_name)")
         .eq("token", token)
-        .eq("used_at", null)
+        .is("used_at", null)
         .single();
 
       if (error || !tokenData) {
